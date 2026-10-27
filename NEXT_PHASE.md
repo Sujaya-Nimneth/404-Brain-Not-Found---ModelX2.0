@@ -16,22 +16,23 @@ hardening and evidence collection rather than new architecture.
   horizons.
 - [x] Cross-service tests cover the history and fallback contracts.
 
-## Remaining Hardening
+## Hardening Completed
 
 - [x] Expand SM-FPR evaluation to five origins, two nearest alternatives per
-  origin, three vehicle types, and four representative quantities.
-- [ ] Add a repeatable browser-level smoke test for the canonical demo and live
+  origin, four crops, three vehicle types, and four representative quantities.
+- [x] Add a repeatable browser-level smoke test for the canonical demo and live
   model modes.
-- [ ] Record final demo evidence after rebuilding the Compose images with the
-  latest commits.
-- [ ] Optionally reduce the frontend's chart bundle through lazy loading.
+- [x] Record final demo evidence after rebuilding the Compose images with the
+  latest commits: `docs/evidence/live-dashboard.png`.
+- [x] Reduce the frontend's chart bundle through lazy loading.
 
 ## Verification Gates
 
 ```bash
 cd ml-service && pytest
 cd ../backend && mvn test
-cd ../frontend && npm run build
+cd ../frontend && npm run lint && npm run build
+cd ../frontend && npm run test:e2e
 cd .. && docker compose up --build -d && docker compose ps
 ```
 

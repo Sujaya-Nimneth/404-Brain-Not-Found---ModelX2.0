@@ -164,7 +164,8 @@ The Vite dev server proxies `/api` to `http://localhost:8080`.
 ```bash
 cd ml-service && pytest
 cd ../backend && mvn test
-cd ../frontend && npm run build
+cd ../frontend && npm run lint && npm run build
+cd ../frontend && npm run test:e2e
 docker compose --env-file .env.example config
 ```
 
@@ -186,7 +187,9 @@ SM-FPR is `null` when no reroute decisions occur, never silently reported as
 zero.
 
 The fallback snapshot covers all four crops across all seven markets at both
-horizons. SM-FPR backtests 60 scenarios per horizon: five origins against
-Dambulla and their two nearest alternatives, four crops, three vehicle types,
-and quantities of 300, 1,000, 1,500, and 3,500 kg. The matrix is deliberately
-finite and does not claim coverage of every possible origin or consignment.
+horizons. SM-FPR backtests 60 route profiles per horizon (five origins, three
+vehicle types, and quantities of 300, 1,000, 1,500, and 3,500 kg). Every profile
+is evaluated across all four crops and every holdout timestamp, with Dambulla
+compared against each origin's two nearest alternatives. The matrix is
+deliberately finite and does not claim coverage of every possible origin or
+consignment.
