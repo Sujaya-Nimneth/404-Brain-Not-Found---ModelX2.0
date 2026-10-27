@@ -110,7 +110,11 @@ class Predictor:
         self.artifact: dict[str, Any] | None = None
         self.metadata: dict[str, Any] = {}
         self.history = generate_demo_history()
+        self._feature_frame: pd.DataFrame | None = None
+        self._latest_rows: pd.DataFrame | None = None
         self._load_artifacts()
+        self._configure_model_runtime()
+        self._prepare_feature_cache()
 
     def _load_artifacts(self) -> None:
         try:
@@ -137,6 +141,17 @@ class Predictor:
             except (OSError, json.JSONDecodeError) as error:
                 logger.warning("Evaluation metadata unavailable: %s", error)
 
+    def _configure_model_runtime(self) -> None:
+        if not self.artifact:
+            return
+        models = self.artifact.get("models", {})
+        if not isinstance(models, dict):
+            return
+        for model in models.values():
+            # Small batch inference is faster without process/thread pool setup.
+            if hasattr(model, "n_jobs"):
+                model.n_jobs = 1
+
     @property
     def model_loaded(self) -> bool:
         return self.artifact is not None
@@ -146,6 +161,24 @@ class Predictor:
         if self.artifact:
             return str(self.artifact.get("model_version", "unknown"))
         return "fallback-v1.0"
+
+    def _prepare_feature_cache(self) -> None:
+        """Build feature history once; inference only slices the latest rows."""
+        if not self.model_loaded:
+            return
+        try:
+            featured = build_features(self.history)
+            self._feature_frame = featured
+            self._latest_rows = (
+                featured.sort_values("recorded_date")
+                .groupby(["market_code", "crop_code"], sort=False)
+                .tail(1)
+                .set_index(["market_code", "crop_code"])
+            )
+        except (KeyError, TypeError, ValueError) as error:
+            logger.warning("Feature cache unavailable; requests will fall back: %s", error)
+            self._feature_frame = None
+            self._latest_rows = None
 
     def predict(self, request: PredictBatchRequest) -> PredictBatchResponse:
         if request.crop_code not in {"TOMATO", "CARROT", "GREEN_CHILI", "RED_ONION"}:
@@ -182,28 +215,31 @@ class Predictor:
         self, request: PredictBatchRequest
     ) -> list[MarketForecast]:
         assert self.artifact is not None
-        featured = build_features(self.history)
-        featured = featured[
-            (featured["crop_code"] == request.crop_code)
-            & (featured["market_code"].isin(request.markets))
-        ]
-        latest_rows = (
-            featured.sort_values("recorded_date")
-            .groupby("market_code", sort=False)
-            .tail(1)
-            .set_index("market_code")
-        )
+        if self._latest_rows is None:
+            raise ValueError("feature cache is unavailable")
         model = self.artifact["models"][str(request.horizon_hours)]
-        result: list[MarketForecast] = []
+        rows: list[pd.Series] = []
         for market_code in request.markets:
-            row = latest_rows.loc[market_code]
-            features = row[FEATURE_COLUMNS].to_frame().T.astype(float)
-            predicted = float(model.predict(features)[0])
+            row = self._latest_rows.loc[(market_code, request.crop_code)]
+            rows.append(row)
+        feature_matrix = pd.DataFrame(
+            [row[FEATURE_COLUMNS].to_numpy(dtype=float) for row in rows],
+            columns=FEATURE_COLUMNS,
+        )
+        predicted_prices = model.predict(feature_matrix)
+
+        result: list[MarketForecast] = []
+        for market_code, row, predicted in zip(
+            request.markets,
+            rows,
+            predicted_prices,
+            strict=True,
+        ):
             result.append(
                 self._market_forecast(
                     market_code=market_code,
                     current=float(row["wholesale_price_lkr_per_kg"]),
-                    predicted=predicted,
+                    predicted=float(predicted),
                     ma7=float(row["rolling_mean_7d"]),
                     source=ForecastSource.MODEL,
                 )
