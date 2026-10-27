@@ -10,6 +10,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
+import com.modelx.atie.client.ForecastClient;
 import com.modelx.atie.client.MlServiceClient;
 import com.modelx.atie.config.AtieProperties;
 import com.modelx.atie.config.OriginCatalog;
@@ -39,7 +40,7 @@ public class ArbitrageRoutingService {
     private final FuelPriceRepository fuelPrices;
     private final WeatherObservationRepository weather;
     private final OriginCatalog origins;
-    private final MlServiceClient mlClient;
+    private final ForecastClient forecastClient;
     private final ProfitMarginCalculator calculator;
     private final RoutingDecisionService decisions;
     private final AtieProperties properties;
@@ -50,7 +51,7 @@ public class ArbitrageRoutingService {
             FuelPriceRepository fuelPrices,
             WeatherObservationRepository weather,
             OriginCatalog origins,
-            MlServiceClient mlClient,
+            ForecastClient forecastClient,
             ProfitMarginCalculator calculator,
             RoutingDecisionService decisions,
             AtieProperties properties
@@ -60,7 +61,7 @@ public class ArbitrageRoutingService {
         this.fuelPrices = fuelPrices;
         this.weather = weather;
         this.origins = origins;
-        this.mlClient = mlClient;
+        this.forecastClient = forecastClient;
         this.calculator = calculator;
         this.decisions = decisions;
         this.properties = properties;
@@ -99,7 +100,7 @@ public class ArbitrageRoutingService {
                 .map(route -> route.getDestinationMarket().getCode())
                 .toList();
         LocalDate referenceDate = LocalDate.now();
-        MlServiceClient.MlForecastResponse forecast = mlClient.predictBatch(
+        MlServiceClient.MlForecastResponse forecast = forecastClient.predictBatch(
                 crop.getCode(),
                 request.horizonHours(),
                 referenceDate,

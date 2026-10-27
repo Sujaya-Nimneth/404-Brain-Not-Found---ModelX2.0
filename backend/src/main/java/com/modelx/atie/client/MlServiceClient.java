@@ -17,7 +17,7 @@ import com.modelx.atie.config.AtieProperties;
 import com.modelx.atie.dto.MarketForecast;
 
 @Component
-public class MlServiceClient {
+public class MlServiceClient implements ForecastClient {
     private static final Logger log = LoggerFactory.getLogger(MlServiceClient.class);
 
     private final RestClient client;
@@ -26,6 +26,7 @@ public class MlServiceClient {
         this.client = builder.baseUrl(properties.mlServiceUrl()).build();
     }
 
+    @Override
     public MlForecastResponse predictBatch(
             String cropCode,
             int horizonHours,
