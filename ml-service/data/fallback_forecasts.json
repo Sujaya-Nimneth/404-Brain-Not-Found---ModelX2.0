@@ -1,0 +1,80 @@
+{
+  "model_version": "fallback-v1.0",
+  "movement_threshold_pct": 10.0,
+  "markets": {
+    "TOMATO": {
+      "DAMBULLA": {
+        "48": {
+          "current_price_lkr": 220.0,
+          "predicted_price_lkr": 154.0,
+          "baseline_ma7_lkr": 237.76,
+          "glut_risk_level": "HIGH",
+          "confidence_score": 0.89,
+          "primary_driver": "Northern harvest arrivals are pressuring Dambulla supply."
+        },
+        "72": {
+          "current_price_lkr": 220.0,
+          "predicted_price_lkr": 155.0,
+          "baseline_ma7_lkr": 237.76,
+          "glut_risk_level": "HIGH",
+          "confidence_score": 0.86,
+          "primary_driver": "Sustained Northern arrivals are expected to keep Dambulla prices depressed."
+        }
+      },
+      "PETTAH_COLOMBO": {
+        "48": {
+          "current_price_lkr": 170.0,
+          "predicted_price_lkr": 187.5,
+          "baseline_ma7_lkr": 171.2,
+          "glut_risk_level": "LOW",
+          "confidence_score": 0.86,
+          "primary_driver": "Urban demand remains firm while arrivals stay near seasonal norms."
+        },
+        "72": {
+          "current_price_lkr": 170.0,
+          "predicted_price_lkr": 188.5,
+          "baseline_ma7_lkr": 171.2,
+          "glut_risk_level": "LOW",
+          "confidence_score": 0.84,
+          "primary_driver": "Urban demand and steady wholesale off-take support Colombo prices."
+        }
+      },
+      "KEPPETIPOLA": {
+        "48": {
+          "current_price_lkr": 175.0,
+          "predicted_price_lkr": 165.0,
+          "baseline_ma7_lkr": 176.4,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.75,
+          "primary_driver": "Hill-country arrivals are offset by elevated transit spoilage."
+        },
+        "72": {
+          "current_price_lkr": 175.0,
+          "predicted_price_lkr": 166.0,
+          "baseline_ma7_lkr": 176.4,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.73,
+          "primary_driver": "Hill-country transit risk is limiting effective market supply."
+        }
+      },
+      "MEEGODA": {
+        "48": {
+          "current_price_lkr": 180.0,
+          "predicted_price_lkr": 172.0,
+          "baseline_ma7_lkr": 181.3,
+          "glut_risk_level": "LOW",
+          "confidence_score": 0.74,
+          "primary_driver": "Western market arrivals remain close to recent demand levels."
+        },
+        "72": {
+          "current_price_lkr": 180.0,
+          "predicted_price_lkr": 173.0,
+          "baseline_ma7_lkr": 181.3,
+          "glut_risk_level": "LOW",
+          "confidence_score": 0.72,
+          "primary_driver": "Western market supply is expected to remain broadly balanced."
+        }
+      }
+    }
+  }
+}
