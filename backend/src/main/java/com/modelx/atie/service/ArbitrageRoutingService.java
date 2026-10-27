@@ -267,7 +267,9 @@ public class ArbitrageRoutingService {
                             risk,
                             message,
                             rain,
-                            observation.isExtremeWeatherFlag()
+                            observation.isExtremeWeatherFlag(),
+                            observation.getSource(),
+                            observation.getObservationDate()
                     );
                 });
     }

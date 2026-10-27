@@ -55,9 +55,20 @@ export function WeatherDisruptionCard({ alerts }: Props) {
                 {alert.extremeWeather ? "Extreme flag" : "Normal route"}
               </span>
             </div>
+            <p className="mt-2 font-mono text-[0.54rem] uppercase tracking-[0.1em] text-ink/35">
+              {alert.source.replaceAll("_", " ")} · {formatDate(alert.observationDate)}
+            </p>
           </article>
         ))}
       </div>
     </section>
   );
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-LK", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(`${value}T00:00:00`));
 }

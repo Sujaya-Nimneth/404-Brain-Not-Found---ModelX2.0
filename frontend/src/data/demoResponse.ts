@@ -84,6 +84,8 @@ export const demoResponse: AnalyzeResponse = {
         "Northern harvest arrivals are overwhelming local demand while rainfall slows onward distribution.",
       precipitationMm: 18.2,
       extremeWeather: true,
+      source: "DEMO_FIXTURE",
+      observationDate: "2026-10-27",
     },
     {
       marketCode: "PETTAH_COLOMBO",
@@ -91,6 +93,8 @@ export const demoResponse: AnalyzeResponse = {
       message: "Clear arterial routes and steady urban off-take support delivery.",
       precipitationMm: 4.1,
       extremeWeather: false,
+      source: "DEMO_FIXTURE",
+      observationDate: "2026-10-27",
     },
   ],
   modelEvaluationSummary: {

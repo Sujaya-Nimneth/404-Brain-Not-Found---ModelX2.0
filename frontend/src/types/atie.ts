@@ -42,6 +42,8 @@ export interface WeatherAlert {
   message: string;
   precipitationMm: number;
   extremeWeather: boolean;
+  source: string;
+  observationDate: string;
 }
 
 export interface ModelEvaluationSummary {
