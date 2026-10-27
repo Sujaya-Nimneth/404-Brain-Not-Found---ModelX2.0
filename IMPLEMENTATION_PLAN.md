@@ -4,6 +4,11 @@
 **Domain:** 01 — Cost of Living and Everyday Economics  
 **Target Coding Agents:** Google Antigravity, OpenAI Codex, Claude Code, Cursor  
 
+> **Normative contracts:** Read `CONTRACTS.md` before implementing any
+> workstream. It fixes the safe-margin formula, movement thresholds, origin
+> representation, SM-FPR evaluation, forecast-source labeling, and canonical
+> regression fixture.
+
 ## 1. Executive Summary & System Directive
 
 **ATIE (Agricultural Trade & Intelligence Engine)** is a predictive decision-support platform designed for Sri Lankan smallholder farmers and informal market traders. Rather than merely displaying current market prices (simple retrieval), ATIE analyzes historical crop yield/price data, regional weather patterns, and current fuel/transport costs to predict localized price crashes (gluts) or surges (shortages) **48 to 72 hours in advance** and recommends optimal market routing after accounting for transport expenses.
@@ -26,6 +31,7 @@ Agents must scaffold and maintain the following exact directory layout inside th
 .
 ├── AGENTS.md                        # Agent instructions & architectural guardrails
 ├── IMPLEMENTATION_PLAN.md           # This master implementation plan
+├── CONTRACTS.md                     # Normative cross-service decision contracts
 ├── README.md                        # Setup, architecture, and verification guide
 ├── .gitignore                       # Standard Java, Python, Node, and Docker ignores
 ├── .env.example                     # Environment variables template

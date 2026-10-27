@@ -2,7 +2,11 @@
 
 Welcome, Agent. You are operating on the **ATIE (Agricultural Trade & Intelligence Engine)** repository for **Team 404 Brain not found** (ModelX 2.0 Competition).
 
-Before writing or modifying any code, read `IMPLEMENTATION_PLAN.md` in the root directory. It is the single source of truth for architecture, schemas, API contracts, domain math, and verification gates.
+Before writing or modifying any code, read `IMPLEMENTATION_PLAN.md` and
+`CONTRACTS.md` in the root directory. The plan is the source of truth for
+architecture, schemas, API endpoints, and verification gates. `CONTRACTS.md`
+is normative for cross-service calculations, thresholds, origin handling,
+evaluation methodology, forecast-source labeling, and the canonical fixture.
 
 ## 1. Quick Context
 - **Problem:** Smallholder farmers and informal traders in Sri Lanka sell produce at a loss due to localized supply gluts and regional price disparities.
