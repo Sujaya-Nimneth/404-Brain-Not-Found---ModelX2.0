@@ -18,6 +18,7 @@ import com.modelx.atie.entity.Market;
 import com.modelx.atie.repository.CropRepository;
 import com.modelx.atie.repository.FuelPriceRepository;
 import com.modelx.atie.repository.MarketRepository;
+import com.modelx.atie.repository.MarketRouteRepository;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,6 +30,7 @@ public class MetadataController {
     private final MarketRepository markets;
     private final CropRepository crops;
     private final FuelPriceRepository fuelPrices;
+    private final MarketRouteRepository routes;
     private final OriginCatalog origins;
     private final AtieProperties properties;
 
@@ -36,12 +38,14 @@ public class MetadataController {
             MarketRepository markets,
             CropRepository crops,
             FuelPriceRepository fuelPrices,
+            MarketRouteRepository routes,
             OriginCatalog origins,
             AtieProperties properties
     ) {
         this.markets = markets;
         this.crops = crops;
         this.fuelPrices = fuelPrices;
+        this.routes = routes;
         this.origins = origins;
         this.properties = properties;
     }
@@ -54,6 +58,12 @@ public class MetadataController {
                 "origins", origins.all(),
                 "markets", markets.findAllByOrderByNameAsc(),
                 "crops", crops.findAllByOrderByNameAsc(),
+                "routes", routes.findAll().stream().map(route -> Map.of(
+                        "originCode", route.getOriginCode(),
+                        "marketCode", route.getDestinationMarket().getCode(),
+                        "distanceKm", route.getDistanceKm(),
+                        "terrainFactor", route.getRoadTerrainFactor()
+                )).toList(),
                 "vehicleTypes", List.of(
                         vehicle(VehicleType.THREE_WHEELER),
                         vehicle(VehicleType.MINI_TRUCK_BATTA),

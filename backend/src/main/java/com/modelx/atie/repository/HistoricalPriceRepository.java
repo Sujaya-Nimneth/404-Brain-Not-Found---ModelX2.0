@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.modelx.atie.entity.HistoricalPrice;
@@ -18,5 +19,11 @@ public interface HistoricalPriceRepository extends JpaRepository<HistoricalPrice
             String marketCode,
             String cropCode,
             LocalDate startDate
+    );
+
+    List<HistoricalPrice> findByMarketCodeAndCropCodeOrderByRecordedDateDesc(
+            String marketCode,
+            String cropCode,
+            Pageable pageable
     );
 }
