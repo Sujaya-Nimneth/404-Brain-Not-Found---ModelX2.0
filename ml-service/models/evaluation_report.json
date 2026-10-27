@@ -1,0 +1,71 @@
+{
+  "model_version": "rf-v1.0",
+  "training_rows": 11704,
+  "holdout_rows": 2940,
+  "trained_through": "2026-07-11 00:00:00",
+  "holdout_start": "2026-07-12 00:00:00",
+  "metrics": {
+    "48": {
+      "model": {
+        "directional_symmetry_pct": 67.89,
+        "mae_lkr": 6.05
+      },
+      "baseline_naive": {
+        "directional_symmetry_pct": 0.0,
+        "mae_lkr": 6.98
+      },
+      "baseline_ma7": {
+        "directional_symmetry_pct": 46.67,
+        "mae_lkr": 9.41
+      },
+      "safe_margin_fpr": {
+        "model": {
+          "safe_margin_fpr_pct": 0.93,
+          "reroute_count": 216,
+          "false_reroute_count": 2
+        },
+        "baseline_naive": {
+          "safe_margin_fpr_pct": 3.81,
+          "reroute_count": 236,
+          "false_reroute_count": 9
+        },
+        "baseline_ma7": {
+          "safe_margin_fpr_pct": 3.48,
+          "reroute_count": 230,
+          "false_reroute_count": 8
+        }
+      }
+    },
+    "72": {
+      "model": {
+        "directional_symmetry_pct": 68.74,
+        "mae_lkr": 6.62
+      },
+      "baseline_naive": {
+        "directional_symmetry_pct": 0.0,
+        "mae_lkr": 7.99
+      },
+      "baseline_ma7": {
+        "directional_symmetry_pct": 42.52,
+        "mae_lkr": 10.69
+      },
+      "safe_margin_fpr": {
+        "model": {
+          "safe_margin_fpr_pct": 2.33,
+          "reroute_count": 215,
+          "false_reroute_count": 5
+        },
+        "baseline_naive": {
+          "safe_margin_fpr_pct": 4.66,
+          "reroute_count": 236,
+          "false_reroute_count": 11
+        },
+        "baseline_ma7": {
+          "safe_margin_fpr_pct": 4.35,
+          "reroute_count": 230,
+          "false_reroute_count": 10
+        }
+      }
+    }
+  }
+}

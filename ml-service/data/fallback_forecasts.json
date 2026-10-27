@@ -1,0 +1,134 @@
+{
+  "model_version": "fallback-v1.0",
+  "movement_threshold_pct": 10.0,
+  "markets": {
+    "TOMATO": {
+      "DAMBULLA": {
+        "48": {
+          "current_price_lkr": 220.0,
+          "predicted_price_lkr": 154.0,
+          "baseline_ma7_lkr": 237.76,
+          "glut_risk_level": "HIGH",
+          "confidence_score": 0.89,
+          "primary_driver": "Northern harvest arrivals are pressuring Dambulla supply."
+        },
+        "72": {
+          "current_price_lkr": 220.0,
+          "predicted_price_lkr": 155.0,
+          "baseline_ma7_lkr": 237.76,
+          "glut_risk_level": "HIGH",
+          "confidence_score": 0.86,
+          "primary_driver": "Sustained Northern arrivals are expected to keep Dambulla prices depressed."
+        }
+      },
+      "PETTAH_COLOMBO": {
+        "48": {
+          "current_price_lkr": 170.0,
+          "predicted_price_lkr": 187.5,
+          "baseline_ma7_lkr": 171.2,
+          "glut_risk_level": "LOW",
+          "confidence_score": 0.86,
+          "primary_driver": "Urban demand remains firm while arrivals stay near seasonal norms."
+        },
+        "72": {
+          "current_price_lkr": 170.0,
+          "predicted_price_lkr": 188.5,
+          "baseline_ma7_lkr": 171.2,
+          "glut_risk_level": "LOW",
+          "confidence_score": 0.84,
+          "primary_driver": "Urban demand and steady wholesale off-take support Colombo prices."
+        }
+      },
+      "KEPPETIPOLA": {
+        "48": {
+          "current_price_lkr": 175.0,
+          "predicted_price_lkr": 165.0,
+          "baseline_ma7_lkr": 176.4,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.75,
+          "primary_driver": "Hill-country arrivals are offset by elevated transit spoilage."
+        },
+        "72": {
+          "current_price_lkr": 175.0,
+          "predicted_price_lkr": 166.0,
+          "baseline_ma7_lkr": 176.4,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.73,
+          "primary_driver": "Hill-country transit risk is limiting effective market supply."
+        }
+      },
+      "MEEGODA": {
+        "48": {
+          "current_price_lkr": 180.0,
+          "predicted_price_lkr": 172.0,
+          "baseline_ma7_lkr": 181.3,
+          "glut_risk_level": "LOW",
+          "confidence_score": 0.74,
+          "primary_driver": "Western market arrivals remain close to recent demand levels."
+        },
+        "72": {
+          "current_price_lkr": 180.0,
+          "predicted_price_lkr": 173.0,
+          "baseline_ma7_lkr": 181.3,
+          "glut_risk_level": "LOW",
+          "confidence_score": 0.72,
+          "primary_driver": "Western market supply is expected to remain broadly balanced."
+        }
+      },
+      "NUWARA_ELIYA": {
+        "48": {
+          "current_price_lkr": 185.0,
+          "predicted_price_lkr": 182.0,
+          "baseline_ma7_lkr": 186.1,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.72,
+          "primary_driver": "Upcountry arrivals remain close to seasonal demand."
+        },
+        "72": {
+          "current_price_lkr": 185.0,
+          "predicted_price_lkr": 183.0,
+          "baseline_ma7_lkr": 186.1,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.7,
+          "primary_driver": "Upcountry supply is expected to remain near seasonal norms."
+        }
+      },
+      "THAMBUTTEGAMA": {
+        "48": {
+          "current_price_lkr": 190.0,
+          "predicted_price_lkr": 174.0,
+          "baseline_ma7_lkr": 191.2,
+          "glut_risk_level": "HIGH",
+          "confidence_score": 0.78,
+          "primary_driver": "Northern and North Central arrivals are elevating supply."
+        },
+        "72": {
+          "current_price_lkr": 190.0,
+          "predicted_price_lkr": 175.0,
+          "baseline_ma7_lkr": 191.2,
+          "glut_risk_level": "HIGH",
+          "confidence_score": 0.76,
+          "primary_driver": "Sustained regional arrivals are expected to weigh on prices."
+        }
+      },
+      "JAFFNA": {
+        "48": {
+          "current_price_lkr": 160.0,
+          "predicted_price_lkr": 158.0,
+          "baseline_ma7_lkr": 161.4,
+          "glut_risk_level": "LOW",
+          "confidence_score": 0.7,
+          "primary_driver": "Local demand is balanced against steady arrivals."
+        },
+        "72": {
+          "current_price_lkr": 160.0,
+          "predicted_price_lkr": 159.0,
+          "baseline_ma7_lkr": 161.4,
+          "glut_risk_level": "LOW",
+          "confidence_score": 0.69,
+          "primary_driver": "Northern market supply is expected to remain stable."
+        }
+      }
+    }
+  }
+}
