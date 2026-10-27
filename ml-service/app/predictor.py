@@ -213,39 +213,48 @@ class Predictor:
     def _fallback_predictions(
         self, request: PredictBatchRequest
     ) -> list[MarketForecast]:
-        data = json.loads(
-            self.settings.fallback_data_path.read_text(encoding="utf-8")
-        )
-        crop_data = data["markets"].get(request.crop_code)
-        if crop_data is None:
-            crop_data = data["markets"]["TOMATO"]
-        result: list[MarketForecast] = []
-        for market_code in request.markets:
-            market_data = crop_data[market_code][str(request.horizon_hours)]
-            current = float(market_data["current_price_lkr"])
-            predicted = float(market_data["predicted_price_lkr"])
-            pct_change = round((predicted - current) / current * 100, 2)
-            result.append(
-                MarketForecast(
-                    market_code=market_code,
-                    current_price_lkr=current,
-                    predicted_price_lkr=predicted,
-                    baseline_naive_lkr=current,
-                    baseline_ma7_lkr=float(market_data["baseline_ma7_lkr"]),
-                    pct_change=pct_change,
-                    direction=Direction(
-                        movement_direction(
-                            current,
-                            predicted,
-                            self.settings.movement_threshold_pct,
-                        )
-                    ),
-                    glut_risk_level=GlutRisk(market_data["glut_risk_level"]),
-                    confidence_score=float(market_data["confidence_score"]),
-                    primary_driver=str(market_data["primary_driver"]),
-                )
+        try:
+            data = json.loads(
+                self.settings.fallback_data_path.read_text(encoding="utf-8")
             )
-        return result
+            crop_data = data["markets"][request.crop_code]
+            result: list[MarketForecast] = []
+            for market_code in request.markets:
+                market_data = crop_data[market_code][str(request.horizon_hours)]
+                current = float(market_data["current_price_lkr"])
+                predicted = float(market_data["predicted_price_lkr"])
+                pct_change = round((predicted - current) / current * 100, 2)
+                result.append(
+                    MarketForecast(
+                        market_code=market_code,
+                        current_price_lkr=current,
+                        predicted_price_lkr=predicted,
+                        baseline_naive_lkr=current,
+                        baseline_ma7_lkr=float(market_data["baseline_ma7_lkr"]),
+                        pct_change=pct_change,
+                        direction=Direction(
+                            movement_direction(
+                                current,
+                                predicted,
+                                self.settings.movement_threshold_pct,
+                            )
+                        ),
+                        glut_risk_level=GlutRisk(market_data["glut_risk_level"]),
+                        confidence_score=float(market_data["confidence_score"]),
+                        primary_driver=str(market_data["primary_driver"]),
+                    )
+                )
+            return result
+        except (
+            OSError,
+            json.JSONDecodeError,
+            KeyError,
+            TypeError,
+            ValueError,
+        ) as error:
+            raise ValueError(
+                "fallback forecast snapshot is unavailable or incomplete"
+            ) from error
 
     def _market_forecast(
         self,

@@ -105,3 +105,32 @@ def test_missing_model_falls_back_even_if_artifact_is_corrupt(tmp_path):
     assert not predictor.model_loaded
     response = predictor.predict(CANONICAL_REQUEST)
     assert response.forecast_source.value == "FALLBACK"
+
+
+@pytest.mark.parametrize("crop_code", ["TOMATO", "CARROT", "GREEN_CHILI", "RED_ONION"])
+@pytest.mark.parametrize("horizon_hours", [48, 72])
+def test_fallback_covers_every_crop_and_horizon(tmp_path, crop_code, horizon_hours):
+    predictor = Predictor(Settings(model_path=tmp_path / "missing.joblib"))
+    request = CANONICAL_REQUEST.model_copy(
+        update={"crop_code": crop_code, "horizon_hours": horizon_hours}
+    )
+
+    response = predictor.predict(request)
+
+    assert response.forecast_source.value == "FALLBACK"
+    assert len(response.predictions) == 7
+    assert all(item.predicted_price_lkr > 0 for item in response.predictions)
+
+
+def test_incomplete_fallback_snapshot_returns_controlled_error(tmp_path):
+    snapshot = tmp_path / "fallback.json"
+    snapshot.write_text('{"markets": {"TOMATO": {}}}', encoding="utf-8")
+    predictor = Predictor(
+        Settings(
+            model_path=tmp_path / "missing.joblib",
+            fallback_data_path=snapshot,
+        )
+    )
+
+    with pytest.raises(ValueError, match="unavailable or incomplete"):
+        predictor.predict(CANONICAL_REQUEST)
