@@ -38,6 +38,18 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "from pathlib import Path; import time; p=Path('/tmp/atie-ingestion-health'); assert p.exists() and time.time()-int(p.read_text()) < 900",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 90s
+      retries: 3
 
   ml-service:
     build:

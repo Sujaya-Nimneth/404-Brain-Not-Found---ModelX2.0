@@ -611,9 +611,11 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
     config = IngestionConfig.from_environment()
+    status_path = Path(os.getenv("INGESTION_HEALTH_PATH", "/tmp/atie-ingestion-health"))
     while True:
         try:
             run_once(config)
+            status_path.write_text(str(int(time.time())), encoding="ascii")
         except Exception:
             logger.exception("Ingestion cycle failed")
         time.sleep(config.interval_seconds)
