@@ -14,6 +14,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.modelx.atie.client.ForecastClient;
 import com.modelx.atie.client.MlServiceClient;
+import com.modelx.atie.client.MlMetricsClient;
 import com.modelx.atie.config.AtieProperties;
 import com.modelx.atie.config.OriginCatalog;
 import com.modelx.atie.domain.VehicleType;
@@ -46,6 +47,7 @@ class ArbitrageRoutingServiceTest {
     private FuelPriceRepository fuelPrices;
     private WeatherObservationRepository weather;
     private ForecastClient forecastClient;
+    private MlMetricsClient metricsClient;
     private ArbitrageRoutingService service;
 
     @BeforeEach
@@ -56,6 +58,7 @@ class ArbitrageRoutingServiceTest {
         weather = stub(WeatherObservationRepository.class);
         forecastClient = (cropCode, horizonHours, referenceDate, markets) ->
                 fixtureForecast();
+        metricsClient = stub(MlMetricsClient.class);
         service = new ArbitrageRoutingService(
                 crops,
                 routes,
@@ -63,6 +66,7 @@ class ArbitrageRoutingServiceTest {
                 weather,
                 new OriginCatalog(),
                 forecastClient,
+                metricsClient,
                 calculator,
                 new RoutingDecisionService(properties),
                 properties

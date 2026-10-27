@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import com.modelx.atie.client.ForecastClient;
 import com.modelx.atie.client.MlServiceClient;
+import com.modelx.atie.client.MlMetricsClient;
 import com.modelx.atie.config.AtieProperties;
 import com.modelx.atie.config.OriginCatalog;
 import com.modelx.atie.domain.Origin;
@@ -41,6 +42,7 @@ public class ArbitrageRoutingService {
     private final WeatherObservationRepository weather;
     private final OriginCatalog origins;
     private final ForecastClient forecastClient;
+    private final MlMetricsClient metricsClient;
     private final ProfitMarginCalculator calculator;
     private final RoutingDecisionService decisions;
     private final AtieProperties properties;
@@ -52,6 +54,7 @@ public class ArbitrageRoutingService {
             WeatherObservationRepository weather,
             OriginCatalog origins,
             ForecastClient forecastClient,
+            MlMetricsClient metricsClient,
             ProfitMarginCalculator calculator,
             RoutingDecisionService decisions,
             AtieProperties properties
@@ -62,6 +65,7 @@ public class ArbitrageRoutingService {
         this.weather = weather;
         this.origins = origins;
         this.forecastClient = forecastClient;
+        this.metricsClient = metricsClient;
         this.calculator = calculator;
         this.decisions = decisions;
         this.properties = properties;
@@ -180,7 +184,7 @@ public class ArbitrageRoutingService {
                 decision.primaryDirective(),
                 comparisons,
                 alerts,
-                evaluationSummary()
+                metricsClient.fetchSummary(request.horizonHours())
         );
     }
 
@@ -252,18 +256,6 @@ public class ArbitrageRoutingService {
                             observation.isExtremeWeatherFlag()
                     );
                 });
-    }
-
-    private ModelEvaluationSummary evaluationSummary() {
-        return new ModelEvaluationSummary(
-                new BigDecimal("67.89"),
-                new BigDecimal("6.05"),
-                new BigDecimal("0.00"),
-                new BigDecimal("6.98"),
-                new BigDecimal("46.67"),
-                new BigDecimal("9.41"),
-                null
-        );
     }
 
     private String normalize(String value) {
