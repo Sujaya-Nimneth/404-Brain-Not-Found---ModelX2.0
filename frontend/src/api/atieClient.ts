@@ -43,25 +43,17 @@ function mapResponse(payload: Record<string, unknown>): AnalyzeResponse {
 export async function analyzeConsignment(
   request: AnalyzeRequest,
 ): Promise<AnalyzeResponse> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/directives/analyze`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(toApiRequest(request)),
-    });
-    if (!response.ok) {
-      const detail = await response.text();
-      throw new Error(`ATIE API ${response.status}: ${detail}`);
-    }
-    return mapResponse((await response.json()) as Record<string, unknown>);
-  } catch (error) {
-    console.warn("ATIE API unavailable; using local demo response", error);
-    return {
-      ...demoResponse,
-      forecastSource: "DEMO_FIXTURE",
-      modelVersion: "local-demo-v1.0",
-    };
+  const response = await fetch(`${API_BASE_URL}/directives/analyze`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(toApiRequest(request)),
+  });
+  if (!response.ok) {
+    throw new Error(
+      `ATIE API ${response.status}: ${await response.text()}`,
+    );
   }
+  return mapResponse((await response.json()) as Record<string, unknown>);
 }
 
 export async function fetchMarketHistory(

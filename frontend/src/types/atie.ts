@@ -5,6 +5,11 @@ export type DirectiveSeverity =
 
 export type ForecastSource = "MODEL" | "FALLBACK" | "DEMO_FIXTURE";
 
+export type AnalysisState =
+  | { kind: "demo"; message: string }
+  | { kind: "live" }
+  | { kind: "offline"; message: string };
+
 export interface MarketComparison {
   marketCode: string;
   marketName: string;
@@ -61,6 +66,7 @@ export interface AnalyzeResponse {
   forecastSource: ForecastSource;
   modelVersion: string;
   referenceDate: string;
+  analysisState?: AnalysisState;
   primaryDirective: PrimaryDirective;
   marketComparisons: MarketComparison[];
   weatherAlerts: WeatherAlert[];

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CloudOff, Leaf, Map, RefreshCw } from "lucide-react";
+import { CloudOff, Leaf, Map, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { analyzeConsignment } from "./api/atieClient";
 import { ForecastTrajectoryChart } from "./components/ForecastTrajectoryChart";
 import { ModelEvaluationBadge } from "./components/ModelEvaluationBadge";
@@ -9,7 +9,11 @@ import { ProfitMarginChart } from "./components/ProfitMarginChart";
 import { RoutingLogisticsPanel } from "./components/RoutingLogisticsPanel";
 import { WeatherDisruptionCard } from "./components/WeatherDisruptionCard";
 import { demoRequest, demoResponse } from "./data/demoResponse";
-import type { AnalyzeRequest, AnalyzeResponse } from "./types/atie";
+import type {
+  AnalysisState,
+  AnalyzeRequest,
+  AnalyzeResponse,
+} from "./types/atie";
 
 const defaultRequest: AnalyzeRequest = {
   ...demoRequest,
@@ -18,7 +22,14 @@ const defaultRequest: AnalyzeRequest = {
 
 export default function App() {
   const [request, setRequest] = useState<AnalyzeRequest>(defaultRequest);
-  const [response, setResponse] = useState<AnalyzeResponse>(demoResponse);
+  const [response, setResponse] = useState<AnalyzeResponse>({
+    ...demoResponse,
+    analysisState: {
+      kind: "demo",
+      message:
+        "Showing the verified competition fixture. Select a scenario and analyze it for live model output.",
+    },
+  });
   const [loading, setLoading] = useState(false);
   const [hasRun, setHasRun] = useState(false);
 
@@ -27,8 +38,20 @@ export default function App() {
     setLoading(true);
     try {
       const result = await analyzeConsignment(nextRequest);
-      setResponse(result);
+      setResponse({ ...result, analysisState: { kind: "live" } });
       setHasRun(true);
+    } catch (error) {
+      const detail =
+        error instanceof Error ? error.message : "The ATIE API is unavailable.";
+      setResponse({
+        ...demoResponse,
+        modelVersion: "local-demo-v1.0",
+        analysisState: {
+          kind: "offline",
+          message: `Live analysis failed, so verified fixture values remain on screen. ${detail}`,
+        },
+      });
+      setHasRun(false);
     } finally {
       setLoading(false);
     }
@@ -93,14 +116,13 @@ export default function App() {
       </section>
 
       {response.forecastSource === "DEMO_FIXTURE" && (
-        <div className="rise-in mb-5 flex items-start gap-3 rounded-2xl border border-amber/30 bg-[#f4e6bd]/75 px-4 py-3 text-xs leading-6 text-[#6b4f16]">
-          <CloudOff className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>
-            <strong>Demo data is active.</strong> This is a verified competition
-            fixture, not a live forecast. Start the API and use “Analyze market
-            route” to request model or fallback predictions.
-          </p>
-        </div>
+        <AnalysisNotice
+          state={response.analysisState}
+          onDismiss={() => setResponse((current) => ({
+            ...current,
+            analysisState: undefined,
+          }))}
+        />
       )}
 
       <OnboardingConfigModal
@@ -143,5 +165,46 @@ export default function App() {
         </span>
       </footer>
     </main>
+  );
+}
+
+function AnalysisNotice({
+  state,
+  onDismiss,
+}: {
+  state: AnalysisState | undefined;
+  onDismiss: () => void;
+}) {
+  const offline = state?.kind === "offline";
+  return (
+    <div
+      role={offline ? "alert" : "status"}
+      className={`rise-in mb-5 flex items-start gap-3 rounded-2xl border px-4 py-3 text-xs leading-6 ${
+        offline
+          ? "border-clay/30 bg-[#f3d8cc]/85 text-[#6f2f1d]"
+          : "border-amber/30 bg-[#f4e6bd]/75 text-[#6b4f16]"
+      }`}
+    >
+      {offline ? (
+        <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+      ) : (
+        <CloudOff className="mt-0.5 h-4 w-4 shrink-0" />
+      )}
+      <p className="min-w-0 flex-1">
+        <strong>{offline ? "Live analysis failed." : "Demo data is active."}</strong>{" "}
+        {(state?.kind === "offline" || state?.kind === "demo"
+          ? state.message
+          : null) ??
+          "This is a verified competition fixture, not a live forecast. Use “Analyze market route” to request model or fallback predictions."}
+      </p>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss data-source notice"
+        className="rounded-full p-1 opacity-55 transition hover:bg-ink/5 hover:opacity-100"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
   );
 }
