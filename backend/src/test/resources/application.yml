@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:atie;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+atie:
+  ml-service-url: http://localhost:18000
+  safe-margin-pct: 5.0
+  safe-absolute-floor-lkr: 1000.00
+  movement-threshold-pct: 10.0
+  cors-allowed-origins:
+    - http://localhost:5173
