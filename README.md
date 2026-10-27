@@ -77,6 +77,31 @@ profit_uplift_pct:    15.84
 Set `"demo_mode": false` to run normal `MODEL` or `FALLBACK` inference. A
 non-canonical request with `demo_mode: true` returns HTTP `400`.
 
+## Market History And Forecast Trace
+
+The dashboard's forecast trace is backed by:
+
+```bash
+curl -sS \
+  'http://localhost:8080/api/v1/markets/DAMBULLA/history?cropCode=TOMATO&days=14'
+```
+
+The endpoint returns the latest requested history in chronological order plus
+the 48h and 72h model, naive, and MA7 trajectories. Its reference date comes
+from the latest stored observation, so seeded demos do not disappear as the
+wall clock advances.
+
+The onboarding controls load origins, routes, markets, crops, vehicles,
+horizons, thresholds, and fuel prices from:
+
+```bash
+curl -sS http://localhost:8080/api/v1/metadata/config
+```
+
+If the live analysis API is unavailable, the dashboard retains the verified
+fixture and displays the failure explicitly. It never silently presents a
+fixture as a successful live response.
+
 ## Local Development
 
 ### ML service
@@ -159,3 +184,8 @@ Chronological holdout results are stored in
 Naive and 7-day moving-average baselines are evaluated alongside the model.
 SM-FPR is `null` when no reroute decisions occur, never silently reported as
 zero.
+
+The fallback snapshot covers all four crops across all seven markets at both
+horizons. SM-FPR currently backtests the canonical Anuradhapura,
+1,000 kg, mini-truck scenario; broader origin/vehicle/quantity scenario
+coverage remains future evaluation work.

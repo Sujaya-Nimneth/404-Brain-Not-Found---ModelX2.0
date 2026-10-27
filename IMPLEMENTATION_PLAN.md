@@ -321,29 +321,29 @@ Per Section 7.3 of the Proposal, the UI must feature a clean, high-contrast, far
 Agents working on this repository must execute the following workstreams in order. Each workstream is self-contained and has strict verification gates.
 
 ### Workstream 1: Foundation, Database & Data Pipeline (Phase 1)
-- [ ] **Task 1.1:** Create root `.gitignore`, `.env.example`, and `docker-compose.yml` defining `postgres:16-alpine`, `ml-service`, `backend`, and `frontend`.
-- [ ] **Task 1.2:** Write `db/init.sql` and `db/seed.sql` with realistic Sri Lankan market coordinates (Dambulla, Colombo Pettah, Nuwara Eliya, Keppetipola, Meegoda, Thambuttegama, Jaffna), inter-district distances, CPC fuel prices, and 180 days of historical price + weather records for `TOMATO`, `CARROT`, `GREEN_CHILI`, and `RED_ONION`.
-- [ ] **Task 1.3:** Build Python ETL scripts (`ml-service/etl/`) for HDX CSV ingestion, Open-Meteo live API fetching, and CROPIX scraping with automatic local seed fallback.
+- [x] **Task 1.1:** Create root `.gitignore`, `.env.example`, and `docker-compose.yml` defining `postgres:16-alpine`, `ml-service`, `backend`, and `frontend`.
+- [x] **Task 1.2:** Write `db/init.sql` and `db/seed.sql` with realistic Sri Lankan market coordinates (Dambulla, Colombo Pettah, Nuwara Eliya, Keppetipola, Meegoda, Thambuttegama, Jaffna), inter-district distances, CPC fuel prices, and 180 days of historical price + weather records for `TOMATO`, `CARROT`, `GREEN_CHILI`, and `RED_ONION`.
+- [x] **Task 1.3:** Build Python ETL scripts (`ml-service/etl/`) for HDX CSV ingestion, Open-Meteo live API fetching, and CROPIX scraping with automatic local seed fallback.
 - **Verification Gate 1:** Running `psql` or loading `init.sql` + `seed.sql` creates all 6 tables cleanly with >500 historical rows.
 
 ### Workstream 2: Python ML Training, Evaluation & FastAPI Inference (Phase 2)
-- [ ] **Task 2.1:** Implement `ml-service/etl/feature_engineering.py` to compute lag features, rolling averages, weather anomalies, and supply glut indicators.
-- [ ] **Task 2.2:** Implement `ml-service/training/train_model.py` and `evaluate.py` using `scikit-learn` and `xgboost`. Train the 48h and 72h price forecasting models and output `ml-service/models/evaluation_report.json` comparing XGBoost against the **Naive Forecast** and **7-Day Moving Average** on **Directional Symmetry (DS %)** and **MAE (LKR)**.
-- [ ] **Task 2.3:** Implement FastAPI app (`ml-service/app/main.py`) exposing `/health`, `/metrics`, and `/predict-batch`.
-- [ ] **Task 2.4:** Write `ml-service/tests/test_inference.py` and verify with `pytest`.
+- [x] **Task 2.1:** Implement `ml-service/etl/feature_engineering.py` to compute lag features, rolling averages, weather anomalies, and supply glut indicators.
+- [x] **Task 2.2:** Implement `ml-service/training/train_model.py` and `evaluate.py` using `scikit-learn` and `xgboost`. Train the 48h and 72h price forecasting models and output `ml-service/models/evaluation_report.json` comparing XGBoost against the **Naive Forecast** and **7-Day Moving Average** on **Directional Symmetry (DS %)** and **MAE (LKR)**.
+- [x] **Task 2.3:** Implement FastAPI app (`ml-service/app/main.py`) exposing `/health`, `/metrics`, and `/predict-batch`.
+- [x] **Task 2.4:** Write `ml-service/tests/test_inference.py` and verify with `pytest`.
 - **Verification Gate 2:** `pytest` passes; `POST /predict-batch` returns valid 48h–72h predictions with `directional_symmetry_pct > baseline_naive_ds` and sub-100ms response latency.
 
 ### Workstream 3: Java Spring Boot Core Backend & Swagger UI (Phase 1 & 3)
-- [ ] **Task 3.1:** Scaffold Spring Boot 3.x project in `backend/` with `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `postgresql`, `springdoc-openapi-starter-webmvc-ui`, and `lombok` (optional).
-- [ ] **Task 3.2:** Implement JPA entities, repositories, and `ProfitMarginCalculator` + `ArbitrageRoutingService` enforcing the Safe Margin Constraint.
-- [ ] **Task 3.3:** Implement `MlServiceClient` with resilient circuit-breaking / fallback so if the Python service is unreachable during testing, Spring Boot still computes baseline forecasts gracefully.
-- [ ] **Task 3.4:** Expose REST endpoints (`/api/v1/metadata/config`, `/api/v1/directives/analyze`, `/api/v1/markets/{code}/history`) and configure Swagger UI at `/swagger-ui.html`.
-- [ ] **Task 3.5:** Write unit tests in `ArbitrageRoutingServiceTest.java` verifying that the Dambulla-to-Colombo reroute scenario yields the expected ~15% higher net profit margin after transport costs.
+- [x] **Task 3.1:** Scaffold Spring Boot 3.x project in `backend/` with `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `postgresql`, `springdoc-openapi-starter-webmvc-ui`, and `lombok` (optional).
+- [x] **Task 3.2:** Implement JPA entities, repositories, and `ProfitMarginCalculator` + `ArbitrageRoutingService` enforcing the Safe Margin Constraint.
+- [x] **Task 3.3:** Implement `MlServiceClient` with resilient circuit-breaking / fallback so if the Python service is unreachable during testing, Spring Boot still computes baseline forecasts gracefully.
+- [x] **Task 3.4:** Expose REST endpoints (`/api/v1/metadata/config`, `/api/v1/directives/analyze`, `/api/v1/markets/{code}/history`) and configure Swagger UI at `/swagger-ui.html`.
+- [x] **Task 3.5:** Write unit tests in `ArbitrageRoutingServiceTest.java` verifying that the Dambulla-to-Colombo reroute scenario yields the expected ~15% higher net profit margin after transport costs.
 - **Verification Gate 3:** `mvn test` passes; `/swagger-ui.html` renders all endpoints and returns a complete directive payload.
 
 ### Workstream 4: React.js Intelligent Dashboard & End-to-End Integration (Phase 3 & 4)
-- [ ] **Task 4.1:** Scaffold React + TypeScript + Vite + Tailwind CSS app inside `frontend/`.
-- [ ] **Task 4.2:** Build `OnboardingConfigModal`, `PrimaryDirectiveCard`, `ProfitMarginChart`, `WeatherDisruptionCard`, and `RoutingLogisticsPanel`, plus a Model Evaluation badge showing DS & MAE vs Baselines.
-- [ ] **Task 4.3:** Wire frontend to Spring Boot API (`/api/v1/directives/analyze`) and include an instant offline/demo fallback mode so the UI can also be previewed standalone.
-- [ ] **Task 4.4:** Finalize root `README.md` with architecture diagrams, one-command Docker startup (`docker compose up --build`), local non-Docker run instructions, and sample curl/Swagger test payloads.
+- [x] **Task 4.1:** Scaffold React + TypeScript + Vite + Tailwind CSS app inside `frontend/`.
+- [x] **Task 4.2:** Build `OnboardingConfigModal`, `PrimaryDirectiveCard`, `ProfitMarginChart`, `WeatherDisruptionCard`, and `RoutingLogisticsPanel`, plus a Model Evaluation badge showing DS & MAE vs Baselines.
+- [x] **Task 4.3:** Wire frontend to Spring Boot API (`/api/v1/directives/analyze`) and include an instant offline/demo fallback mode so the UI can also be previewed standalone.
+- [x] **Task 4.4:** Finalize root `README.md` with architecture diagrams, one-command Docker startup (`docker compose up --build`), local non-Docker run instructions, and sample curl/Swagger test payloads.
 - **Verification Gate 4:** `npm run build` succeeds with zero TypeScript errors; full end-to-end flow renders the Primary Directive, Profit Margin Chart, Weather Disruption Alert, and Routing Logistics Panel.
