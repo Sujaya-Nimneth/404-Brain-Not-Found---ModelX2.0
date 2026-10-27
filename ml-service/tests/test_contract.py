@@ -66,7 +66,10 @@ def test_metrics_expose_all_forecasters_and_nullable_fpr():
                 "safe_margin_fpr_pct",
                 "reroute_count",
                 "false_reroute_count",
+                "scenario_count",
+                "scenarios",
             }
+            assert fpr["scenario_count"] == len(fpr["scenarios"])
             if fpr["reroute_count"] == 0:
                 assert fpr["safe_margin_fpr_pct"] is None
 

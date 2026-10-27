@@ -3,6 +3,7 @@ import pytest
 
 from training.evaluate import (
     evaluate_predictions,
+    evaluate_routing_matrix,
     evaluate_routing_decisions,
     safe_margin_fpr,
 )
@@ -109,3 +110,28 @@ def test_routing_backtest_skips_incomplete_market_snapshots():
         "reroute_count": 0,
         "false_reroute_count": 0,
     }
+
+
+def test_routing_matrix_covers_origins_vehicles_and_quantities():
+    frame = pd.DataFrame(
+        [
+            {
+                "recorded_date": pd.Timestamp("2026-09-01"),
+                "market_code": "DAMBULLA",
+                "crop_code": "TOMATO",
+                "price_lag_1d": 100.0,
+                "target_price_48h": 100.0,
+                "prediction_48h": 100.0,
+            }
+        ]
+    )
+
+    result = evaluate_routing_matrix(frame, 48, "prediction_48h")
+
+    assert result["scenario_count"] == 60
+    assert len(result["scenarios"]) == 60
+    assert result["reroute_count"] == 0
+    assert result["safe_margin_fpr_pct"] is None
+    assert {
+        scenario["origin"] for scenario in result["scenarios"]
+    } == {"ANURADHAPURA", "JAFFNA", "DAMBULLA", "NUWARA_ELIYA", "THAMBUTTEGAMA"}

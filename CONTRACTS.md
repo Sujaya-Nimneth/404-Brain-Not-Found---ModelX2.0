@@ -183,6 +183,24 @@ Evaluate and expose the trained model, naive forecast, and MA7 forecast
 separately for 48 and 72 hours. Report `reroute_count` and
 `false_reroute_count` alongside the percentage.
 
+The operational evaluation matrix is finite and versioned:
+
+- origins: `ANURADHAPURA`, `JAFFNA`, `DAMBULLA`, `NUWARA_ELIYA`,
+  `THAMBUTTEGAMA`
+- default market: `DAMBULLA` for every origin
+- compared alternatives: the two nearest other reachable markets for each
+  origin
+- crops: `TOMATO`, `CARROT`, `GREEN_CHILI`, `RED_ONION`
+- vehicles: `THREE_WHEELER`, `MINI_TRUCK_BATTA`, `LORRY_3_5T`
+- quantities: `300`, `1000`, `1500`, `3500` kg
+- horizons: `48`, `72` hours
+
+The default market is fixed to Dambulla so the reported metric remains
+comparable across runs. The two alternatives are selected by configured
+one-way distance, with market code as the tie-breaker. The matrix is
+intentionally finite and does not claim coverage of every possible farm
+quantity.
+
 If `reroute_decisions == 0`, `safe_margin_fpr_pct` is `null`, never `0`.
 Evaluation must use the same safe-margin and net-profit implementation as the
 backend. A separate Python reimplementation is permitted only if it is covered

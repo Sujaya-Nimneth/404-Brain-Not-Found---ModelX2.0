@@ -16,7 +16,7 @@ from etl.feature_engineering import (
     feature_ready_frame,
 )
 from etl.seed_loader import generate_demo_history
-from training.evaluate import evaluate_routing_decisions, write_evaluation_report
+from training.evaluate import evaluate_routing_matrix, write_evaluation_report
 
 
 def train(
@@ -82,13 +82,13 @@ def train(
                 "mae_lkr": round(float(mean_absolute_error(actual, ma7)), 2),
             },
             "safe_margin_fpr": {
-                "model": evaluate_routing_decisions(
+                "model": evaluate_routing_matrix(
                     horizon_test, horizon, f"prediction_{horizon}h"
                 ),
-                "baseline_naive": evaluate_routing_decisions(
+                "baseline_naive": evaluate_routing_matrix(
                     horizon_test, horizon, "price_lag_1d"
                 ),
-                "baseline_ma7": evaluate_routing_decisions(
+                "baseline_ma7": evaluate_routing_matrix(
                     horizon_test, horizon, "rolling_mean_7d"
                 ),
             },

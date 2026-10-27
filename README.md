@@ -178,14 +178,15 @@ Chronological holdout results are stored in
 
 | Horizon | DS | MAE (LKR/kg) | SM-FPR | Reroutes |
 |---|---:|---:|---:|---:|
-| 48h | 67.89% | 6.05 | 0.93% | 216 |
-| 72h | 68.74% | 6.62 | 2.33% | 215 |
+| 48h | 67.89% | 6.05 | 3.00% | 6,502 |
+| 72h | 68.74% | 6.62 | 4.96% | 6,669 |
 
 Naive and 7-day moving-average baselines are evaluated alongside the model.
 SM-FPR is `null` when no reroute decisions occur, never silently reported as
 zero.
 
 The fallback snapshot covers all four crops across all seven markets at both
-horizons. SM-FPR currently backtests the canonical Anuradhapura,
-1,000 kg, mini-truck scenario; broader origin/vehicle/quantity scenario
-coverage remains future evaluation work.
+horizons. SM-FPR backtests 60 scenarios per horizon: five origins against
+Dambulla and their two nearest alternatives, four crops, three vehicle types,
+and quantities of 300, 1,000, 1,500, and 3,500 kg. The matrix is deliberately
+finite and does not claim coverage of every possible origin or consignment.

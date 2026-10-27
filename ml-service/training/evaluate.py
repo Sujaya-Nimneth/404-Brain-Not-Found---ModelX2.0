@@ -18,55 +18,112 @@ from training.routing import (
 
 
 ROUTES = {
-    "DAMBULLA": Route(
-        "ANURADHAPURA",
-        "DAMBULLA",
-        Decimal("70"),
-        Decimal("1.00"),
-        Decimal("2.50"),
-    ),
-    "PETTAH_COLOMBO": Route(
-        "ANURADHAPURA",
-        "PETTAH_COLOMBO",
-        Decimal("205"),
-        Decimal("1.00"),
-        Decimal("2.50"),
-    ),
-    "NUWARA_ELIYA": Route(
-        "ANURADHAPURA",
-        "NUWARA_ELIYA",
-        Decimal("185"),
-        Decimal("1.25"),
-        Decimal("2.50"),
-    ),
-    "KEPPETIPOLA": Route(
-        "ANURADHAPURA",
-        "KEPPETIPOLA",
-        Decimal("175"),
-        Decimal("1.25"),
-        Decimal("2.50"),
-    ),
-    "MEEGODA": Route(
-        "ANURADHAPURA",
-        "MEEGODA",
-        Decimal("195"),
-        Decimal("1.00"),
-        Decimal("2.50"),
-    ),
-    "THAMBUTTEGAMA": Route(
-        "ANURADHAPURA",
-        "THAMBUTTEGAMA",
-        Decimal("55"),
-        Decimal("1.00"),
-        Decimal("2.50"),
-    ),
-    "JAFFNA": Route(
-        "ANURADHAPURA",
-        "JAFFNA",
-        Decimal("260"),
-        Decimal("1.00"),
-        Decimal("2.50"),
-    ),
+    "ANURADHAPURA": {
+        "DAMBULLA": Route(
+            "ANURADHAPURA", "DAMBULLA", Decimal("70"), Decimal("1.00"), Decimal("2.50")
+        ),
+        "PETTAH_COLOMBO": Route(
+            "ANURADHAPURA", "PETTAH_COLOMBO", Decimal("205"), Decimal("1.00"), Decimal("2.50")
+        ),
+        "NUWARA_ELIYA": Route(
+            "ANURADHAPURA", "NUWARA_ELIYA", Decimal("185"), Decimal("1.25"), Decimal("2.50")
+        ),
+        "KEPPETIPOLA": Route(
+            "ANURADHAPURA", "KEPPETIPOLA", Decimal("175"), Decimal("1.25"), Decimal("2.50")
+        ),
+        "MEEGODA": Route(
+            "ANURADHAPURA", "MEEGODA", Decimal("195"), Decimal("1.00"), Decimal("2.50")
+        ),
+        "THAMBUTTEGAMA": Route(
+            "ANURADHAPURA", "THAMBUTTEGAMA", Decimal("55"), Decimal("1.00"), Decimal("2.50")
+        ),
+        "JAFFNA": Route(
+            "ANURADHAPURA", "JAFFNA", Decimal("260"), Decimal("1.00"), Decimal("2.50")
+        ),
+    },
+    "JAFFNA": {
+        "DAMBULLA": Route(
+            "JAFFNA", "DAMBULLA", Decimal("330"), Decimal("1.00"), Decimal("2.50")
+        ),
+        "PETTAH_COLOMBO": Route(
+            "JAFFNA", "PETTAH_COLOMBO", Decimal("400"), Decimal("1.00"), Decimal("2.50")
+        ),
+        "NUWARA_ELIYA": Route(
+            "JAFFNA", "NUWARA_ELIYA", Decimal("445"), Decimal("1.25"), Decimal("2.50")
+        ),
+        "KEPPETIPOLA": Route(
+            "JAFFNA", "KEPPETIPOLA", Decimal("435"), Decimal("1.25"), Decimal("2.50")
+        ),
+        "MEEGODA": Route(
+            "JAFFNA", "MEEGODA", Decimal("390"), Decimal("1.00"), Decimal("2.50")
+        ),
+        "THAMBUTTEGAMA": Route(
+            "JAFFNA", "THAMBUTTEGAMA", Decimal("275"), Decimal("1.00"), Decimal("2.50")
+        ),
+    },
+    "DAMBULLA": {
+        "DAMBULLA": Route(
+            "DAMBULLA", "DAMBULLA", Decimal("3"), Decimal("1.00"), Decimal("2.50")
+        ),
+        "PETTAH_COLOMBO": Route(
+            "DAMBULLA", "PETTAH_COLOMBO", Decimal("150"), Decimal("1.00"), Decimal("2.50")
+        ),
+        "NUWARA_ELIYA": Route(
+            "DAMBULLA", "NUWARA_ELIYA", Decimal("120"), Decimal("1.25"), Decimal("2.50")
+        ),
+        "KEPPETIPOLA": Route(
+            "DAMBULLA", "KEPPETIPOLA", Decimal("125"), Decimal("1.25"), Decimal("2.50")
+        ),
+        "MEEGODA": Route(
+            "DAMBULLA", "MEEGODA", Decimal("140"), Decimal("1.00"), Decimal("2.50")
+        ),
+        "THAMBUTTEGAMA": Route(
+            "DAMBULLA", "THAMBUTTEGAMA", Decimal("75"), Decimal("1.00"), Decimal("2.50")
+        ),
+        "JAFFNA": Route(
+            "DAMBULLA", "JAFFNA", Decimal("330"), Decimal("1.00"), Decimal("2.50")
+        ),
+    },
+    "NUWARA_ELIYA": {
+        "DAMBULLA": Route(
+            "NUWARA_ELIYA", "DAMBULLA", Decimal("120"), Decimal("1.25"), Decimal("2.50")
+        ),
+        "PETTAH_COLOMBO": Route(
+            "NUWARA_ELIYA", "PETTAH_COLOMBO", Decimal("180"), Decimal("1.25"), Decimal("2.50")
+        ),
+        "KEPPETIPOLA": Route(
+            "NUWARA_ELIYA", "KEPPETIPOLA", Decimal("55"), Decimal("1.25"), Decimal("2.50")
+        ),
+        "MEEGODA": Route(
+            "NUWARA_ELIYA", "MEEGODA", Decimal("170"), Decimal("1.25"), Decimal("2.50")
+        ),
+        "THAMBUTTEGAMA": Route(
+            "NUWARA_ELIYA", "THAMBUTTEGAMA", Decimal("185"), Decimal("1.25"), Decimal("2.50")
+        ),
+        "JAFFNA": Route(
+            "NUWARA_ELIYA", "JAFFNA", Decimal("445"), Decimal("1.25"), Decimal("2.50")
+        ),
+    },
+    "THAMBUTTEGAMA": {
+        "DAMBULLA": Route(
+            "THAMBUTTEGAMA", "DAMBULLA", Decimal("75"), Decimal("1.00"), Decimal("2.50")
+        ),
+        "PETTAH_COLOMBO": Route(
+            "THAMBUTTEGAMA", "PETTAH_COLOMBO", Decimal("190"), Decimal("1.00"), Decimal("2.50")
+        ),
+        "NUWARA_ELIYA": Route(
+            "THAMBUTTEGAMA", "NUWARA_ELIYA", Decimal("185"), Decimal("1.25"), Decimal("2.50")
+        ),
+        "KEPPETIPOLA": Route(
+            "THAMBUTTEGAMA", "KEPPETIPOLA", Decimal("180"), Decimal("1.25"), Decimal("2.50")
+        ),
+        "MEEGODA": Route(
+            "THAMBUTTEGAMA", "MEEGODA", Decimal("175"), Decimal("1.00"), Decimal("2.50")
+        ),
+        "JAFFNA": Route(
+            "THAMBUTTEGAMA", "JAFFNA", Decimal("275"), Decimal("1.00"), Decimal("2.50")
+        ),
+    },
 }
 
 SPOILAGE_RATES = {
@@ -77,9 +134,24 @@ SPOILAGE_RATES = {
 }
 
 QUANTITY_KG = Decimal("1000")
+DEFAULT_ORIGIN = "ANURADHAPURA"
 DEFAULT_MARKET = "DAMBULLA"
 SAFE_MARGIN_PCT = Decimal("5.0")
 SAFE_ABSOLUTE_FLOOR_LKR = Decimal("1000.00")
+EVALUATION_ORIGINS = (
+    "ANURADHAPURA",
+    "JAFFNA",
+    "DAMBULLA",
+    "NUWARA_ELIYA",
+    "THAMBUTTEGAMA",
+)
+EVALUATION_VEHICLES = ("THREE_WHEELER", "MINI_TRUCK_BATTA", "LORRY_3_5T")
+EVALUATION_QUANTITIES = (
+    Decimal("300"),
+    Decimal("1000"),
+    Decimal("1500"),
+    Decimal("3500"),
+)
 
 
 def evaluate_predictions(
@@ -126,6 +198,10 @@ def evaluate_routing_decisions(
     frame: pd.DataFrame,
     horizon_hours: int,
     prediction_column: str,
+    origin_code: str = DEFAULT_ORIGIN,
+    quantity_kg: Decimal = QUANTITY_KG,
+    vehicle_code: str = "MINI_TRUCK_BATTA",
+    market_codes: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     """Backtest complete decisions and settle them against realized prices."""
     target_column = f"target_price_{horizon_hours}h"
@@ -155,19 +231,29 @@ def evaluate_routing_decisions(
     decisions["recorded_date"] = pd.to_datetime(
         decisions["recorded_date"], errors="raise"
     )
+    if market_codes is not None:
+        decisions = decisions[decisions["market_code"].isin(market_codes)].copy()
 
     recommended_alternative_realized: list[Decimal] = []
     default_realized: list[Decimal] = []
+    route_set = ROUTES[origin_code]
+    if DEFAULT_MARKET not in route_set:
+        raise ValueError(f"default market is unreachable from {origin_code}")
     for (recorded_date, crop_code), snapshot in decisions.groupby(
         ["recorded_date", "crop_code"], sort=True
     ):
-        if set(snapshot["market_code"]) != set(ROUTES):
+        if DEFAULT_MARKET not in set(snapshot["market_code"]):
+            continue
+        if not set(snapshot["market_code"]).issubset(route_set):
             continue
         by_market = snapshot.set_index("market_code")
         predicted_net = _net_profits(
             by_market,
             crop_code,
             prediction_column,
+            route_set,
+            quantity_kg,
+            vehicle_code,
         )
         alternative = select_reroute(
             DEFAULT_MARKET,
@@ -181,6 +267,9 @@ def evaluate_routing_decisions(
             by_market,
             crop_code,
             target_column,
+            route_set,
+            quantity_kg,
+            vehicle_code,
         )
         recommended_alternative_realized.append(realized_net[alternative])
         default_realized.append(realized_net[DEFAULT_MARKET])
@@ -195,16 +284,19 @@ def _net_profits(
     snapshot: pd.DataFrame,
     crop_code: str,
     price_column: str,
+    route_set: dict[str, Route],
+    quantity_kg: Decimal,
+    vehicle_code: str,
 ) -> dict[str, Decimal]:
-    vehicle = VEHICLES["MINI_TRUCK_BATTA"]
+    vehicle = VEHICLES[vehicle_code]
     spoilage_rate = SPOILAGE_RATES[crop_code]
     result: dict[str, Decimal] = {}
     for market_code, row in snapshot.iterrows():
         price = Decimal(str(row[price_column]))
         profit = calculate_profit(
             price,
-            QUANTITY_KG,
-            ROUTES[str(market_code)],
+            quantity_kg,
+            route_set[str(market_code)],
             vehicle,
             Decimal("283.00"),
             Decimal("311.00"),
@@ -212,6 +304,59 @@ def _net_profits(
         )
         result[str(market_code)] = profit.net_profit_lkr
     return result
+
+
+def evaluate_routing_matrix(
+    frame: pd.DataFrame,
+    horizon_hours: int,
+    prediction_column: str,
+) -> dict[str, Any]:
+    """Evaluate the finite operational scenario matrix from CONTRACTS.md."""
+    results: list[dict[str, Any]] = []
+    total_reroutes = 0
+    total_false_reroutes = 0
+    for origin_code in EVALUATION_ORIGINS:
+        alternatives = sorted(
+            (
+                (market_code, route.distance_km)
+                for market_code, route in ROUTES[origin_code].items()
+                if market_code != DEFAULT_MARKET
+            ),
+            key=lambda item: (item[1], item[0]),
+        )[:2]
+        compared_markets = (DEFAULT_MARKET, *(code for code, _ in alternatives))
+        for vehicle_code in EVALUATION_VEHICLES:
+            for quantity_kg in EVALUATION_QUANTITIES:
+                result = evaluate_routing_decisions(
+                    frame,
+                    horizon_hours,
+                    prediction_column,
+                    origin_code,
+                    quantity_kg,
+                    vehicle_code,
+                    compared_markets,
+                )
+                total_reroutes += result["reroute_count"]
+                total_false_reroutes += result["false_reroute_count"]
+                results.append(
+                    {
+                        "origin": origin_code,
+                        "vehicle": vehicle_code,
+                        "quantity_kg": str(quantity_kg),
+                        **result,
+                    }
+                )
+    return {
+        "safe_margin_fpr_pct": (
+            None
+            if total_reroutes == 0
+            else round(total_false_reroutes / total_reroutes * 100, 2)
+        ),
+        "reroute_count": total_reroutes,
+        "false_reroute_count": total_false_reroutes,
+        "scenario_count": len(results),
+        "scenarios": results,
+    }
 
 
 def write_evaluation_report(report: dict[str, Any], path: Path) -> Path:

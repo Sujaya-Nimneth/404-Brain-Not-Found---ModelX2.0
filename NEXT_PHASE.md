@@ -18,8 +18,8 @@ hardening and evidence collection rather than new architecture.
 
 ## Remaining Hardening
 
-- [ ] Expand SM-FPR evaluation beyond the canonical Anuradhapura mini-truck
-  scenario to every supported origin, vehicle, and representative quantity.
+- [x] Expand SM-FPR evaluation to five origins, two nearest alternatives per
+  origin, three vehicle types, and four representative quantities.
 - [ ] Add a repeatable browser-level smoke test for the canonical demo and live
   model modes.
 - [ ] Record final demo evidence after rebuilding the Compose images with the
