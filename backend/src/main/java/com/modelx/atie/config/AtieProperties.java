@@ -11,6 +11,10 @@ public record AtieProperties(
         BigDecimal safeMarginPct,
         BigDecimal safeAbsoluteFloorLkr,
         BigDecimal movementThresholdPct,
-        List<String> corsAllowedOrigins
+        List<String> corsAllowedOrigins,
+        String apiKey
 ) {
+    public boolean apiKeyRequired() {
+        return apiKey != null && !apiKey.isBlank();
+    }
 }

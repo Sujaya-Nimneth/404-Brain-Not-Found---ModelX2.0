@@ -17,7 +17,8 @@ class RoutingDecisionServiceTest {
                     new BigDecimal("5.0"),
                     new BigDecimal("1000.00"),
                     new BigDecimal("10.0"),
-                    List.of("http://localhost:5173")
+                    List.of("http://localhost:5173"),
+                    ""
             )
     );
 

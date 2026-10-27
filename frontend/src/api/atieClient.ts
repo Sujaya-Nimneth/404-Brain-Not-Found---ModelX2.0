@@ -8,6 +8,7 @@ import type {
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api/v1";
+const API_KEY = import.meta.env.VITE_ATIE_API_KEY as string | undefined;
 
 const fieldMap: Record<keyof AnalyzeRequest, string> = {
   originCode: "origin_code",
@@ -28,6 +29,13 @@ function toApiRequest(request: AnalyzeRequest) {
   );
 }
 
+function authHeaders(contentType = false): HeadersInit {
+  return {
+    ...(contentType ? { "Content-Type": "application/json" } : {}),
+    ...(API_KEY ? { "X-ATIE-API-Key": API_KEY } : {}),
+  };
+}
+
 function mapResponse(payload: Record<string, unknown>): AnalyzeResponse {
   return {
     forecastSource: payload.forecast_source as AnalyzeResponse["forecastSource"],
@@ -46,7 +54,7 @@ export async function analyzeConsignment(
 ): Promise<AnalyzeResponse> {
   const response = await fetch(`${API_BASE_URL}/directives/analyze`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(true),
     body: JSON.stringify(toApiRequest(request)),
   });
   if (!response.ok) {
@@ -68,6 +76,7 @@ export async function fetchMarketHistory(
   });
   const response = await fetch(
     `${API_BASE_URL}/markets/${encodeURIComponent(marketCode)}/history?${query}`,
+    { headers: authHeaders() },
   );
   if (!response.ok) {
     throw new Error(
@@ -78,7 +87,9 @@ export async function fetchMarketHistory(
 }
 
 export async function fetchMetadataConfig(): Promise<MetadataConfig> {
-  const response = await fetch(`${API_BASE_URL}/metadata/config`);
+  const response = await fetch(`${API_BASE_URL}/metadata/config`, {
+    headers: authHeaders(),
+  });
   if (!response.ok) {
     throw new Error(
       `ATIE metadata API ${response.status}: ${await response.text()}`,
