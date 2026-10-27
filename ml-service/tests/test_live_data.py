@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from etl.ingestion_worker import write_heartbeat
 from etl.live_data import (
     parse_cropix_prices,
     parse_hdx_prices,
@@ -67,3 +68,11 @@ def test_cache_writes_successful_payload(tmp_path: Path):
     assert read_or_write_cache(cache, "payload") == "payload"
     assert cache.read_text(encoding="utf-8") == "payload"
     assert read_or_write_cache(cache, None) == "payload"
+
+
+def test_heartbeat_writes_a_fresh_timestamp(tmp_path: Path):
+    heartbeat = tmp_path / "atie-ingestion-health"
+
+    write_heartbeat(heartbeat)
+
+    assert int(heartbeat.read_text(encoding="ascii")) > 0

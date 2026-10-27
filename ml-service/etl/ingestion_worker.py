@@ -605,6 +605,20 @@ def run_once(config: IngestionConfig) -> list[dict[str, object]]:
     return results
 
 
+def write_heartbeat(status_path: Path) -> None:
+    status_path.write_text(str(int(time.time())), encoding="ascii")
+
+
+def wait_for_next_cycle(interval_seconds: int, status_path: Path) -> None:
+    deadline = time.monotonic() + interval_seconds
+    while True:
+        write_heartbeat(status_path)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return
+        time.sleep(min(60, remaining))
+
+
 def main() -> None:
     logging.basicConfig(
         level=os.getenv("LOG_LEVEL", "INFO"),
@@ -615,10 +629,9 @@ def main() -> None:
     while True:
         try:
             run_once(config)
-            status_path.write_text(str(int(time.time())), encoding="ascii")
         except Exception:
             logger.exception("Ingestion cycle failed")
-        time.sleep(config.interval_seconds)
+        wait_for_next_cycle(config.interval_seconds, status_path)
 
 
 if __name__ == "__main__":
