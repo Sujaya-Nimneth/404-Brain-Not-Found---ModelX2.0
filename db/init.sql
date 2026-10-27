@@ -69,6 +69,7 @@ CREATE TABLE weather_observations (
     temp_max_c DECIMAL(5, 2),
     temp_min_c DECIMAL(5, 2),
     extreme_weather_flag BOOLEAN NOT NULL DEFAULT FALSE,
+    source VARCHAR(32) NOT NULL DEFAULT 'SEED',
     CONSTRAINT weather_unique_market_date UNIQUE (market_id, observation_date),
     CONSTRAINT weather_precipitation_non_negative CHECK (precipitation_mm >= 0),
     CONSTRAINT weather_temperature_order CHECK (
@@ -96,5 +97,43 @@ CREATE INDEX idx_weather_lookup
     ON weather_observations(market_id, observation_date DESC);
 CREATE INDEX idx_fuel_prices_effective_date
     ON fuel_prices(effective_date DESC);
+
+CREATE TABLE data_ingestion_runs (
+    id BIGSERIAL PRIMARY KEY,
+    source_code VARCHAR(32) NOT NULL,
+    status VARCHAR(16) NOT NULL,
+    data_state VARCHAR(16) NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL,
+    finished_at TIMESTAMPTZ NOT NULL,
+    records_received INT NOT NULL DEFAULT 0,
+    records_written INT NOT NULL DEFAULT 0,
+    source_url TEXT,
+    error_message TEXT,
+    CONSTRAINT data_ingestion_runs_source_check
+        CHECK (source_code IN ('HDX', 'CROPIX', 'OPEN_METEO')),
+    CONSTRAINT data_ingestion_runs_status_check
+        CHECK (status IN ('SUCCESS', 'FALLBACK', 'FAILED')),
+    CONSTRAINT data_ingestion_runs_state_check
+        CHECK (data_state IN ('LIVE', 'CACHED', 'SEED', 'UNAVAILABLE'))
+);
+
+CREATE TABLE data_source_status (
+    source_code VARCHAR(32) PRIMARY KEY,
+    data_state VARCHAR(16) NOT NULL,
+    last_attempt_at TIMESTAMPTZ NOT NULL,
+    last_success_at TIMESTAMPTZ,
+    latest_observation_date DATE,
+    source_url TEXT,
+    records_written INT NOT NULL DEFAULT 0,
+    message TEXT,
+    updated_at TIMESTAMPTZ NOT NULL,
+    CONSTRAINT data_source_status_source_check
+        CHECK (source_code IN ('HDX', 'CROPIX', 'OPEN_METEO')),
+    CONSTRAINT data_source_status_state_check
+        CHECK (data_state IN ('LIVE', 'CACHED', 'SEED', 'UNAVAILABLE'))
+);
+
+CREATE INDEX idx_data_ingestion_runs_source_time
+    ON data_ingestion_runs(source_code, started_at DESC);
 
 COMMIT;
