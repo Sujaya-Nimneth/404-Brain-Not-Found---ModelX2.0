@@ -167,7 +167,7 @@ export default function App() {
         />
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1.45fr_0.9fr]">
+      <div className="mt-5 grid grid-cols-1 items-start gap-5 xl:grid-cols-[1.45fr_0.9fr]">
         <PrimaryDirectiveCard response={response} />
         <WeatherDisruptionCard alerts={response.weatherAlerts} />
       </div>

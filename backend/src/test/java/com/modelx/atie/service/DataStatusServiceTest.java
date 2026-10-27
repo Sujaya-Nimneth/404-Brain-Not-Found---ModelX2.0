@@ -57,4 +57,30 @@ class DataStatusServiceTest {
         assertThat(result.overallStatus()).isEqualTo("UNAVAILABLE");
         assertThat(result.sources()).hasSize(3);
     }
+
+    @Test
+    void cachedSourcesWithoutLiveSourcesReturnFallback() {
+        var result = DataStatusService.build(
+                List.of(
+                        new DataStatusService.SourceRow(
+                                "HDX", "CACHED", Instant.now(), null,
+                                LocalDate.of(2026, 10, 20), "/cache/hdx.csv",
+                                101, "live fetch failed"
+                        ),
+                        new DataStatusService.SourceRow(
+                                "CROPIX", "UNAVAILABLE", Instant.now(), null,
+                                null, null, 0, "not configured"
+                        ),
+                        new DataStatusService.SourceRow(
+                                "OPEN_METEO", "CACHED", Instant.now(), null,
+                                LocalDate.of(2026, 10, 20), "/cache/weather.json",
+                                49, "live fetch failed"
+                        )
+                ),
+                List.of(),
+                LocalDate.of(2026, 10, 27)
+        );
+
+        assertThat(result.overallStatus()).isEqualTo("FALLBACK");
+    }
 }

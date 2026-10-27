@@ -145,18 +145,17 @@ public class DataStatusService {
                 .filter(source -> "LIVE".equals(source.dataState()))
                 .filter(source -> "CURRENT".equals(source.freshness()))
                 .count();
-        long available = sources.stream()
-                .filter(source -> !"UNAVAILABLE".equals(source.dataState()))
+        long fallback = sources.stream()
+                .filter(source -> "CACHED".equals(source.dataState())
+                        || "SEED".equals(source.dataState()))
                 .count();
         if (live == sources.size()) {
             return "LIVE";
         }
-        if (live > 0 || available > 0) {
+        if (live > 0) {
             return "PARTIAL";
         }
-        if (sources.stream().anyMatch(source ->
-                "CACHED".equals(source.dataState())
-                        || "SEED".equals(source.dataState()))) {
+        if (fallback > 0) {
             return "FALLBACK";
         }
         return "UNAVAILABLE";
