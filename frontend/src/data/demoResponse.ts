@@ -96,11 +96,25 @@ export const demoResponse: AnalyzeResponse = {
   modelEvaluationSummary: {
     modelDirectionalSymmetryPct: 67.89,
     modelMaeLkr: 6.05,
+    modelSafeMarginFpr: {
+      safeMarginFprPct: 0.93,
+      rerouteCount: 216,
+      falseRerouteCount: 2,
+    },
     naiveDirectionalSymmetryPct: 0,
     naiveMaeLkr: 6.98,
+    naiveSafeMarginFpr: {
+      safeMarginFprPct: 3.81,
+      rerouteCount: 236,
+      falseRerouteCount: 9,
+    },
     ma7DirectionalSymmetryPct: 46.67,
     ma7MaeLkr: 9.41,
-    safeMarginFprPct: null,
+    ma7SafeMarginFpr: {
+      safeMarginFprPct: 3.48,
+      rerouteCount: 230,
+      falseRerouteCount: 8,
+    },
   },
 };
 

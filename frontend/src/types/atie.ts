@@ -42,11 +42,19 @@ export interface WeatherAlert {
 export interface ModelEvaluationSummary {
   modelDirectionalSymmetryPct: number;
   modelMaeLkr: number;
+  modelSafeMarginFpr: SafeMarginFpr | null;
   naiveDirectionalSymmetryPct: number;
   naiveMaeLkr: number;
+  naiveSafeMarginFpr: SafeMarginFpr | null;
   ma7DirectionalSymmetryPct: number;
   ma7MaeLkr: number;
+  ma7SafeMarginFpr: SafeMarginFpr | null;
+}
+
+export interface SafeMarginFpr {
   safeMarginFprPct: number | null;
+  rerouteCount: number;
+  falseRerouteCount: number;
 }
 
 export interface AnalyzeResponse {

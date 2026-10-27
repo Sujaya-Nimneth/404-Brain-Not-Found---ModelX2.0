@@ -22,7 +22,15 @@ export function ModelEvaluationBadge({
       <span>
         MAE{" "}
         <strong className="text-ink">
-          {summary.modelMaeLkr.toFixed(2)}
+          {summary.modelMaeLkr.toFixed(2)} LKR
+        </strong>
+      </span>
+      <span>
+        SM-FPR{" "}
+        <strong className="text-ink">
+          {summary.modelSafeMarginFpr?.safeMarginFprPct == null
+            ? "n/a"
+            : `${summary.modelSafeMarginFpr.safeMarginFprPct.toFixed(2)}%`}
         </strong>
       </span>
       <span className="inline-flex items-center gap-1 text-moss">

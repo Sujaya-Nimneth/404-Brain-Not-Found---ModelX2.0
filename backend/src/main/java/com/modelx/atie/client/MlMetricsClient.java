@@ -41,27 +41,44 @@ public class MlMetricsClient {
             Map<String, Object> ma7 = (Map<String, Object>) horizon.get("baseline_ma7");
             @SuppressWarnings("unchecked")
             Map<String, Object> fpr = (Map<String, Object>) horizon.get("safe_margin_fpr");
-            Object fprValue = fpr.get("safe_margin_fpr_pct");
             return new ModelEvaluationSummary(
                     decimal(model.get("directional_symmetry_pct")),
                     decimal(model.get("mae_lkr")),
+                    safeMarginFpr(fpr.get("model")),
                     decimal(naive.get("directional_symmetry_pct")),
                     decimal(naive.get("mae_lkr")),
+                    safeMarginFpr(fpr.get("baseline_naive")),
                     decimal(ma7.get("directional_symmetry_pct")),
                     decimal(ma7.get("mae_lkr")),
-                    fprValue == null ? null : decimal(fprValue)
+                    safeMarginFpr(fpr.get("baseline_ma7"))
             );
         } catch (RuntimeException error) {
             return new ModelEvaluationSummary(
                     new BigDecimal("67.89"),
                     new BigDecimal("6.05"),
+                    null,
                     BigDecimal.ZERO.setScale(2),
                     new BigDecimal("6.98"),
+                    null,
                     new BigDecimal("46.67"),
                     new BigDecimal("9.41"),
                     null
             );
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private ModelEvaluationSummary.SafeMarginFpr safeMarginFpr(Object value) {
+        if (!(value instanceof Map<?, ?> raw)) {
+            return null;
+        }
+        Map<String, Object> fpr = (Map<String, Object>) raw;
+        Object percentage = fpr.get("safe_margin_fpr_pct");
+        return new ModelEvaluationSummary.SafeMarginFpr(
+                percentage == null ? null : decimal(percentage),
+                ((Number) fpr.get("reroute_count")).intValue(),
+                ((Number) fpr.get("false_reroute_count")).intValue()
+        );
     }
 
     private BigDecimal decimal(Object value) {
