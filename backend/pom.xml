@@ -69,4 +69,28 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>postgres-it</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <atie.postgres.integration>true</atie.postgres.integration>
+                            </systemPropertyVariables>
+                            <environmentVariables>
+                                <ATIE_TEST_DATABASE_URL>${ATIE_TEST_DATABASE_URL}</ATIE_TEST_DATABASE_URL>
+                                <ATIE_TEST_DATABASE_USERNAME>${ATIE_TEST_DATABASE_USERNAME}</ATIE_TEST_DATABASE_USERNAME>
+                                <ATIE_TEST_DATABASE_PASSWORD>${ATIE_TEST_DATABASE_PASSWORD}</ATIE_TEST_DATABASE_PASSWORD>
+                            </environmentVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
