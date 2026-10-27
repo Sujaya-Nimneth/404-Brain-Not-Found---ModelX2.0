@@ -27,6 +27,9 @@ frontend/vite.config.d.ts
 frontend/playwright-report/
 frontend/test-results/
 
+# Raw browser recordings; final MP4 evidence is checked in
+docs/evidence/*.webm
+
 # IDE and OS
 .idea/
 .vscode/
@@ -36,3 +39,4 @@ frontend/test-results/
 ml-service/data/cache/
 ml-service/models/*.tmp
 coverage/
+/tmp/
