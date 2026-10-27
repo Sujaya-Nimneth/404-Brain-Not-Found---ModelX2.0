@@ -14,7 +14,15 @@ CANONICAL_REQUEST = PredictBatchRequest(
     crop_code="TOMATO",
     horizon_hours=48,
     reference_date=date(2026, 10, 27),
-    markets=["DAMBULLA", "PETTAH_COLOMBO", "KEPPETIPOLA", "MEEGODA"],
+    markets=[
+        "DAMBULLA",
+        "PETTAH_COLOMBO",
+        "NUWARA_ELIYA",
+        "KEPPETIPOLA",
+        "MEEGODA",
+        "THAMBUTTEGAMA",
+        "JAFFNA",
+    ],
 )
 
 
@@ -37,7 +45,7 @@ def test_fallback_is_labeled_when_artifact_is_missing(tmp_path):
     response = predictor.predict(CANONICAL_REQUEST)
 
     assert response.forecast_source.value == "FALLBACK"
-    assert len(response.predictions) == 4
+    assert len(response.predictions) == 7
     assert {item.market_code for item in response.predictions} == set(
         CANONICAL_REQUEST.markets
     )

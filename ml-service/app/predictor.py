@@ -74,6 +74,33 @@ DEMO_FIXTURE = {
         confidence=0.74,
         driver="Western market arrivals remain close to recent demand levels.",
     ),
+    "NUWARA_ELIYA": FixtureMarket(
+        current=185.0,
+        predicted_48h=182.0,
+        predicted_72h=183.0,
+        ma7=186.1,
+        glut_risk=GlutRisk.MEDIUM,
+        confidence=0.72,
+        driver="Upcountry arrivals remain close to seasonal demand.",
+    ),
+    "THAMBUTTEGAMA": FixtureMarket(
+        current=190.0,
+        predicted_48h=174.0,
+        predicted_72h=175.0,
+        ma7=191.2,
+        glut_risk=GlutRisk.HIGH,
+        confidence=0.78,
+        driver="Northern and North Central arrivals are elevating supply.",
+    ),
+    "JAFFNA": FixtureMarket(
+        current=160.0,
+        predicted_48h=158.0,
+        predicted_72h=159.0,
+        ma7=161.4,
+        glut_risk=GlutRisk.LOW,
+        confidence=0.7,
+        driver="Local demand is balanced against steady arrivals.",
+    ),
 }
 
 
