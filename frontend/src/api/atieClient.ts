@@ -2,6 +2,7 @@ import type {
   AnalyzeRequest,
   AnalyzeResponse,
   MarketHistoryResponse,
+  MetadataConfig,
 } from "../types/atie";
 import { demoResponse } from "../data/demoResponse";
 
@@ -74,4 +75,14 @@ export async function fetchMarketHistory(
     );
   }
   return (await response.json()) as MarketHistoryResponse;
+}
+
+export async function fetchMetadataConfig(): Promise<MetadataConfig> {
+  const response = await fetch(`${API_BASE_URL}/metadata/config`);
+  if (!response.ok) {
+    throw new Error(
+      `ATIE metadata API ${response.status}: ${await response.text()}`,
+    );
+  }
+  return (await response.json()) as MetadataConfig;
 }

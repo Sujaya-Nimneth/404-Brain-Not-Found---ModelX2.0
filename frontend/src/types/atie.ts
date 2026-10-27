@@ -99,6 +99,65 @@ export interface MarketHistoryResponse {
   forecastTrajectory: ForecastTrajectoryPoint[];
 }
 
+export interface MetadataOrigin {
+  code: string;
+  name: string;
+  district: string;
+  province: string;
+  latitude: number;
+  longitude: number;
+  supplyZone: string;
+}
+
+export interface MetadataMarket {
+  code: string;
+  name: string;
+  province: string;
+  latitude: number;
+  longitude: number;
+  handlingFeePerKgLkr: number;
+}
+
+export interface MetadataCrop {
+  code: string;
+  name: string;
+  spoilageRatePer100KmPct: number;
+}
+
+export interface MetadataVehicle {
+  code: AnalyzeRequest["vehicleType"];
+  displayName: string;
+  capacityKg: number;
+  litresPerKm: number;
+  fuelType: "DIESEL" | "PETROL";
+}
+
+export interface MetadataRoute {
+  originCode: string;
+  marketCode: string;
+  distanceKm: number;
+  terrainFactor: number;
+}
+
+export interface MetadataConfig {
+  origins: MetadataOrigin[];
+  markets: MetadataMarket[];
+  crops: MetadataCrop[];
+  routes: MetadataRoute[];
+  vehicleTypes: MetadataVehicle[];
+  horizons: Array<48 | 72>;
+  fuelPrices: {
+    effectiveDate?: string;
+    dieselLkrPerLiter?: number;
+    petrolLkrPerLiter?: number;
+  };
+  thresholds: {
+    safeMarginPct: number;
+    safeAbsoluteFloorLkr: number;
+    movementThresholdPct: number;
+  };
+}
+
 export interface AnalyzeRequest {
   originCode: string;
   defaultMarketCode: string;
