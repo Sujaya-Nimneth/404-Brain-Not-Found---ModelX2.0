@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     fallback_data_path: Path = ROOT_DIR / "data" / "fallback_forecasts.json"
     movement_threshold_pct: float = 10.0
     random_seed: int = 404
+    retrain_on_startup: bool = False
 
 
 @lru_cache
