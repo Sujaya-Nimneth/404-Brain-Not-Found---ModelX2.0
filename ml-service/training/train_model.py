@@ -16,7 +16,7 @@ from etl.feature_engineering import (
     feature_ready_frame,
 )
 from etl.seed_loader import generate_demo_history
-from training.evaluate import safe_margin_fpr, write_evaluation_report
+from training.evaluate import evaluate_routing_decisions, write_evaluation_report
 
 
 def train(
@@ -40,7 +40,6 @@ def train(
 
     models: dict[str, RandomForestRegressor] = {}
     metrics: dict[str, dict[str, object]] = {}
-    predictions: dict[str, pd.DataFrame] = {}
     for horizon in (48, 72):
         target = f"target_price_{horizon}h"
         model = RandomForestRegressor(
@@ -51,16 +50,17 @@ def train(
             n_jobs=-1,
         )
         model.fit(train[FEATURE_COLUMNS], train[target])
-        test = test.copy()
-        test[f"prediction_{horizon}h"] = model.predict(test[FEATURE_COLUMNS])
+        horizon_test = test.copy()
+        horizon_test[f"prediction_{horizon}h"] = model.predict(
+            horizon_test[FEATURE_COLUMNS]
+        )
         models[str(horizon)] = model
-        predictions[str(horizon)] = test
 
-        actual = test[target]
-        predicted = test[f"prediction_{horizon}h"]
-        current = test["price_lag_1d"]
+        actual = horizon_test[target]
+        predicted = horizon_test[f"prediction_{horizon}h"]
+        current = horizon_test["price_lag_1d"]
         naive = current
-        ma7 = test["rolling_mean_7d"]
+        ma7 = horizon_test["rolling_mean_7d"]
 
         metrics[str(horizon)] = {
             "model": {
@@ -81,10 +81,17 @@ def train(
                 ),
                 "mae_lkr": round(float(mean_absolute_error(actual, ma7)), 2),
             },
-            "safe_margin_fpr": safe_margin_fpr(
-                pd.Series(dtype=float),
-                pd.Series(dtype=float),
-            ),
+            "safe_margin_fpr": {
+                "model": evaluate_routing_decisions(
+                    horizon_test, horizon, f"prediction_{horizon}h"
+                ),
+                "baseline_naive": evaluate_routing_decisions(
+                    horizon_test, horizon, "price_lag_1d"
+                ),
+                "baseline_ma7": evaluate_routing_decisions(
+                    horizon_test, horizon, "rolling_mean_7d"
+                ),
+            },
         }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
