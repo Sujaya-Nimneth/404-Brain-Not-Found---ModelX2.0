@@ -1,0 +1,61 @@
+import type { AnalyzeRequest, AnalyzeResponse } from "../types/atie";
+import { demoResponse } from "../data/demoResponse";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api/v1";
+
+const fieldMap: Record<keyof AnalyzeRequest, string> = {
+  originCode: "origin_code",
+  defaultMarketCode: "default_market_code",
+  cropCode: "crop_code",
+  quantityKg: "quantity_kg",
+  vehicleType: "vehicle_type",
+  horizonHours: "horizon_hours",
+  demoMode: "demo_mode",
+};
+
+function toApiRequest(request: AnalyzeRequest) {
+  return Object.fromEntries(
+    Object.entries(request).map(([key, value]) => [
+      fieldMap[key as keyof AnalyzeRequest],
+      value,
+    ]),
+  );
+}
+
+function mapResponse(payload: Record<string, unknown>): AnalyzeResponse {
+  return {
+    forecastSource: payload.forecast_source as AnalyzeResponse["forecastSource"],
+    modelVersion: payload.model_version as string,
+    referenceDate: payload.reference_date as string,
+    primaryDirective: payload.primary_directive as AnalyzeResponse["primaryDirective"],
+    marketComparisons: payload.market_comparisons as AnalyzeResponse["marketComparisons"],
+    weatherAlerts: payload.weather_alerts as AnalyzeResponse["weatherAlerts"],
+    modelEvaluationSummary:
+      payload.model_evaluation_summary as AnalyzeResponse["modelEvaluationSummary"],
+  };
+}
+
+export async function analyzeConsignment(
+  request: AnalyzeRequest,
+): Promise<AnalyzeResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/directives/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(toApiRequest(request)),
+    });
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(`ATIE API ${response.status}: ${detail}`);
+    }
+    return mapResponse((await response.json()) as Record<string, unknown>);
+  } catch (error) {
+    console.warn("ATIE API unavailable; using local demo response", error);
+    return {
+      ...demoResponse,
+      forecastSource: "DEMO_FIXTURE",
+      modelVersion: "local-demo-v1.0",
+    };
+  }
+}
