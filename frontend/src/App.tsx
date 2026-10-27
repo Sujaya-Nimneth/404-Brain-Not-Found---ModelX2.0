@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CloudOff, Leaf, Map, RefreshCw } from "lucide-react";
 import { analyzeConsignment } from "./api/atieClient";
+import { ForecastTrajectoryChart } from "./components/ForecastTrajectoryChart";
 import { ModelEvaluationBadge } from "./components/ModelEvaluationBadge";
 import { OnboardingConfigModal } from "./components/OnboardingConfigModal";
 import { PrimaryDirectiveCard } from "./components/PrimaryDirectiveCard";
@@ -118,6 +119,20 @@ export default function App() {
       <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
         <ProfitMarginChart markets={response.marketComparisons} />
         <RoutingLogisticsPanel markets={response.marketComparisons} />
+      </div>
+
+      <div className="mt-5">
+        <ForecastTrajectoryChart
+          key={`${request.defaultMarketCode}-${request.cropCode}`}
+          marketCode={request.defaultMarketCode}
+          marketName={
+            response.marketComparisons.find(
+              (market) => market.marketCode === request.defaultMarketCode,
+            )?.marketName ?? request.defaultMarketCode
+          }
+          cropCode={request.cropCode}
+          forecastSource={response.forecastSource}
+        />
       </div>
 
       <footer className="mt-6 flex flex-col justify-between gap-2 border-t border-ink/10 py-5 font-mono text-[0.58rem] uppercase tracking-[0.12em] text-ink/35 sm:flex-row">

@@ -67,6 +67,32 @@ export interface AnalyzeResponse {
   modelEvaluationSummary: ModelEvaluationSummary;
 }
 
+export interface MarketHistoryPoint {
+  date: string;
+  priceLkrPerKg: number;
+  arrivalVolumeTonnes: number | null;
+}
+
+export interface ForecastTrajectoryPoint {
+  horizonHours: 48 | 72;
+  predictedPriceLkr: number;
+  baselineNaiveLkr: number;
+  baselineMa7Lkr: number;
+  direction: "CRASH" | "STABLE" | "SURGE";
+}
+
+export interface MarketHistoryResponse {
+  marketCode: string;
+  marketName: string;
+  cropCode: string;
+  days: number;
+  referenceDate: string;
+  forecastSource: ForecastSource;
+  modelVersion: string;
+  history: MarketHistoryPoint[];
+  forecastTrajectory: ForecastTrajectoryPoint[];
+}
+
 export interface AnalyzeRequest {
   originCode: string;
   defaultMarketCode: string;

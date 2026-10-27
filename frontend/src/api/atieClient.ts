@@ -1,4 +1,8 @@
-import type { AnalyzeRequest, AnalyzeResponse } from "../types/atie";
+import type {
+  AnalyzeRequest,
+  AnalyzeResponse,
+  MarketHistoryResponse,
+} from "../types/atie";
 import { demoResponse } from "../data/demoResponse";
 
 const API_BASE_URL =
@@ -58,4 +62,24 @@ export async function analyzeConsignment(
       modelVersion: "local-demo-v1.0",
     };
   }
+}
+
+export async function fetchMarketHistory(
+  marketCode: string,
+  cropCode: string,
+  days = 14,
+): Promise<MarketHistoryResponse> {
+  const query = new URLSearchParams({
+    cropCode,
+    days: String(days),
+  });
+  const response = await fetch(
+    `${API_BASE_URL}/markets/${encodeURIComponent(marketCode)}/history?${query}`,
+  );
+  if (!response.ok) {
+    throw new Error(
+      `ATIE history API ${response.status}: ${await response.text()}`,
+    );
+  }
+  return (await response.json()) as MarketHistoryResponse;
 }
