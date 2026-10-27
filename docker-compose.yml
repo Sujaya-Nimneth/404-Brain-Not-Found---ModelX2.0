@@ -17,5 +17,19 @@ services:
       timeout: 5s
       retries: 12
 
+  ml-service:
+    build:
+      context: ./ml-service
+    environment:
+      ML_MODEL_PATH: /app/models/atie_forecaster.joblib
+      ML_METADATA_PATH: /app/models/evaluation_report.json
+      ML_FALLBACK_DATA_PATH: /app/data/fallback_forecasts.json
+      ML_MOVEMENT_THRESHOLD_PCT: ${MOVEMENT_THRESHOLD_PCT:-10.0}
+    ports:
+      - "${ML_SERVICE_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:
