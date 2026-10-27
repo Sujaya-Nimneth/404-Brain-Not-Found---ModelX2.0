@@ -44,4 +44,9 @@ test("renders the canonical fixture and switches to live model output", async ({
     path: "../docs/evidence/live-dashboard.png",
     fullPage: true,
   });
+
+  await page.getByRole("button", { name: "Show all 7 market alerts" }).click();
+  await expect(
+    page.getByRole("button", { name: "Show highest-risk markets" }),
+  ).toBeVisible();
 });
