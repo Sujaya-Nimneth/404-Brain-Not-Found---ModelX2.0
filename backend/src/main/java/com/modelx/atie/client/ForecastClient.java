@@ -8,6 +8,7 @@ public interface ForecastClient {
             String cropCode,
             int horizonHours,
             LocalDate referenceDate,
-            List<String> markets
+            List<String> markets,
+            boolean demoMode
     );
 }

@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
@@ -75,6 +76,12 @@ public class ArbitrageRoutingService {
         String originCode = normalize(request.originCode());
         String cropCode = normalize(request.cropCode());
         String defaultMarketCode = normalize(request.defaultMarketCode());
+        if (!Set.of(48, 72).contains(request.horizonHours())) {
+            throw new IllegalArgumentException("horizonHours must be 48 or 72");
+        }
+        if (request.demoRequested()) {
+            validateCanonicalDemo(request, originCode, cropCode, defaultMarketCode);
+        }
         Origin origin = origins.find(originCode).orElseThrow(
                 () -> new IllegalArgumentException("Unknown origin: " + originCode)
         );
@@ -108,8 +115,15 @@ public class ArbitrageRoutingService {
                 crop.getCode(),
                 request.horizonHours(),
                 referenceDate,
-                marketCodes
+                marketCodes,
+                request.demoRequested()
         );
+        String expectedSource = request.demoRequested() ? "DEMO_FIXTURE" : null;
+        if (expectedSource != null && !expectedSource.equals(forecast.forecastSource())) {
+            throw new IllegalArgumentException(
+                    "Demo request did not resolve to the canonical fixture"
+            );
+        }
         Map<String, MarketForecast> forecasts = forecast.predictions().stream()
                 .collect(java.util.stream.Collectors.toMap(
                         MarketForecast::marketCode,
@@ -260,5 +274,24 @@ public class ArbitrageRoutingService {
 
     private String normalize(String value) {
         return value == null ? "" : value.trim().toUpperCase();
+    }
+
+    private void validateCanonicalDemo(
+            AnalyzeRequest request,
+            String originCode,
+            String cropCode,
+            String defaultMarketCode
+    ) {
+        boolean matches = "ANURADHAPURA".equals(originCode)
+                && "DAMBULLA".equals(defaultMarketCode)
+                && "TOMATO".equals(cropCode)
+                && request.quantityKg() != null
+                && request.quantityKg().compareTo(new BigDecimal("1000")) == 0
+                && request.vehicleType() == VehicleType.MINI_TRUCK_BATTA;
+        if (!matches) {
+            throw new IllegalArgumentException(
+                    "demo_mode only supports the registered Anuradhapura tomato fixture"
+            );
+        }
     }
 }

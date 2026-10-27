@@ -19,7 +19,7 @@ class MlServiceClientTest {
     void unavailableServiceUsesLabeledFallback() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        server.expect(requestTo("http://localhost:8000/predict-batch"))
+        server.expect(requestTo("http://localhost:8000/predict-batch?demo_mode=false"))
                 .andRespond(withServerError().contentType(MediaType.APPLICATION_JSON));
 
         MlServiceClient client = new MlServiceClient(
@@ -30,13 +30,34 @@ class MlServiceClientTest {
                 "TOMATO",
                 48,
                 LocalDate.of(2026, 10, 27),
-                List.of("DAMBULLA", "PETTAH_COLOMBO")
+                List.of("DAMBULLA", "PETTAH_COLOMBO"),
+                false
         );
 
         assertThat(response.forecastSource()).isEqualTo("FALLBACK");
         assertThat(response.predictions()).hasSize(2);
         assertThat(response.predictions().get(0).predictedPriceLkr())
                 .isEqualByComparingTo("154.00");
+        server.verify();
+    }
+
+    @Test
+    void demoRequestIsForwardedToMlService() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("http://localhost:8000/predict-batch?demo_mode=true"))
+                .andRespond(withServerError().contentType(MediaType.APPLICATION_JSON));
+
+        MlServiceClient client = new MlServiceClient(builder, properties());
+        MlServiceClient.MlForecastResponse response = client.predictBatch(
+                "TOMATO",
+                48,
+                LocalDate.of(2026, 10, 27),
+                List.of("DAMBULLA", "PETTAH_COLOMBO"),
+                true
+        );
+
+        assertThat(response.forecastSource()).isEqualTo("DEMO_FIXTURE");
         server.verify();
     }
 

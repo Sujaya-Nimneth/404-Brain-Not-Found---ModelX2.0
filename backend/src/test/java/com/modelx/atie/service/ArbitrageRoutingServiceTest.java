@@ -56,7 +56,7 @@ class ArbitrageRoutingServiceTest {
         routes = stub(MarketRouteRepository.class);
         fuelPrices = stub(FuelPriceRepository.class);
         weather = stub(WeatherObservationRepository.class);
-        forecastClient = (cropCode, horizonHours, referenceDate, markets) ->
+        forecastClient = (cropCode, horizonHours, referenceDate, markets, demoMode) ->
                 fixtureForecast();
         metricsClient = stub(MlMetricsClient.class);
         service = new ArbitrageRoutingService(
@@ -148,7 +148,10 @@ class ArbitrageRoutingServiceTest {
                         forecast("DAMBULLA", "220", "154", "HIGH"),
                         forecast("PETTAH_COLOMBO", "170", "187.50", "LOW"),
                         forecast("MEEGODA", "180", "172", "LOW"),
-                        forecast("KEPPETIPOLA", "175", "165", "MEDIUM")
+                        forecast("KEPPETIPOLA", "175", "165", "MEDIUM"),
+                        forecast("NUWARA_ELIYA", "185", "182", "MEDIUM"),
+                        forecast("THAMBUTTEGAMA", "190", "174", "HIGH"),
+                        forecast("JAFFNA", "160", "158", "LOW")
                 )
         );
     }

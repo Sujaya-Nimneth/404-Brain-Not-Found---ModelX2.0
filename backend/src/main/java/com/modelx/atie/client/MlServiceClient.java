@@ -31,11 +31,15 @@ public class MlServiceClient implements ForecastClient {
             String cropCode,
             int horizonHours,
             LocalDate referenceDate,
-            List<String> markets
+            List<String> markets,
+            boolean demoMode
     ) {
         try {
             MlForecastResponse response = client.post()
-                    .uri("/predict-batch")
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/predict-batch")
+                            .queryParam("demo_mode", demoMode)
+                            .build())
                     .body(Map.of(
                             "crop_code", cropCode,
                             "horizon_hours", horizonHours,
@@ -50,7 +54,7 @@ public class MlServiceClient implements ForecastClient {
             return response;
         } catch (RestClientException | IllegalStateException error) {
             log.warn("ML service unavailable; using deterministic fallback: {}", error.getMessage());
-            return fallback(cropCode, horizonHours, referenceDate, markets);
+            return fallback(cropCode, horizonHours, referenceDate, markets, demoMode);
         }
     }
 
@@ -58,7 +62,8 @@ public class MlServiceClient implements ForecastClient {
             String cropCode,
             int horizonHours,
             LocalDate referenceDate,
-            List<String> markets
+            List<String> markets,
+            boolean demoMode
     ) {
         Map<String, FallbackMarket> fixtures = Map.of(
                 "DAMBULLA", new FallbackMarket(
@@ -100,6 +105,36 @@ public class MlServiceClient implements ForecastClient {
                         "LOW",
                         new BigDecimal("0.74"),
                         "Balanced western arrivals."
+                ),
+                "NUWARA_ELIYA", new FallbackMarket(
+                        new BigDecimal("185.00"),
+                        horizonHours == 48
+                                ? new BigDecimal("182.00")
+                                : new BigDecimal("183.00"),
+                        new BigDecimal("186.10"),
+                        "MEDIUM",
+                        new BigDecimal("0.72"),
+                        "Upcountry arrivals remain close to seasonal demand."
+                ),
+                "THAMBUTTEGAMA", new FallbackMarket(
+                        new BigDecimal("190.00"),
+                        horizonHours == 48
+                                ? new BigDecimal("174.00")
+                                : new BigDecimal("175.00"),
+                        new BigDecimal("191.20"),
+                        "HIGH",
+                        new BigDecimal("0.78"),
+                        "Northern and North Central arrivals are elevating supply."
+                ),
+                "JAFFNA", new FallbackMarket(
+                        new BigDecimal("160.00"),
+                        horizonHours == 48
+                                ? new BigDecimal("158.00")
+                                : new BigDecimal("159.00"),
+                        new BigDecimal("161.40"),
+                        "LOW",
+                        new BigDecimal("0.70"),
+                        "Local demand is balanced against steady arrivals."
                 )
         );
 
@@ -139,8 +174,8 @@ public class MlServiceClient implements ForecastClient {
                 cropCode,
                 horizonHours,
                 referenceDate,
-                "FALLBACK",
-                "backend-fallback-v1.0",
+                demoMode ? "DEMO_FIXTURE" : "FALLBACK",
+                demoMode ? "demo-fixture-v1.0" : "backend-fallback-v1.0",
                 predictions
         );
     }
