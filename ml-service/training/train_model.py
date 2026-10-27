@@ -44,8 +44,8 @@ def train(
     for horizon in (48, 72):
         target = f"target_price_{horizon}h"
         model = RandomForestRegressor(
-            n_estimators=180,
-            max_depth=12,
+            n_estimators=120,
+            max_depth=8,
             min_samples_leaf=2,
             random_state=settings.random_seed,
             n_jobs=-1,
@@ -81,7 +81,10 @@ def train(
                 ),
                 "mae_lkr": round(float(mean_absolute_error(actual, ma7)), 2),
             },
-            "safe_margin_fpr": safe_margin_fpr(pd.Series(dtype=float), pd.Series(dtype=float)),
+            "safe_margin_fpr": safe_margin_fpr(
+                pd.Series(dtype=float),
+                pd.Series(dtype=float),
+            ),
         }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
