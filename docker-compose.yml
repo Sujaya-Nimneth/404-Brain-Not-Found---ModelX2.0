@@ -36,7 +36,7 @@ services:
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
         ]
       interval: 15s
       timeout: 5s
@@ -70,7 +70,7 @@ services:
           "-q",
           "-O",
           "-",
-          "http://localhost:8080/actuator/health",
+          "http://127.0.0.1:8080/actuator/health",
         ]
       interval: 15s
       timeout: 5s
@@ -95,7 +95,7 @@ services:
           "-q",
           "-O",
           "-",
-          "http://localhost/healthz",
+          "http://127.0.0.1/healthz",
         ]
       interval: 15s
       timeout: 5s
