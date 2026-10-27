@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, MapPin, Sprout, Truck, Wheat } from "lucide-react";
+import { MapPin, Sprout, Truck, Wheat } from "lucide-react";
 import { fetchMetadataConfig } from "../api/atieClient";
 import type {
   AnalyzeRequest,
   MetadataConfig,
-  MetadataRoute,
 } from "../types/atie";
 
 interface Props {

@@ -5,6 +5,7 @@ import {
   TrendingDown,
 } from "lucide-react";
 import type { AnalyzeResponse } from "../types/atie";
+import { formatLkr } from "../utils/format";
 
 interface Props {
   response: AnalyzeResponse;
@@ -180,10 +181,4 @@ function Metric({
       <p className="mt-0.5 text-[0.68rem] text-cream/40">{suffix}</p>
     </div>
   );
-}
-
-export function formatLkr(value: number) {
-  return new Intl.NumberFormat("en-LK", {
-    maximumFractionDigits: 0,
-  }).format(value);
 }

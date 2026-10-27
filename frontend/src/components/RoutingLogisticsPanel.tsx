@@ -1,6 +1,6 @@
 import { Fuel, MapPinned, Route, WalletCards } from "lucide-react";
 import type { MarketComparison } from "../types/atie";
-import { formatLkr } from "./PrimaryDirectiveCard";
+import { formatLkr } from "../utils/format";
 
 interface Props {
   markets: MarketComparison[];

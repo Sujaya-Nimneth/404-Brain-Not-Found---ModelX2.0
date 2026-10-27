@@ -1,11 +1,9 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { CloudOff, Leaf, Map, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { analyzeConsignment } from "./api/atieClient";
-import { ForecastTrajectoryChart } from "./components/ForecastTrajectoryChart";
 import { ModelEvaluationBadge } from "./components/ModelEvaluationBadge";
 import { OnboardingConfigModal } from "./components/OnboardingConfigModal";
 import { PrimaryDirectiveCard } from "./components/PrimaryDirectiveCard";
-import { ProfitMarginChart } from "./components/ProfitMarginChart";
 import { RoutingLogisticsPanel } from "./components/RoutingLogisticsPanel";
 import { WeatherDisruptionCard } from "./components/WeatherDisruptionCard";
 import { demoRequest, demoResponse } from "./data/demoResponse";
@@ -14,6 +12,17 @@ import type {
   AnalyzeRequest,
   AnalyzeResponse,
 } from "./types/atie";
+
+const ProfitMarginChart = lazy(() =>
+  import("./components/ProfitMarginChart").then((module) => ({
+    default: module.ProfitMarginChart,
+  })),
+);
+const ForecastTrajectoryChart = lazy(() =>
+  import("./components/ForecastTrajectoryChart").then((module) => ({
+    default: module.ForecastTrajectoryChart,
+  })),
+);
 
 const defaultRequest: AnalyzeRequest = {
   ...demoRequest,
@@ -139,22 +148,26 @@ export default function App() {
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-        <ProfitMarginChart markets={response.marketComparisons} />
+        <Suspense fallback={<ChartLoading label="Loading market economics…" />}>
+          <ProfitMarginChart markets={response.marketComparisons} />
+        </Suspense>
         <RoutingLogisticsPanel markets={response.marketComparisons} />
       </div>
 
       <div className="mt-5">
-        <ForecastTrajectoryChart
-          key={`${request.defaultMarketCode}-${request.cropCode}`}
-          marketCode={request.defaultMarketCode}
-          marketName={
-            response.marketComparisons.find(
-              (market) => market.marketCode === request.defaultMarketCode,
-            )?.marketName ?? request.defaultMarketCode
-          }
-          cropCode={request.cropCode}
-          forecastSource={response.forecastSource}
-        />
+        <Suspense fallback={<ChartLoading label="Loading forecast trace…" />}>
+          <ForecastTrajectoryChart
+            key={`${request.defaultMarketCode}-${request.cropCode}`}
+            marketCode={request.defaultMarketCode}
+            marketName={
+              response.marketComparisons.find(
+                (market) => market.marketCode === request.defaultMarketCode,
+              )?.marketName ?? request.defaultMarketCode
+            }
+            cropCode={request.cropCode}
+            forecastSource={response.forecastSource}
+          />
+        </Suspense>
       </div>
 
       <footer className="mt-6 flex flex-col justify-between gap-2 border-t border-ink/10 py-5 font-mono text-[0.58rem] uppercase tracking-[0.12em] text-ink/35 sm:flex-row">
@@ -165,6 +178,20 @@ export default function App() {
         </span>
       </footer>
     </main>
+  );
+}
+
+function ChartLoading({ label }: { label: string }) {
+  return (
+    <section
+      role="status"
+      className="grid min-h-[20rem] place-items-center rounded-[2rem] border border-ink/10 bg-cream/80 p-6 shadow-card"
+    >
+      <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink/55">
+        <RefreshCw className="h-4 w-4 animate-spin" />
+        {label}
+      </span>
+    </section>
   );
 }
 
