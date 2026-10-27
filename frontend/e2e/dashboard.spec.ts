@@ -11,6 +11,10 @@ test("renders the canonical fixture and switches to live model output", async ({
   await expect(page.getByText("DEMO FIXTURE").first()).toBeVisible();
   await expect(page.getByText("23,239")).toBeVisible();
   await expect(page.getByText("15.84%").first()).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Live where it can be." }),
+  ).toBeVisible();
+  await expect(page.getByText(/Data provenance/i).first()).toBeVisible();
 
   await page.getByRole("button", { name: "Load Northern glut demo" }).click();
   await expect(page.getByText("DEMO FIXTURE").first()).toBeVisible();
@@ -40,4 +44,9 @@ test("renders the canonical fixture and switches to live model output", async ({
     path: "../docs/evidence/live-dashboard.png",
     fullPage: true,
   });
+
+  await page.getByRole("button", { name: "Show all 7 market alerts" }).click();
+  await expect(
+    page.getByRole("button", { name: "Show highest-risk markets" }),
+  ).toBeVisible();
 });

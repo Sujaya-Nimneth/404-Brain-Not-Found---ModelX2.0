@@ -12,9 +12,14 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [
-    {
-      name: "chrome",
-      use: { ...devices["Desktop Chrome"], channel: "chrome" },
-    },
+    process.env.CI
+      ? {
+          name: "chromium",
+          use: { ...devices["Desktop Chrome"] },
+        }
+      : {
+          name: "chrome",
+          use: { ...devices["Desktop Chrome"], channel: "chrome" },
+        },
   ],
 });

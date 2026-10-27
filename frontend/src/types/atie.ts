@@ -42,6 +42,8 @@ export interface WeatherAlert {
   message: string;
   precipitationMm: number;
   extremeWeather: boolean;
+  source: string;
+  observationDate: string;
 }
 
 export interface ModelEvaluationSummary {
@@ -156,6 +158,34 @@ export interface MetadataConfig {
     safeAbsoluteFloorLkr: number;
     movementThresholdPct: number;
   };
+}
+
+export interface DataSourceStatus {
+  sourceCode: string;
+  label: string;
+  dataState: "LIVE" | "CACHED" | "SEED" | "UNAVAILABLE";
+  freshness: "CURRENT" | "STALE" | "UNKNOWN";
+  lastAttemptAt: string | null;
+  lastSuccessAt: string | null;
+  latestObservationDate: string | null;
+  sourceUrl: string | null;
+  recordsWritten: number;
+  message: string | null;
+}
+
+export interface PriceCoverage {
+  marketCode: string;
+  cropCode: string;
+  latestObservationDate: string | null;
+  source: string | null;
+  state: "CURRENT" | "STALE" | "SEED" | "CACHED" | "UNAVAILABLE" | "UNKNOWN";
+}
+
+export interface DataStatus {
+  overallStatus: "LIVE" | "PARTIAL" | "FALLBACK" | "UNAVAILABLE";
+  generatedAt: string;
+  sources: DataSourceStatus[];
+  priceCoverage: PriceCoverage[];
 }
 
 export interface AnalyzeRequest {

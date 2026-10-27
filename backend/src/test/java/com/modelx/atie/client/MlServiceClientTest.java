@@ -113,7 +113,8 @@ class MlServiceClientTest {
                 new java.math.BigDecimal("5.0"),
                 new java.math.BigDecimal("1000.00"),
                 new java.math.BigDecimal("10.0"),
-                List.of("http://localhost:5173")
+                List.of("http://localhost:5173"),
+                ""
         );
     }
 }

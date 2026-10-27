@@ -1,6 +1,7 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { CloudOff, Leaf, Map, RefreshCw, TriangleAlert, X } from "lucide-react";
-import { analyzeConsignment } from "./api/atieClient";
+import { analyzeConsignment, fetchDataStatus } from "./api/atieClient";
+import { DataFreshnessPanel } from "./components/DataFreshnessPanel";
 import { ModelEvaluationBadge } from "./components/ModelEvaluationBadge";
 import { OnboardingConfigModal } from "./components/OnboardingConfigModal";
 import { PrimaryDirectiveCard } from "./components/PrimaryDirectiveCard";
@@ -11,6 +12,7 @@ import type {
   AnalysisState,
   AnalyzeRequest,
   AnalyzeResponse,
+  DataStatus,
 } from "./types/atie";
 
 const ProfitMarginChart = lazy(() =>
@@ -41,6 +43,22 @@ export default function App() {
   });
   const [loading, setLoading] = useState(false);
   const [hasRun, setHasRun] = useState(false);
+  const [dataStatus, setDataStatus] = useState<DataStatus | null>(null);
+  const [dataStatusUnavailable, setDataStatusUnavailable] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetchDataStatus()
+      .then((status) => {
+        if (active) setDataStatus(status);
+      })
+      .catch(() => {
+        if (active) setDataStatusUnavailable(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function run(nextRequest: AnalyzeRequest) {
     setRequest(nextRequest);
@@ -142,7 +160,14 @@ export default function App() {
         loading={loading}
       />
 
-      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1.45fr_0.9fr]">
+      <div className="mt-5">
+        <DataFreshnessPanel
+          status={dataStatus}
+          unavailable={dataStatusUnavailable}
+        />
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 items-start gap-5 xl:grid-cols-[1.45fr_0.9fr]">
         <PrimaryDirectiveCard response={response} />
         <WeatherDisruptionCard alerts={response.weatherAlerts} />
       </div>

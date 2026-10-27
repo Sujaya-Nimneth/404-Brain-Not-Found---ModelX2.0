@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { CloudRain, Droplets, Wind } from "lucide-react";
 import type { WeatherAlert } from "../types/atie";
 
@@ -6,6 +7,12 @@ interface Props {
 }
 
 export function WeatherDisruptionCard({ alerts }: Props) {
+  const [expanded, setExpanded] = useState(false);
+  const orderedAlerts = [...alerts].sort(
+    (left, right) => riskRank(right.riskLevel) - riskRank(left.riskLevel),
+  );
+  const visibleAlerts = expanded ? orderedAlerts : orderedAlerts.slice(0, 3);
+
   return (
     <section className="rise-in rise-in-delay-3 rounded-[2rem] bg-[#dce8c7] p-5 shadow-card md:p-7">
       <div className="flex items-start justify-between gap-4">
@@ -23,7 +30,7 @@ export function WeatherDisruptionCard({ alerts }: Props) {
       </div>
 
       <div className="mt-6 space-y-3">
-        {alerts.map((alert) => (
+        {visibleAlerts.map((alert) => (
           <article
             key={alert.marketCode}
             className="rounded-2xl border border-ink/10 bg-cream/75 p-4 backdrop-blur"
@@ -55,9 +62,36 @@ export function WeatherDisruptionCard({ alerts }: Props) {
                 {alert.extremeWeather ? "Extreme flag" : "Normal route"}
               </span>
             </div>
+            <p className="mt-2 font-mono text-[0.54rem] uppercase tracking-[0.1em] text-ink/35">
+              {alert.source.replaceAll("_", " ")} · {formatDate(alert.observationDate)}
+            </p>
           </article>
         ))}
       </div>
+      {alerts.length > 3 && (
+        <button
+          type="button"
+          onClick={() => setExpanded((current) => !current)}
+          aria-expanded={expanded}
+          className="mt-4 w-full rounded-full border border-ink/15 bg-cream/55 px-4 py-2.5 font-mono text-[0.6rem] font-bold uppercase tracking-[0.12em] text-ink/60 transition hover:border-moss hover:text-moss"
+        >
+          {expanded
+            ? "Show highest-risk markets"
+            : `Show all ${alerts.length} market alerts`}
+        </button>
+      )}
     </section>
   );
+}
+
+function riskRank(level: WeatherAlert["riskLevel"]) {
+  return level === "HIGH" ? 3 : level === "MEDIUM" ? 2 : 1;
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-LK", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(`${value}T00:00:00`));
 }

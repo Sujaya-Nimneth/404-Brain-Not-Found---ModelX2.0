@@ -1,4 +1,5 @@
 from datetime import date
+import time
 
 import joblib
 import pytest
@@ -134,3 +135,18 @@ def test_incomplete_fallback_snapshot_returns_controlled_error(tmp_path):
 
     with pytest.raises(ValueError, match="unavailable or incomplete"):
         predictor.predict(CANONICAL_REQUEST)
+
+
+def test_warm_model_inference_meets_sub_100ms_gate():
+    predictor = Predictor(Settings())
+    assert predictor.model_loaded
+    predictor.predict(CANONICAL_REQUEST)
+
+    samples: list[float] = []
+    for _ in range(12):
+        started = time.perf_counter()
+        response = predictor.predict(CANONICAL_REQUEST)
+        samples.append((time.perf_counter() - started) * 1000)
+        assert response.forecast_source.value == "MODEL"
+
+    assert max(samples) < 100.0, f"warm inference exceeded 100 ms: {samples}"

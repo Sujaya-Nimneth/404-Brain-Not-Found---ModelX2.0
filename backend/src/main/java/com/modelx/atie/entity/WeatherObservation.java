@@ -49,6 +49,9 @@ public class WeatherObservation {
     @Column(name = "extreme_weather_flag", nullable = false)
     private boolean extremeWeatherFlag;
 
+    @Column(nullable = false, length = 32)
+    private String source;
+
     protected WeatherObservation() {
     }
 
@@ -74,5 +77,9 @@ public class WeatherObservation {
 
     public boolean isExtremeWeatherFlag() {
         return extremeWeatherFlag;
+    }
+
+    public String getSource() {
+        return source;
     }
 }

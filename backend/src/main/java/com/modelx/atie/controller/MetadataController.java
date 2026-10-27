@@ -19,6 +19,7 @@ import com.modelx.atie.repository.CropRepository;
 import com.modelx.atie.repository.FuelPriceRepository;
 import com.modelx.atie.repository.MarketRepository;
 import com.modelx.atie.repository.MarketRouteRepository;
+import com.modelx.atie.service.DataStatusService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,6 +34,7 @@ public class MetadataController {
     private final MarketRouteRepository routes;
     private final OriginCatalog origins;
     private final AtieProperties properties;
+    private final DataStatusService dataStatus;
 
     public MetadataController(
             MarketRepository markets,
@@ -40,7 +42,8 @@ public class MetadataController {
             FuelPriceRepository fuelPrices,
             MarketRouteRepository routes,
             OriginCatalog origins,
-            AtieProperties properties
+            AtieProperties properties,
+            DataStatusService dataStatus
     ) {
         this.markets = markets;
         this.crops = crops;
@@ -48,6 +51,7 @@ public class MetadataController {
         this.routes = routes;
         this.origins = origins;
         this.properties = properties;
+        this.dataStatus = dataStatus;
     }
 
     @GetMapping("/config")
@@ -81,6 +85,12 @@ public class MetadataController {
                         "movementThresholdPct", properties.movementThresholdPct()
                 )
         );
+    }
+
+    @GetMapping("/data-status")
+    @Operation(summary = "Get live-data provenance, freshness, and price coverage")
+    public com.modelx.atie.dto.DataStatusResponse dataStatus() {
+        return dataStatus.snapshot();
     }
 
     private Map<String, Object> vehicle(VehicleType vehicle) {

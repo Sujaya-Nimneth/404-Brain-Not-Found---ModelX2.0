@@ -319,3 +319,69 @@ Before each workstream is considered complete, tests must prove:
 
 The canonical scenario must also be exercised end-to-end through the backend
 and rendered dashboard, not only at the calculator or ML layer.
+
+## 7. Live Data Provenance and Freshness
+
+ATIE distinguishes a data source from the state of a fetch. A source is never
+described as live merely because a network adapter exists.
+
+Every ingestion attempt must write one row to `data_ingestion_runs` with:
+
+- a stable `source_code`: `HDX`, `CROPIX`, or `OPEN_METEO`
+- a terminal `status`: `SUCCESS`, `FALLBACK`, or `FAILED`
+- the active `data_state`: `LIVE`, `CACHED`, `SEED`, or `UNAVAILABLE`
+- `started_at`, `finished_at`, `records_received`, `records_written`
+- the upstream URL or local cache path actually used
+- a bounded error message when the attempt did not succeed
+
+The latest successful observation for each source is also recorded in
+`data_source_status`, including `last_success_at`, `latest_observation_date`,
+the source URL, and the number of records written. A fallback attempt must not
+advance `last_success_at`.
+
+The provenance values on stored observations are:
+
+```text
+HDX_LIVE       HDX data fetched from the verified HDX resource
+HDX_CACHED     normalized HDX data loaded from the local cache
+HDX_SEED       deterministic local seed history
+CROPIX_LIVE    CROPIX data fetched from a configured live endpoint
+CROPIX_CACHED  CROPIX data loaded from a checked-in/local cache
+OPEN_METEO_LIVE Open-Meteo forecast fetched successfully
+OPEN_METEO_CACHED Open-Meteo data loaded from local cache
+SEED           deterministic local values
+```
+
+Live price ingestion must be idempotent on
+`(market_id, crop_id, recorded_date)`. An upsert may replace a seeded value
+only when the incoming row is genuinely live and maps to a supported market and
+crop. The adapter must not invent a market or commodity mapping.
+
+The initial verified HDX resource is
+`wfp-food-prices-for-sri-lanka`. It is a WFP monthly price series with
+historical Dambulla/Pettah wholesale coverage and broader retail coverage.
+Consequently, the presence of an HDX success does not by itself make all seven
+markets or all four crops current. Missing combinations retain their existing
+source and are reported as gaps, never backfilled and relabeled as live.
+
+The configured CROPIX hosts currently do not resolve. CROPIX ingestion must
+therefore return a visible `UNAVAILABLE` or `CACHED` state and must not block
+startup or inference. A later working endpoint can be supplied through
+configuration without changing the contract.
+
+Open-Meteo is the live weather source. Each successful market/day response is
+upserted on `(market_id, observation_date)` with the daily precipitation and
+temperature values. A fallback response keeps the last verified weather row
+and records a fallback attempt.
+
+`GET /api/v1/metadata/data-status` returns:
+
+- overall `status`: `LIVE`, `PARTIAL`, `FALLBACK`, or `UNAVAILABLE`
+- `generated_at`
+- one entry per source with its latest state, timestamps, counts, and message
+- `price_coverage`: supported market/crop combinations with latest
+  observation date and provenance
+
+The endpoint is read-only and must remain available even when every upstream
+source is offline. The dashboard must display the distinction between live and
+seeded/fallback data.
