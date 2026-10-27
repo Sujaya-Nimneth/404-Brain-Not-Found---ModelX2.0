@@ -7,7 +7,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: process.env.ATIE_E2E_URL ?? "http://127.0.0.1:15173",
+    baseURL: process.env.ATIE_E2E_URL ?? "http://localhost:15173",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
