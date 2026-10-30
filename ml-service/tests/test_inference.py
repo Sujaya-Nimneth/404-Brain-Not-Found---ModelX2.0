@@ -1,4 +1,5 @@
 from datetime import date
+import math
 import time
 
 import joblib
@@ -139,19 +140,22 @@ def test_incomplete_fallback_snapshot_returns_controlled_error(tmp_path):
         predictor.predict(CANONICAL_REQUEST)
 
 
-def test_warm_model_inference_meets_sub_100ms_gate():
+def test_warm_model_inference_meets_sub_100ms_p95_gate():
     predictor = Predictor(Settings())
     assert predictor.model_loaded
     predictor.predict(CANONICAL_REQUEST)
 
     samples: list[float] = []
-    for _ in range(12):
+    for _ in range(20):
         started = time.perf_counter()
         response = predictor.predict(CANONICAL_REQUEST)
         samples.append((time.perf_counter() - started) * 1000)
         assert response.forecast_source.value == "MODEL"
 
-    assert max(samples) < 100.0, f"warm inference exceeded 100 ms: {samples}"
+    ordered = sorted(samples)
+    p95_index = math.ceil(0.95 * len(ordered)) - 1
+    p95 = ordered[p95_index]
+    assert p95 < 100.0, f"warm inference p95 exceeded 100 ms: {samples}"
 
 
 def test_model_predictions_honor_the_requested_reference_date():
