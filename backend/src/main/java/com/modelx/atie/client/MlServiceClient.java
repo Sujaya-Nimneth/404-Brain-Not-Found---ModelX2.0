@@ -1,29 +1,58 @@
 package com.modelx.atie.client;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.modelx.atie.config.AtieProperties;
 import com.modelx.atie.dto.MarketForecast;
 
 @Component
 public class MlServiceClient implements ForecastClient {
     private static final Logger log = LoggerFactory.getLogger(MlServiceClient.class);
+    private static final Set<String> FORECAST_SOURCES = Set.of(
+            "MODEL",
+            "FALLBACK",
+            "DEMO_FIXTURE"
+    );
+    private static final Set<String> DATA_STATES = Set.of(
+            "LIVE",
+            "CACHED",
+            "SEED"
+    );
 
     private final RestClient client;
+    private final AtieProperties properties;
+    private final JsonNode fallbackSnapshot;
 
-    public MlServiceClient(RestClient.Builder builder, AtieProperties properties) {
-        this.client = builder.baseUrl(properties.mlServiceUrl()).build();
+    public MlServiceClient(
+            RestClient.Builder builder,
+            AtieProperties properties,
+            ObjectMapper objectMapper
+    ) {
+        this.client = builder
+                .baseUrl(properties.mlServiceUrl())
+                .build();
+        this.properties = properties;
+        this.fallbackSnapshot = loadFallbackSnapshot(objectMapper);
     }
 
     @Override
@@ -48,13 +77,104 @@ public class MlServiceClient implements ForecastClient {
                     ))
                     .retrieve()
                     .body(MlForecastResponse.class);
-            if (response == null || response.predictions() == null) {
-                throw new IllegalStateException("ML service returned no predictions");
-            }
+            validateResponse(
+                    response,
+                    cropCode,
+                    horizonHours,
+                    markets,
+                    demoMode
+            );
             return response;
-        } catch (RestClientException | IllegalStateException error) {
-            log.warn("ML service unavailable; using deterministic fallback: {}", error.getMessage());
+        } catch (RestClientResponseException error) {
+            if (error.getStatusCode().is4xxClientError()) {
+                throw new MlServiceException(
+                        HttpStatus.valueOf(error.getStatusCode().value()),
+                        "ML_REJECTED_REQUEST",
+                        bounded(error.getResponseBodyAsString()),
+                        error
+                );
+            }
+            log.warn("ML service returned {}; using fallback", error.getStatusCode());
             return fallback(cropCode, horizonHours, referenceDate, markets, demoMode);
+        } catch (ResourceAccessException error) {
+            log.warn("ML service is unreachable; using fallback: {}", error.getMessage());
+            return fallback(cropCode, horizonHours, referenceDate, markets, demoMode);
+        } catch (RestClientException error) {
+            log.warn("ML transport failed; using fallback: {}", error.getMessage());
+            return fallback(cropCode, horizonHours, referenceDate, markets, demoMode);
+        }
+    }
+
+    private void validateResponse(
+            MlForecastResponse response,
+            String cropCode,
+            int horizonHours,
+            List<String> markets,
+            boolean demoMode
+    ) {
+        if (response == null || response.predictions() == null
+                || response.predictions().isEmpty()) {
+            throw contractError("ML service returned no predictions");
+        }
+        if (!cropCode.equals(response.cropCode())) {
+            throw contractError("ML service returned a mismatched crop");
+        }
+        if (horizonHours != response.horizonHours()) {
+            throw contractError("ML service returned a mismatched horizon");
+        }
+        if (response.referenceDate() == null) {
+            throw contractError("ML service returned no reference date");
+        }
+        if (!FORECAST_SOURCES.contains(response.forecastSource())) {
+            throw contractError("ML service returned an invalid forecast source");
+        }
+        if (!DATA_STATES.contains(response.inputDataState())) {
+            throw contractError("ML service returned an invalid input data state");
+        }
+        if (demoMode && !"DEMO_FIXTURE".equals(response.forecastSource())) {
+            throw contractError("ML demo request did not resolve to DEMO_FIXTURE");
+        }
+        if (!demoMode && !Set.of("MODEL", "FALLBACK")
+                .contains(response.forecastSource())) {
+            throw contractError("ML live request returned a demo fixture");
+        }
+
+        Set<String> expectedMarkets = new HashSet<>(markets);
+        Set<String> returnedMarkets = new HashSet<>();
+        for (MarketForecast prediction : response.predictions()) {
+            if (prediction == null || prediction.marketCode() == null) {
+                throw contractError("ML service returned an empty market forecast");
+            }
+            if (!returnedMarkets.add(prediction.marketCode())) {
+                throw contractError("ML service returned duplicate market forecasts");
+            }
+            validateForecast(prediction);
+        }
+        if (!expectedMarkets.equals(returnedMarkets)) {
+            throw contractError(
+                    "ML forecast markets do not match the requested markets"
+            );
+        }
+    }
+
+    private void validateForecast(MarketForecast forecast) {
+        if (forecast.currentPriceLkr() == null
+                || forecast.predictedPriceLkr() == null
+                || forecast.baselineNaiveLkr() == null
+                || forecast.baselineMa7Lkr() == null
+                || forecast.currentPriceLkr().signum() <= 0
+                || forecast.predictedPriceLkr().signum() <= 0
+                || forecast.baselineNaiveLkr().signum() <= 0
+                || forecast.baselineMa7Lkr().signum() <= 0) {
+            throw contractError("ML service returned non-positive price data");
+        }
+        if (!Set.of("CRASH", "STABLE", "SURGE").contains(forecast.direction())) {
+            throw contractError("ML service returned an invalid direction");
+        }
+        if (forecast.confidenceScore() == null
+                || forecast.confidenceScore().signum() < 0
+                || forecast.confidenceScore().compareTo(BigDecimal.ONE) > 0) {
+            throw contractError("ML service returned an invalid confidence score");
         }
     }
 
@@ -65,119 +185,118 @@ public class MlServiceClient implements ForecastClient {
             List<String> markets,
             boolean demoMode
     ) {
-        Map<String, FallbackMarket> fixtures = Map.of(
-                "DAMBULLA", new FallbackMarket(
-                        new BigDecimal("220.00"),
-                        horizonHours == 48
-                                ? new BigDecimal("154.00")
-                                : new BigDecimal("155.00"),
-                        new BigDecimal("237.76"),
-                        "HIGH",
-                        new BigDecimal("0.89"),
-                        "Supply glut from Northern province harvest."
-                ),
-                "PETTAH_COLOMBO", new FallbackMarket(
-                        new BigDecimal("170.00"),
-                        horizonHours == 48
-                                ? new BigDecimal("187.50")
-                                : new BigDecimal("188.50"),
-                        new BigDecimal("171.20"),
-                        "LOW",
-                        new BigDecimal("0.86"),
-                        "High urban demand."
-                ),
-                "KEPPETIPOLA", new FallbackMarket(
-                        new BigDecimal("175.00"),
-                        horizonHours == 48
-                                ? new BigDecimal("165.00")
-                                : new BigDecimal("166.00"),
-                        new BigDecimal("176.40"),
-                        "MEDIUM",
-                        new BigDecimal("0.75"),
-                        "Hill-country transit risk."
-                ),
-                "MEEGODA", new FallbackMarket(
-                        new BigDecimal("180.00"),
-                        horizonHours == 48
-                                ? new BigDecimal("172.00")
-                                : new BigDecimal("173.00"),
-                        new BigDecimal("181.30"),
-                        "LOW",
-                        new BigDecimal("0.74"),
-                        "Balanced western arrivals."
-                ),
-                "NUWARA_ELIYA", new FallbackMarket(
-                        new BigDecimal("185.00"),
-                        horizonHours == 48
-                                ? new BigDecimal("182.00")
-                                : new BigDecimal("183.00"),
-                        new BigDecimal("186.10"),
-                        "MEDIUM",
-                        new BigDecimal("0.72"),
-                        "Upcountry arrivals remain close to seasonal demand."
-                ),
-                "THAMBUTTEGAMA", new FallbackMarket(
-                        new BigDecimal("190.00"),
-                        horizonHours == 48
-                                ? new BigDecimal("174.00")
-                                : new BigDecimal("175.00"),
-                        new BigDecimal("191.20"),
-                        "HIGH",
-                        new BigDecimal("0.78"),
-                        "Northern and North Central arrivals are elevating supply."
-                ),
-                "JAFFNA", new FallbackMarket(
-                        new BigDecimal("160.00"),
-                        horizonHours == 48
-                                ? new BigDecimal("158.00")
-                                : new BigDecimal("159.00"),
-                        new BigDecimal("161.40"),
-                        "LOW",
-                        new BigDecimal("0.70"),
-                        "Local demand is balanced against steady arrivals."
-                )
+        JsonNode cropData = fallbackSnapshot.path("markets").path(cropCode);
+        if (!cropData.isObject()) {
+            throw fallbackUnavailable("No fallback snapshot exists for " + cropCode);
+        }
+        String source = demoMode ? "DEMO_FIXTURE" : "FALLBACK";
+        String dataState = fallbackSnapshot.path("input_data_state")
+                .asText("SEED");
+        LocalDate fallbackDate = LocalDate.parse(
+                fallbackSnapshot.path("reference_date")
+                        .asText(referenceDate.toString())
         );
-
         List<MarketForecast> predictions = markets.stream()
-                .map(marketCode -> {
-                    FallbackMarket fixture = fixtures.get(marketCode);
-                    if (fixture == null) {
-                        throw new IllegalArgumentException(
-                                "No fallback for market " + marketCode
-                        );
-                    }
-                    BigDecimal change = fixture.predicted()
-                            .subtract(fixture.current())
-                            .divide(fixture.current(), java.math.MathContext.DECIMAL128)
-                            .multiply(new BigDecimal("100"))
-                            .setScale(2, java.math.RoundingMode.HALF_UP);
-                    String direction = change.compareTo(new BigDecimal("-10")) <= 0
-                            ? "CRASH"
-                            : change.compareTo(new BigDecimal("10")) >= 0
-                            ? "SURGE"
-                            : "STABLE";
-                    return new MarketForecast(
-                            marketCode,
-                            fixture.current(),
-                            fixture.predicted(),
-                            fixture.current(),
-                            fixture.ma7(),
-                            change,
-                            direction,
-                            fixture.glutRisk(),
-                            fixture.confidence(),
-                            fixture.driver()
-                    );
-                })
+                .map(marketCode -> fallbackForecast(
+                        cropData,
+                        marketCode,
+                        horizonHours
+                ))
                 .toList();
         return new MlForecastResponse(
                 cropCode,
                 horizonHours,
-                referenceDate,
-                demoMode ? "DEMO_FIXTURE" : "FALLBACK",
-                demoMode ? "demo-fixture-v1.0" : "backend-fallback-v1.0",
+                fallbackDate,
+                source,
+                demoMode
+                        ? "demo-fixture-v1.0"
+                        : fallbackSnapshot.path("model_version")
+                                .asText("backend-fallback-v1.0"),
+                dataState,
                 predictions
         );
+    }
+
+    private MarketForecast fallbackForecast(
+            JsonNode cropData,
+            String marketCode,
+            int horizonHours
+    ) {
+        JsonNode fixture = cropData.path(marketCode).path(
+                String.valueOf(horizonHours)
+        );
+        if (!fixture.isObject()) {
+            throw fallbackUnavailable(
+                    "Fallback snapshot is missing " + marketCode + "/" + horizonHours
+            );
+        }
+        BigDecimal current = decimal(fixture, "current_price_lkr");
+        BigDecimal predicted = decimal(fixture, "predicted_price_lkr");
+        BigDecimal ma7 = decimal(fixture, "baseline_ma7_lkr");
+        BigDecimal change = predicted.subtract(current)
+                .divide(current, MathContext.DECIMAL128)
+                .multiply(new BigDecimal("100"));
+        String direction = change.compareTo(
+                properties.movementThresholdPct().negate()
+        ) <= 0
+                ? "CRASH"
+                : change.compareTo(properties.movementThresholdPct()) >= 0
+                ? "SURGE"
+                : "STABLE";
+        return new MarketForecast(
+                marketCode,
+                current,
+                predicted,
+                current,
+                ma7,
+                change.setScale(2, RoundingMode.HALF_UP),
+                direction,
+                fixture.path("glut_risk_level").asText("MEDIUM"),
+                decimal(fixture, "confidence_score"),
+                fixture.path("primary_driver").asText("Fallback forecast snapshot")
+        );
+    }
+
+    private BigDecimal decimal(JsonNode fixture, String field) {
+        JsonNode value = fixture.get(field);
+        if (value == null || !value.isNumber()) {
+            throw fallbackUnavailable(
+                    "Fallback snapshot field is missing: " + field
+            );
+        }
+        return value.decimalValue();
+    }
+
+    private JsonNode loadFallbackSnapshot(ObjectMapper objectMapper) {
+        try (var input = new ClassPathResource("fallback_forecasts.json")
+                .getInputStream()) {
+            return objectMapper.readTree(input);
+        } catch (Exception error) {
+            throw new IllegalStateException("Fallback forecast snapshot is invalid", error);
+        }
+    }
+
+    private MlServiceException contractError(String message) {
+        return new MlServiceException(
+                HttpStatus.BAD_GATEWAY,
+                "ML_CONTRACT_ERROR",
+                message
+        );
+    }
+
+    private MlServiceException fallbackUnavailable(String message) {
+        return new MlServiceException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "FALLBACK_UNAVAILABLE",
+                message
+        );
+    }
+
+    private String bounded(String message) {
+        if (message == null || message.isBlank()) {
+            return "ML service rejected the request";
+        }
+        return message.length() <= 500 ? message : message.substring(0, 500);
     }
 
     public record MlForecastResponse(
@@ -186,17 +305,8 @@ public class MlServiceClient implements ForecastClient {
             @JsonProperty("reference_date") LocalDate referenceDate,
             @JsonProperty("forecast_source") String forecastSource,
             @JsonProperty("model_version") String modelVersion,
+            @JsonProperty("input_data_state") String inputDataState,
             List<MarketForecast> predictions
-    ) {
-    }
-
-    private record FallbackMarket(
-            BigDecimal current,
-            BigDecimal predicted,
-            BigDecimal ma7,
-            String glutRisk,
-            BigDecimal confidence,
-            String driver
     ) {
     }
 }

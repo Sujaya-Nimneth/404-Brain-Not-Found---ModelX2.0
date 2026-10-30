@@ -2,6 +2,8 @@ package com.modelx.atie.dto;
 
 import java.math.BigDecimal;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public record MarketComparison(
         String marketCode,
         String marketName,
@@ -13,8 +15,12 @@ public record MarketComparison(
         BigDecimal handlingCostLkr,
         BigDecimal netProfitLkr,
         BigDecimal distanceKm,
+        BigDecimal profitDeltaLkr,
         BigDecimal profitUpliftPct,
-        boolean recommended,
+        BigDecimal fuelLitres,
+        int trips,
+        BigDecimal vehicleCapacityKg,
+        @JsonProperty("is_recommended") boolean recommended,
         String direction
 ) {
 }

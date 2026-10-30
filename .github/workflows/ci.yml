@@ -2,7 +2,7 @@ name: ATIE CI
 
 on:
   push:
-    branches: [main, sujaya-main]
+    branches: [main, sujaya-main, "codex/**"]
   pull_request:
     branches: [main, sujaya-main]
 
@@ -12,6 +12,20 @@ permissions:
 jobs:
   ml-service:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: atie
+          POSTGRES_USER: atie
+          POSTGRES_PASSWORD: atie_dev_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U atie -d atie"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -21,8 +35,16 @@ jobs:
           cache-dependency-path: ml-service/requirements-dev.txt
       - run: pip install -r requirements-dev.txt
         working-directory: ml-service
+      - name: Initialize integration-test database
+        env:
+          PGPASSWORD: atie_dev_password
+        run: |
+          psql -h localhost -U atie -d atie -v ON_ERROR_STOP=1 -f db/init.sql
+          psql -h localhost -U atie -d atie -v ON_ERROR_STOP=1 -f db/seed.sql
       - run: pytest --cov=app --cov=etl --cov=training --cov-report=term-missing
         working-directory: ml-service
+        env:
+          ATIE_TEST_POSTGRES_DSN: postgresql://atie:atie_dev_password@localhost:5432/atie
 
   backend:
     runs-on: ubuntu-latest
@@ -47,6 +69,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
         working-directory: frontend
+      - run: npm test
+        working-directory: frontend
       - run: npm run lint
         working-directory: frontend
       - run: npm run build
@@ -66,6 +90,7 @@ jobs:
         working-directory: frontend
       - run: npx playwright install --with-deps chromium
         working-directory: frontend
+      - run: docker compose --env-file .env.example config --quiet
       - run: docker compose --env-file .env.example up --build -d --wait
       - run: npm run test:e2e
         working-directory: frontend

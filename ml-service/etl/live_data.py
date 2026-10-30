@@ -33,7 +33,6 @@ MARKET_MAPPING = {
 COMMODITY_MAPPING = {
     "Tomatoes": "TOMATO",
     "Carrots": "CARROT",
-    "Chili (red, dry raw)": "GREEN_CHILI",
     "Onions (red, local)": "RED_ONION",
     "Onions (red)": "RED_ONION",
 }

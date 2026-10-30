@@ -41,4 +41,18 @@ CREATE INDEX IF NOT EXISTS idx_data_ingestion_runs_source_time
 ALTER TABLE weather_observations
     ADD COLUMN IF NOT EXISTS source VARCHAR(32) NOT NULL DEFAULT 'SEED';
 
+CREATE OR REPLACE FUNCTION atie_source_priority(source_value TEXT)
+RETURNS INT
+LANGUAGE SQL
+IMMUTABLE
+AS $$
+    SELECT CASE
+        WHEN source_value LIKE '%!_LIVE' ESCAPE '!' THEN 3
+        WHEN source_value LIKE '%!_CACHED' ESCAPE '!' THEN 2
+        WHEN source_value = 'SEED'
+          OR source_value LIKE '%!_SEED' ESCAPE '!' THEN 1
+        ELSE 0
+    END;
+$$;
+
 COMMIT;

@@ -1,8 +1,6 @@
 package com.modelx.atie.controller;
 
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,6 +10,7 @@ import com.modelx.atie.config.AtieProperties;
 import com.modelx.atie.config.OriginCatalog;
 import com.modelx.atie.domain.Origin;
 import com.modelx.atie.domain.VehicleType;
+import com.modelx.atie.dto.MetadataConfigResponse;
 import com.modelx.atie.entity.Crop;
 import com.modelx.atie.entity.FuelPrice;
 import com.modelx.atie.entity.Market;
@@ -56,33 +55,50 @@ public class MetadataController {
 
     @GetMapping("/config")
     @Operation(summary = "Get supported crops, origins, markets, vehicles, and fuel prices")
-    public Map<String, Object> config() {
+    public MetadataConfigResponse config() {
         FuelPrice fuel = fuelPrices.findTopByOrderByEffectiveDateDesc().orElse(null);
-        return Map.of(
-                "origins", origins.all(),
-                "markets", markets.findAllByOrderByNameAsc(),
-                "crops", crops.findAllByOrderByNameAsc(),
-                "routes", routes.findAll().stream().map(route -> Map.of(
-                        "originCode", route.getOriginCode(),
-                        "marketCode", route.getDestinationMarket().getCode(),
-                        "distanceKm", route.getDistanceKm(),
-                        "terrainFactor", route.getRoadTerrainFactor()
-                )).toList(),
-                "vehicleTypes", List.of(
+        return new MetadataConfigResponse(
+                origins.all(),
+                markets.findAllByOrderByNameAsc().stream()
+                        .map(market -> new MetadataConfigResponse.MarketInfo(
+                                market.getCode(),
+                                market.getName(),
+                                market.getProvince(),
+                                market.getLatitude(),
+                                market.getLongitude(),
+                                market.getHandlingFeePerKgLkr()
+                        ))
+                        .toList(),
+                crops.findAllByOrderByNameAsc().stream()
+                        .map(crop -> new MetadataConfigResponse.CropInfo(
+                                crop.getCode(),
+                                crop.getName(),
+                                crop.getSpoilageRatePer100KmPct()
+                        ))
+                        .toList(),
+                routes.findAll().stream()
+                        .map(route -> new MetadataConfigResponse.RouteInfo(
+                                route.getOriginCode(),
+                                route.getDestinationMarket().getCode(),
+                                route.getDistanceKm(),
+                                route.getRoadTerrainFactor()
+                        ))
+                        .toList(),
+                List.of(
                         vehicle(VehicleType.THREE_WHEELER),
                         vehicle(VehicleType.MINI_TRUCK_BATTA),
                         vehicle(VehicleType.LORRY_3_5T)
                 ),
-                "horizons", List.of(48, 72),
-                "fuelPrices", fuel == null ? Map.of() : Map.of(
-                        "effectiveDate", fuel.getEffectiveDate(),
-                        "dieselLkrPerLiter", fuel.getDieselLkrPerLiter(),
-                        "petrolLkrPerLiter", fuel.getPetrolLkrPerLiter()
+                List.of(48, 72),
+                fuel == null ? null : new MetadataConfigResponse.FuelPrices(
+                        fuel.getEffectiveDate(),
+                        fuel.getDieselLkrPerLiter(),
+                        fuel.getPetrolLkrPerLiter()
                 ),
-                "thresholds", Map.of(
-                        "safeMarginPct", properties.safeMarginPct(),
-                        "safeAbsoluteFloorLkr", properties.safeAbsoluteFloorLkr(),
-                        "movementThresholdPct", properties.movementThresholdPct()
+                new MetadataConfigResponse.Thresholds(
+                        properties.safeMarginPct(),
+                        properties.safeAbsoluteFloorLkr(),
+                        properties.movementThresholdPct()
                 )
         );
     }
@@ -93,13 +109,13 @@ public class MetadataController {
         return dataStatus.snapshot();
     }
 
-    private Map<String, Object> vehicle(VehicleType vehicle) {
-        return Map.of(
-                "code", vehicle.name(),
-                "displayName", vehicle.getDisplayName(),
-                "capacityKg", vehicle.getCapacityKg(),
-                "litresPerKm", vehicle.getLitresPerKm(),
-                "fuelType", vehicle.getFuelType()
+    private MetadataConfigResponse.VehicleInfo vehicle(VehicleType vehicle) {
+        return new MetadataConfigResponse.VehicleInfo(
+                vehicle.name(),
+                vehicle.getDisplayName(),
+                vehicle.getCapacityKg(),
+                vehicle.getLitresPerKm(),
+                vehicle.getFuelType().name()
         );
     }
 }

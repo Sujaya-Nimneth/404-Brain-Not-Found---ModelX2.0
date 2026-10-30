@@ -1,9 +1,5 @@
 package com.modelx.atie.controller;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,25 +29,4 @@ public class DirectiveController {
         return routingService.analyze(request);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiError> handleInvalidRequest(IllegalArgumentException error) {
-        return ResponseEntity.badRequest().body(
-                new ApiError("INVALID_REQUEST", error.getMessage())
-        );
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiError> handleValidation(
-            MethodArgumentNotValidException error
-    ) {
-        String message = error.getBindingResult().getFieldErrors().stream()
-                .findFirst()
-                .map(field -> field.getField() + ": " + field.getDefaultMessage())
-                .orElse("Request validation failed");
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ApiError("VALIDATION_ERROR", message));
-    }
-
-    public record ApiError(String code, String message) {
-    }
 }

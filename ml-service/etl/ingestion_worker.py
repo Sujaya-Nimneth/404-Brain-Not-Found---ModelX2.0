@@ -15,6 +15,7 @@ from etl.live_data import (
     HDX_DEFAULT_URL,
     PriceObservation,
     WeatherObservation,
+    dedupe_by_key,
     fetch_text,
     parse_cropix_prices,
     parse_hdx_prices,
@@ -22,6 +23,7 @@ from etl.live_data import (
     read_or_write_cache,
     utc_now,
 )
+from etl.weather_client import read_weather_cache, write_weather_cache
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +48,7 @@ class IngestionConfig:
     cropix_url: str | None = None
     cropix_cache_path: Path = Path("/app/data/cache/cropix_prices.csv")
     open_meteo_url: str = OPEN_METEO_URL
+    weather_cache_path: Path = Path("/app/data/cache/weather_forecasts.json")
     interval_seconds: int = 21_600
 
     @classmethod
@@ -68,6 +71,12 @@ class IngestionConfig:
                 os.getenv("CROPIX_CACHE_PATH", "/app/data/cache/cropix_prices.csv")
             ),
             open_meteo_url=os.getenv("OPEN_METEO_URL", OPEN_METEO_URL),
+            weather_cache_path=Path(
+                os.getenv(
+                    "OPEN_METEO_CACHE_PATH",
+                    "/app/data/cache/weather_forecasts.json",
+                )
+            ),
             interval_seconds=max(300, int(os.getenv("INGESTION_INTERVAL_SECONDS", "21600"))),
         )
 
@@ -172,7 +181,27 @@ def ingest_weather(config: IngestionConfig) -> dict[str, object]:
                 observations.extend(rows)
             except (httpx.HTTPError, KeyError, TypeError, ValueError) as error:
                 errors.append(f"{market_code}: {error}")
+    if observations:
+        try:
+            write_weather_cache(config.weather_cache_path, observations)
+        except OSError as error:
+            errors.append(f"weather cache write failed: {error}")
     if not observations:
+        cached = read_weather_cache(config.weather_cache_path)
+        if cached:
+            return _ingest_weather_rows(
+                config,
+                cached,
+                started,
+                records_received=len(cached),
+                status="FALLBACK",
+                data_state="CACHED",
+                source_url=str(config.weather_cache_path),
+                message=(
+                    "Open-Meteo unavailable; using verified cached weather. "
+                    + "; ".join(errors)
+                ),
+            )
         return _record_failure(
             config,
             source_code="OPEN_METEO",
@@ -243,19 +272,10 @@ def _ingest_prices(
     source_url: str | None,
     message: str,
 ) -> dict[str, object]:
-    rows = list(observations)
+    rows = dedupe_by_key(observations)
+    if not rows:
+        raise ValueError("price ingestion requires at least one observation")
     with psycopg.connect(config.dsn) as connection:
-        _record_run(
-            connection,
-            source_code=source_code,
-            status=status,
-            data_state=data_state,
-            started=started,
-            records_received=len(rows),
-            records_written=len(rows),
-            source_url=source_url,
-            message=message,
-        )
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -285,29 +305,33 @@ def _ingest_prices(
             )
             cursor.execute(
                 """
-                INSERT INTO historical_prices (
-                    market_id, crop_id, recorded_date,
-                    wholesale_price_lkr_per_kg, source
+                WITH upserted AS (
+                    INSERT INTO historical_prices (
+                        market_id, crop_id, recorded_date,
+                        wholesale_price_lkr_per_kg, source
+                    )
+                    SELECT markets.id, crops.id, incoming.recorded_date,
+                           incoming.wholesale_price_lkr_per_kg, incoming.source
+                    FROM incoming_prices incoming
+                    JOIN markets ON markets.code = incoming.market_code
+                    JOIN crops ON crops.code = incoming.crop_code
+                    ON CONFLICT (market_id, crop_id, recorded_date) DO UPDATE SET
+                        wholesale_price_lkr_per_kg =
+                            EXCLUDED.wholesale_price_lkr_per_kg,
+                        source = EXCLUDED.source
+                    WHERE atie_source_priority(EXCLUDED.source)
+                            > atie_source_priority(historical_prices.source)
+                       OR (
+                            atie_source_priority(EXCLUDED.source)
+                                = atie_source_priority(historical_prices.source)
+                        AND EXCLUDED.source = historical_prices.source
+                       )
+                    RETURNING 1
                 )
-                SELECT markets.id, crops.id, incoming.recorded_date,
-                       incoming.wholesale_price_lkr_per_kg, incoming.source
-                FROM incoming_prices incoming
-                JOIN markets ON markets.code = incoming.market_code
-                JOIN crops ON crops.code = incoming.crop_code
-                ON CONFLICT (market_id, crop_id, recorded_date) DO UPDATE SET
-                    wholesale_price_lkr_per_kg =
-                        EXCLUDED.wholesale_price_lkr_per_kg,
-                    source = EXCLUDED.source
-                WHERE historical_prices.source LIKE '%!_LIVE' ESCAPE '!'
-                   OR historical_prices.source LIKE '%!_CACHED' ESCAPE '!'
-                   OR historical_prices.source LIKE '%!_SEED' ESCAPE '!'
+                SELECT count(*) FROM upserted
                 """
             )
-            written = _matched_rows(
-                cursor,
-                "historical_prices",
-                [(row.market_code, row.crop_code, row.recorded_date) for row in rows],
-            )
+            written = int(cursor.fetchone()[0])
             _upsert_status(
                 cursor,
                 source_code=source_code,
@@ -318,6 +342,17 @@ def _ingest_prices(
                 records_written=written,
                 message=message,
             )
+        _record_run(
+            connection,
+            source_code=source_code,
+            status=status,
+            data_state=data_state,
+            started=started,
+            records_received=len(rows),
+            records_written=written,
+            source_url=source_url,
+            message=message,
+        )
     return {
         "source": source_code,
         "status": status,
@@ -341,17 +376,6 @@ def _ingest_weather_rows(
 ) -> dict[str, object]:
     rows = list(observations)
     with psycopg.connect(config.dsn) as connection:
-        _record_run(
-            connection,
-            source_code="OPEN_METEO",
-            status=status,
-            data_state=data_state,
-            started=started,
-            records_received=records_received,
-            records_written=len(rows),
-            source_url=source_url,
-            message=message,
-        )
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -381,29 +405,36 @@ def _ingest_weather_rows(
             )
             cursor.execute(
                 """
-                INSERT INTO weather_observations (
-                    market_id, observation_date, precipitation_mm,
-                    temp_max_c, temp_min_c, extreme_weather_flag, source
+                WITH upserted AS (
+                    INSERT INTO weather_observations (
+                        market_id, observation_date, precipitation_mm,
+                        temp_max_c, temp_min_c, extreme_weather_flag, source
+                    )
+                    SELECT markets.id, incoming.observation_date,
+                           incoming.precipitation_mm, incoming.temp_max_c,
+                           incoming.temp_min_c,
+                           incoming.precipitation_mm >= 15, incoming.source
+                    FROM incoming_weather incoming
+                    JOIN markets ON markets.code = incoming.market_code
+                    ON CONFLICT (market_id, observation_date) DO UPDATE SET
+                        precipitation_mm = EXCLUDED.precipitation_mm,
+                        temp_max_c = EXCLUDED.temp_max_c,
+                        temp_min_c = EXCLUDED.temp_min_c,
+                        extreme_weather_flag = EXCLUDED.extreme_weather_flag,
+                        source = EXCLUDED.source
+                    WHERE atie_source_priority(EXCLUDED.source)
+                            > atie_source_priority(weather_observations.source)
+                       OR (
+                            atie_source_priority(EXCLUDED.source)
+                                = atie_source_priority(weather_observations.source)
+                        AND EXCLUDED.source = weather_observations.source
+                       )
+                    RETURNING 1
                 )
-                SELECT markets.id, incoming.observation_date,
-                       incoming.precipitation_mm, incoming.temp_max_c,
-                       incoming.temp_min_c,
-                       incoming.precipitation_mm >= 15, incoming.source
-                FROM incoming_weather incoming
-                JOIN markets ON markets.code = incoming.market_code
-                ON CONFLICT (market_id, observation_date) DO UPDATE SET
-                    precipitation_mm = EXCLUDED.precipitation_mm,
-                    temp_max_c = EXCLUDED.temp_max_c,
-                    temp_min_c = EXCLUDED.temp_min_c,
-                    extreme_weather_flag = EXCLUDED.extreme_weather_flag,
-                    source = EXCLUDED.source
+                SELECT count(*) FROM upserted
                 """
             )
-            written = _matched_rows(
-                cursor,
-                "weather_observations",
-                [(row.market_code, None, row.observation_date) for row in rows],
-            )
+            written = int(cursor.fetchone()[0])
             _upsert_status(
                 cursor,
                 source_code="OPEN_METEO",
@@ -414,6 +445,17 @@ def _ingest_weather_rows(
                 records_written=written,
                 message=message,
             )
+        _record_run(
+            connection,
+            source_code="OPEN_METEO",
+            status=status,
+            data_state=data_state,
+            started=started,
+            records_received=records_received,
+            records_written=written,
+            source_url=source_url,
+            message=message,
+        )
     return {
         "source": "OPEN_METEO",
         "status": status,
@@ -496,46 +538,6 @@ def _record_run(
             None if status == "SUCCESS" else message,
         ),
     )
-
-
-def _matched_rows(
-    cursor: psycopg.Cursor,
-    table: str,
-    keys: list[tuple[str, str | None, date]],
-) -> int:
-    if table == "historical_prices":
-        cursor.execute(
-            """
-            SELECT count(*)
-            FROM historical_prices history
-            JOIN markets ON markets.id = history.market_id
-            JOIN crops ON crops.id = history.crop_id
-            JOIN unnest(%s::text[], %s::text[], %s::date[])
-                AS incoming(market_code, crop_code, recorded_date)
-            ON markets.code = incoming.market_code
-            AND crops.code = incoming.crop_code
-            AND history.recorded_date = incoming.recorded_date
-            """,
-            (
-                [key[0] for key in keys],
-                [key[1] for key in keys],
-                [key[2] for key in keys],
-            ),
-        )
-    else:
-        cursor.execute(
-            """
-            SELECT count(*)
-            FROM weather_observations weather
-            JOIN markets ON markets.id = weather.market_id
-            JOIN unnest(%s::text[], %s::date[])
-                AS incoming(market_code, observation_date)
-            ON markets.code = incoming.market_code
-            AND weather.observation_date = incoming.observation_date
-            """,
-            ([key[0] for key in keys], [key[2] for key in keys]),
-        )
-    return int(cursor.fetchone()[0])
 
 
 def _upsert_status(

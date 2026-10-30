@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,7 +21,10 @@ class Settings(BaseSettings):
     model_path: Path = ROOT_DIR / "models" / "atie_forecaster.joblib"
     metadata_path: Path = ROOT_DIR / "models" / "evaluation_report.json"
     fallback_data_path: Path = ROOT_DIR / "data" / "fallback_forecasts.json"
-    movement_threshold_pct: float = 10.0
+    history_path: Path = ROOT_DIR / "data" / "feature_history.csv"
+    database_dsn: str | None = None
+    feature_refresh_seconds: int = Field(default=900, ge=30)
+    movement_threshold_pct: float = Field(default=10.0, gt=0, le=100)
     random_seed: int = 404
     retrain_on_startup: bool = False
 

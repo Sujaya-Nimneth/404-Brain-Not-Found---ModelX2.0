@@ -1,7 +1,12 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { CloudOff, Leaf, Map, RefreshCw, TriangleAlert, X } from "lucide-react";
-import { analyzeConsignment, fetchDataStatus } from "./api/atieClient";
+import {
+  analyzeConsignment,
+  AtieApiError,
+  fetchDataStatus,
+} from "./api/atieClient";
 import { DataFreshnessPanel } from "./components/DataFreshnessPanel";
+import { EvaluationBaselinesPanel } from "./components/EvaluationBaselinesPanel";
 import { ModelEvaluationBadge } from "./components/ModelEvaluationBadge";
 import { OnboardingConfigModal } from "./components/OnboardingConfigModal";
 import { PrimaryDirectiveCard } from "./components/PrimaryDirectiveCard";
@@ -9,7 +14,6 @@ import { RoutingLogisticsPanel } from "./components/RoutingLogisticsPanel";
 import { WeatherDisruptionCard } from "./components/WeatherDisruptionCard";
 import { demoRequest, demoResponse } from "./data/demoResponse";
 import type {
-  AnalysisState,
   AnalyzeRequest,
   AnalyzeResponse,
   DataStatus,
@@ -31,20 +35,36 @@ const defaultRequest: AnalyzeRequest = {
   demoMode: false,
 };
 
+interface ResultSnapshot {
+  request: AnalyzeRequest;
+  response: AnalyzeResponse;
+}
+
+interface AnalysisFailure {
+  message: string;
+  keptPreviousResult: boolean;
+}
+
 export default function App() {
   const [request, setRequest] = useState<AnalyzeRequest>(defaultRequest);
-  const [response, setResponse] = useState<AnalyzeResponse>({
-    ...demoResponse,
-    analysisState: {
-      kind: "demo",
-      message:
-        "Showing the verified competition fixture. Select a scenario and analyze it for live model output.",
+  const [result, setResult] = useState<ResultSnapshot | null>({
+    request: demoRequest,
+    response: {
+      ...demoResponse,
+      analysisState: {
+        kind: "demo",
+        message:
+          "Showing the verified competition fixture. Select a scenario and analyze it for live model output.",
+      },
     },
   });
   const [loading, setLoading] = useState(false);
-  const [hasRun, setHasRun] = useState(false);
+  const [analysisFailure, setAnalysisFailure] =
+    useState<AnalysisFailure | null>(null);
   const [dataStatus, setDataStatus] = useState<DataStatus | null>(null);
   const [dataStatusUnavailable, setDataStatusUnavailable] = useState(false);
+  const response = result?.response ?? null;
+  const activeRequest = result?.request ?? request;
 
   useEffect(() => {
     let active = true;
@@ -63,22 +83,33 @@ export default function App() {
   async function run(nextRequest: AnalyzeRequest) {
     setRequest(nextRequest);
     setLoading(true);
+    setAnalysisFailure(null);
     try {
-      const result = await analyzeConsignment(nextRequest);
-      setResponse({ ...result, analysisState: { kind: "live" } });
-      setHasRun(true);
-    } catch (error) {
-      const detail =
-        error instanceof Error ? error.message : "The ATIE API is unavailable.";
-      setResponse({
-        ...demoResponse,
-        modelVersion: "local-demo-v1.0",
-        analysisState: {
-          kind: "offline",
-          message: `Live analysis failed, so verified fixture values remain on screen. ${detail}`,
+      const apiResponse = await analyzeConsignment(nextRequest);
+      setResult({
+        request: nextRequest,
+        response: {
+          ...apiResponse,
+          analysisState:
+            apiResponse.forecastSource === "DEMO_FIXTURE"
+              ? {
+                  kind: "demo",
+                  message:
+                    "The canonical competition fixture was requested explicitly; these values are not live model output.",
+                }
+              : { kind: "live" },
         },
       });
-      setHasRun(false);
+    } catch (error) {
+      const keepPrevious =
+        result !== null && sameRequest(result.request, nextRequest);
+      if (!keepPrevious) {
+        setResult(null);
+      }
+      setAnalysisFailure({
+        message: errorMessage(error),
+        keptPreviousResult: keepPrevious,
+      });
     } finally {
       setLoading(false);
     }
@@ -101,7 +132,9 @@ export default function App() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ModelEvaluationBadge summary={response.modelEvaluationSummary} />
+          {response && (
+            <ModelEvaluationBadge summary={response.modelEvaluationSummary} />
+          )}
           <button
             type="button"
             onClick={() => run({ ...request, demoMode: false })}
@@ -142,13 +175,29 @@ export default function App() {
         </div>
       </section>
 
-      {response.forecastSource === "DEMO_FIXTURE" && (
+      {analysisFailure && (
+        <AnalysisFailureNotice
+          failure={analysisFailure}
+          onDismiss={() => setAnalysisFailure(null)}
+        />
+      )}
+
+      {response && response.analysisState && shouldShowSourceNotice(response) && (
         <AnalysisNotice
-          state={response.analysisState}
-          onDismiss={() => setResponse((current) => ({
-            ...current,
-            analysisState: undefined,
-          }))}
+          response={response}
+          onDismiss={() =>
+            setResult((current) =>
+              current
+                ? {
+                    ...current,
+                    response: {
+                      ...current.response,
+                      analysisState: undefined,
+                    },
+                  }
+                : current,
+            )
+          }
         />
       )}
 
@@ -167,39 +216,72 @@ export default function App() {
         />
       </div>
 
-      <div className="mt-5 grid grid-cols-1 items-start gap-5 xl:grid-cols-[1.45fr_0.9fr]">
-        <PrimaryDirectiveCard response={response} />
-        <WeatherDisruptionCard alerts={response.weatherAlerts} />
-      </div>
+      {response ? (
+        <>
+          <div className="mt-5 grid grid-cols-1 items-start gap-5 xl:grid-cols-[1.45fr_0.9fr]">
+            <PrimaryDirectiveCard response={response} />
+            <WeatherDisruptionCard alerts={response.weatherAlerts} />
+          </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-        <Suspense fallback={<ChartLoading label="Loading market economics…" />}>
-          <ProfitMarginChart markets={response.marketComparisons} />
-        </Suspense>
-        <RoutingLogisticsPanel markets={response.marketComparisons} />
-      </div>
+          <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+            <Suspense
+              fallback={<ChartLoading label="Loading market economics…" />}
+            >
+              <ProfitMarginChart markets={response.marketComparisons} />
+            </Suspense>
+            <RoutingLogisticsPanel markets={response.marketComparisons} />
+          </div>
 
-      <div className="mt-5">
-        <Suspense fallback={<ChartLoading label="Loading forecast trace…" />}>
-          <ForecastTrajectoryChart
-            key={`${request.defaultMarketCode}-${request.cropCode}`}
-            marketCode={request.defaultMarketCode}
-            marketName={
-              response.marketComparisons.find(
-                (market) => market.marketCode === request.defaultMarketCode,
-              )?.marketName ?? request.defaultMarketCode
-            }
-            cropCode={request.cropCode}
-            forecastSource={response.forecastSource}
-          />
-        </Suspense>
-      </div>
+          <div className="mt-5">
+            <Suspense
+              fallback={<ChartLoading label="Loading forecast trace…" />}
+            >
+              <ForecastTrajectoryChart
+                key={`${activeRequest.defaultMarketCode}-${activeRequest.cropCode}`}
+                marketCode={activeRequest.defaultMarketCode}
+                marketName={
+                  response.marketComparisons.find(
+                    (market) =>
+                      market.marketCode === activeRequest.defaultMarketCode,
+                  )?.marketName ?? activeRequest.defaultMarketCode
+                }
+                cropCode={activeRequest.cropCode}
+                forecastSource={response.forecastSource}
+              />
+            </Suspense>
+          </div>
+
+          <div className="mt-5">
+            <EvaluationBaselinesPanel
+              summary={response.modelEvaluationSummary}
+            />
+          </div>
+        </>
+      ) : (
+        !analysisFailure && (
+          <section
+            role="status"
+            className="mt-5 rounded-[2rem] border border-ink/10 bg-cream/80 p-8 text-center shadow-card"
+          >
+            <p className="font-display text-2xl font-semibold text-ink">
+              No analysis result yet.
+            </p>
+            <p className="mt-2 text-sm text-ink/55">
+              Choose a consignment above and run a safe-route analysis.
+            </p>
+          </section>
+        )
+      )}
 
       <footer className="mt-6 flex flex-col justify-between gap-2 border-t border-ink/10 py-5 font-mono text-[0.58rem] uppercase tracking-[0.12em] text-ink/35 sm:flex-row">
         <span>ATIE · safe routing first</span>
         <span>
-          {hasRun ? "Analysis refreshed" : "Showing verified demo fixture"} ·{" "}
-          {response.modelVersion}
+          {response
+            ? response.forecastSource === "DEMO_FIXTURE"
+              ? "Showing verified demo fixture"
+              : "Analysis refreshed"
+            : "No current result"}
+          {response ? ` · ${response.modelVersion}` : ""}
         </span>
       </footer>
     </main>
@@ -221,33 +303,46 @@ function ChartLoading({ label }: { label: string }) {
 }
 
 function AnalysisNotice({
-  state,
+  response,
   onDismiss,
 }: {
-  state: AnalysisState | undefined;
+  response: AnalyzeResponse;
   onDismiss: () => void;
 }) {
-  const offline = state?.kind === "offline";
+  const demo = response.forecastSource === "DEMO_FIXTURE";
+  const fallback = response.forecastSource === "FALLBACK";
+  const title = demo
+    ? "Demo fixture is active."
+    : fallback
+      ? "Fallback forecast is active."
+      : response.inputDataState === "CACHED"
+        ? "Cached inputs are active."
+        : "Seed inputs are active.";
+  const detail =
+    response.analysisState?.kind === "demo"
+      ? response.analysisState.message
+      : [
+          fallback
+            ? "The trained model was unavailable, so the deterministic fallback supplied these forecasts."
+            : null,
+          response.inputDataState === "CACHED"
+            ? "Price and weather features include verified local cache data."
+            : null,
+          response.inputDataState === "SEED"
+            ? "Price and weather features include deterministic seed history."
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" ");
+
   return (
     <div
-      role={offline ? "alert" : "status"}
-      className={`rise-in mb-5 flex items-start gap-3 rounded-2xl border px-4 py-3 text-xs leading-6 ${
-        offline
-          ? "border-clay/30 bg-[#f3d8cc]/85 text-[#6f2f1d]"
-          : "border-amber/30 bg-[#f4e6bd]/75 text-[#6b4f16]"
-      }`}
+      role="status"
+      className="rise-in mb-5 flex items-start gap-3 rounded-2xl border border-amber/30 bg-[#f4e6bd]/75 px-4 py-3 text-xs leading-6 text-[#6b4f16]"
     >
-      {offline ? (
-        <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-      ) : (
-        <CloudOff className="mt-0.5 h-4 w-4 shrink-0" />
-      )}
+      <CloudOff className="mt-0.5 h-4 w-4 shrink-0" />
       <p className="min-w-0 flex-1">
-        <strong>{offline ? "Live analysis failed." : "Demo data is active."}</strong>{" "}
-        {(state?.kind === "offline" || state?.kind === "demo"
-          ? state.message
-          : null) ??
-          "This is a verified competition fixture, not a live forecast. Use “Analyze market route” to request model or fallback predictions."}
+        <strong>{title}</strong> {detail}
       </p>
       <button
         type="button"
@@ -258,5 +353,72 @@ function AnalysisNotice({
         <X className="h-3.5 w-3.5" />
       </button>
     </div>
+  );
+}
+
+function AnalysisFailureNotice({
+  failure,
+  onDismiss,
+}: {
+  failure: AnalysisFailure;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      role="alert"
+      className="rise-in mb-5 flex items-start gap-3 rounded-2xl border border-clay/30 bg-[#f3d8cc]/85 px-4 py-3 text-xs leading-6 text-[#6f2f1d]"
+    >
+      <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+      <p className="min-w-0 flex-1">
+        <strong>
+          {failure.keptPreviousResult
+            ? "Analysis failed; the previous matching result remains below."
+            : "Analysis failed."}
+        </strong>{" "}
+        {failure.message}
+        {!failure.keptPreviousResult &&
+          " No demo fixture was substituted for this request."}
+      </p>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss analysis error"
+        className="rounded-full p-1 opacity-55 transition hover:bg-ink/5 hover:opacity-100"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function shouldShowSourceNotice(response: AnalyzeResponse) {
+  return (
+    response.forecastSource !== "MODEL" ||
+    response.inputDataState !== "LIVE"
+  );
+}
+
+function errorMessage(error: unknown) {
+  if (error instanceof AtieApiError) {
+    const code = error.code ? ` (${error.code})` : "";
+    const requestId = error.requestId
+      ? ` Request ${error.requestId}.`
+      : "";
+    return `${error.message.replace(/[.!?]+$/, "")}${code}.${requestId}`;
+  }
+  return error instanceof Error
+    ? error.message
+    : "The ATIE API is unavailable.";
+}
+
+function sameRequest(left: AnalyzeRequest, right: AnalyzeRequest) {
+  return (
+    left.originCode === right.originCode &&
+    left.defaultMarketCode === right.defaultMarketCode &&
+    left.cropCode === right.cropCode &&
+    left.quantityKg === right.quantityKg &&
+    left.vehicleType === right.vehicleType &&
+    left.horizonHours === right.horizonHours &&
+    left.demoMode === right.demoMode
   );
 }

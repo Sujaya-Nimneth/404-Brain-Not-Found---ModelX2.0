@@ -40,7 +40,9 @@ class ArbitrageRoutingServiceTest {
             new BigDecimal("1000.00"),
             new BigDecimal("10.0"),
             List.of("http://localhost:5173"),
-            ""
+            "",
+            3,
+            15
     );
 
     private CropRepository crops;
@@ -145,6 +147,7 @@ class ArbitrageRoutingServiceTest {
                 LocalDate.of(2026, 10, 27),
                 "DEMO_FIXTURE",
                 "demo-fixture-v1.0",
+                "SEED",
                 List.of(
                         forecast("DAMBULLA", "220", "154", "HIGH"),
                         forecast("PETTAH_COLOMBO", "170", "187.50", "LOW"),

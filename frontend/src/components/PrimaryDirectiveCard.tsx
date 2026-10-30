@@ -63,6 +63,9 @@ export function PrimaryDirectiveCard({ response }: Props) {
             <span className="rounded-full border border-white/20 px-3 py-1.5 font-mono text-[0.62rem] uppercase tracking-[0.12em] text-cream/65">
               {response.forecastSource.replaceAll("_", " ")}
             </span>
+            <span className="rounded-full border border-white/20 px-3 py-1.5 font-mono text-[0.62rem] uppercase tracking-[0.12em] text-cream/65">
+              Inputs {response.inputDataState}
+            </span>
           </div>
 
           <h2 className="mt-5 max-w-2xl font-display text-4xl font-semibold leading-[1.03] md:text-6xl">
@@ -121,7 +124,7 @@ export function PrimaryDirectiveCard({ response }: Props) {
         <div className="relative z-10 mt-7 flex items-start gap-3 rounded-2xl border border-[#e9b29c]/20 bg-[#8b3e2b]/30 p-4 text-sm text-[#f6c6b2]">
           <TrendingDown className="mt-0.5 h-5 w-5 shrink-0" />
           <p>
-            Dambulla prices are forecast to fall{" "}
+            {defaultMarket.marketName} prices are forecast to fall{" "}
             <strong className="text-cream">
               {Math.abs(
                 ((defaultMarket.predictedPriceLkr -

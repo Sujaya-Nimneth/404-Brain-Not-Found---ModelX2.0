@@ -7,6 +7,8 @@ from training.routing import (
     ProfitBreakdown,
     Route,
     calculate_profit,
+    display_money,
+    display_percentage,
     passes_safe_margin,
     relative_uplift_pct,
     select_reroute,
@@ -39,16 +41,16 @@ def test_canonical_dambulla_and_pettah_match_backend_contract():
     dambulla = profit("DAMBULLA", "70", "154.00")
     pettah = profit("PETTAH_COLOMBO", "205", "187.50")
 
-    assert dambulla.effective_volume_kg == Decimal("989.50")
-    assert dambulla.gross_revenue_lkr == Decimal("152383.00")
-    assert dambulla.transport_cost_lkr == Decimal("3169.60")
-    assert dambulla.net_profit_lkr == Decimal("146713.40")
-    assert pettah.effective_volume_kg == Decimal("969.25")
-    assert pettah.gross_revenue_lkr == Decimal("181734.38")
-    assert pettah.transport_cost_lkr == Decimal("9282.40")
-    assert pettah.net_profit_lkr == Decimal("169951.98")
-    assert relative_uplift_pct(
-        pettah.net_profit_lkr, dambulla.net_profit_lkr
+    assert display_money(dambulla.effective_volume_kg) == Decimal("989.50")
+    assert display_money(dambulla.gross_revenue_lkr) == Decimal("152383.00")
+    assert display_money(dambulla.transport_cost_lkr) == Decimal("3169.60")
+    assert display_money(dambulla.net_profit_lkr) == Decimal("146713.40")
+    assert display_money(pettah.effective_volume_kg) == Decimal("969.25")
+    assert display_money(pettah.gross_revenue_lkr) == Decimal("181734.38")
+    assert display_money(pettah.transport_cost_lkr) == Decimal("9282.40")
+    assert display_money(pettah.net_profit_lkr) == Decimal("169951.98")
+    assert display_percentage(
+        relative_uplift_pct(pettah.net_profit_lkr, dambulla.net_profit_lkr)
     ) == Decimal("15.84")
 
 
@@ -118,3 +120,12 @@ def test_select_reroute_chooses_highest_eligible_net_profit():
 def test_zero_current_price_is_rejected():
     with pytest.raises(ValueError, match="positive"):
         profit("DAMBULLA", "70", "0")
+
+
+def test_safe_margin_uses_raw_decimal_values_not_display_rounding():
+    assert not passes_safe_margin(
+        Decimal("104999.996"),
+        Decimal("100000.004"),
+        Decimal("5"),
+        Decimal("1000"),
+    )

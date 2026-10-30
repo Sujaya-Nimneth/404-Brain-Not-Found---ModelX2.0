@@ -18,6 +18,7 @@ HDX_SAMPLE = """date,market,commodity,pricetype,price,unit
 2021-04-15,Unknown Market,Tomatoes,Wholesale,99.00,KG
 2021-04-15,Economic Centre-Pettah,Unknown Crop,Wholesale,99.00,KG
 2021-04-15,Economic Centre-Pettah,Carrots,Wholesale,130.00,KG
+2021-04-15,Economic Centre-Dambulla,Chili (red, dry raw),Wholesale,450.00,KG
 """
 
 

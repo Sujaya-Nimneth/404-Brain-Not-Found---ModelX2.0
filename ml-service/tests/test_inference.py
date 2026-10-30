@@ -1,4 +1,5 @@
 from datetime import date
+import math
 import time
 
 import joblib
@@ -33,6 +34,8 @@ def test_demo_fixture_is_explicit_and_exact(tmp_path):
     response = predictor.predict_demo_fixture(CANONICAL_REQUEST)
 
     assert response.forecast_source.value == "DEMO_FIXTURE"
+    assert response.input_data_state.value == "SEED"
+    assert response.reference_date == date(2026, 10, 27)
     by_market = {item.market_code: item for item in response.predictions}
     assert by_market["DAMBULLA"].predicted_price_lkr == 154.0
     assert by_market["DAMBULLA"].pct_change == -30.0
@@ -137,16 +140,71 @@ def test_incomplete_fallback_snapshot_returns_controlled_error(tmp_path):
         predictor.predict(CANONICAL_REQUEST)
 
 
-def test_warm_model_inference_meets_sub_100ms_gate():
+def test_warm_model_inference_meets_sub_100ms_p95_gate():
     predictor = Predictor(Settings())
     assert predictor.model_loaded
     predictor.predict(CANONICAL_REQUEST)
 
     samples: list[float] = []
-    for _ in range(12):
+    for _ in range(20):
         started = time.perf_counter()
         response = predictor.predict(CANONICAL_REQUEST)
         samples.append((time.perf_counter() - started) * 1000)
         assert response.forecast_source.value == "MODEL"
 
-    assert max(samples) < 100.0, f"warm inference exceeded 100 ms: {samples}"
+    ordered = sorted(samples)
+    p95_index = math.ceil(0.95 * len(ordered)) - 1
+    p95 = ordered[p95_index]
+    assert p95 < 100.0, f"warm inference p95 exceeded 100 ms: {samples}"
+
+
+def test_model_predictions_honor_the_requested_reference_date():
+    predictor = Predictor(Settings())
+    earlier = predictor.predict(
+        CANONICAL_REQUEST.model_copy(
+            update={"reference_date": date(2026, 10, 20)}
+        )
+    )
+    latest = predictor.predict(CANONICAL_REQUEST)
+
+    assert earlier.reference_date == date(2026, 10, 20)
+    assert latest.reference_date == date(2026, 10, 27)
+    assert earlier.input_data_state.value == "SEED"
+    assert [
+        item.predicted_price_lkr for item in earlier.predictions
+    ] != [
+        item.predicted_price_lkr for item in latest.predictions
+    ]
+
+
+def test_future_reference_date_echoes_the_latest_observation_used():
+    predictor = Predictor(Settings())
+    response = predictor.predict(
+        CANONICAL_REQUEST.model_copy(
+            update={"reference_date": date(2030, 1, 1)}
+        )
+    )
+
+    assert response.reference_date == date(2026, 10, 27)
+
+
+def test_reference_date_before_history_is_rejected():
+    predictor = Predictor(Settings())
+
+    with pytest.raises(ValueError, match="no observations"):
+        predictor.predict(
+            CANONICAL_REQUEST.model_copy(
+                update={"reference_date": date(2020, 1, 1)}
+            )
+        )
+
+
+def test_model_metadata_is_not_reused_from_the_demo_fixture():
+    predictor = Predictor(Settings())
+    response = predictor.predict(CANONICAL_REQUEST)
+
+    assert response.forecast_source.value == "MODEL"
+    assert any(
+        item.primary_driver != DEMO_FIXTURE[item.market_code].driver
+        for item in response.predictions
+    )

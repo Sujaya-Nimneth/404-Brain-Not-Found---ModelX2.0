@@ -1,8 +1,5 @@
 package com.modelx.atie.controller;
 
-import java.util.Map;
-import java.util.NoSuchElementException;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,17 +33,4 @@ public class MarketHistoryController {
         return ResponseEntity.ok(history.history(marketCode, cropCode, days));
     }
 
-    @org.springframework.web.bind.annotation.ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> invalidRequest(IllegalArgumentException error) {
-        return ResponseEntity.badRequest().body(
-                Map.of("code", "INVALID_REQUEST", "message", error.getMessage())
-        );
-    }
-
-    @org.springframework.web.bind.annotation.ExceptionHandler(NoSuchElementException.class)
-    public ResponseEntity<Map<String, String>> notFound(NoSuchElementException error) {
-        return ResponseEntity.status(404).body(
-                Map.of("code", "NOT_FOUND", "message", error.getMessage())
-        );
-    }
 }

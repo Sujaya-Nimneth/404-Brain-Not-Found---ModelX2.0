@@ -17,22 +17,34 @@ class ProfitMarginCalculatorTest {
     void canonicalDambullaCalculationMatchesContract() {
         ProfitBreakdown result = calculate("154", "70", "1.00");
 
-        assertThat(result.effectiveVolumeKg()).isEqualByComparingTo("989.50");
-        assertThat(result.grossRevenueLkr()).isEqualByComparingTo("152383.00");
-        assertThat(result.transportCostLkr()).isEqualByComparingTo("3169.60");
-        assertThat(result.handlingCostLkr()).isEqualByComparingTo("2500.00");
-        assertThat(result.netProfitLkr()).isEqualByComparingTo("146713.40");
-        assertThat(result.spoilageLossLkr()).isEqualByComparingTo("1617.00");
+        assertThat(calculator.displayMoney(result.effectiveVolumeKg()))
+                .isEqualByComparingTo("989.50");
+        assertThat(calculator.displayMoney(result.grossRevenueLkr()))
+                .isEqualByComparingTo("152383.00");
+        assertThat(calculator.displayMoney(result.transportCostLkr()))
+                .isEqualByComparingTo("3169.60");
+        assertThat(calculator.displayMoney(result.handlingCostLkr()))
+                .isEqualByComparingTo("2500.00");
+        assertThat(calculator.displayMoney(result.netProfitLkr()))
+                .isEqualByComparingTo("146713.40");
+        assertThat(calculator.displayMoney(result.spoilageLossLkr()))
+                .isEqualByComparingTo("1617.00");
+        assertThat(result.fuelLitres()).isEqualByComparingTo("11.20");
+        assertThat(result.trips()).isEqualByComparingTo("1");
     }
 
     @Test
     void canonicalPettahCalculationMatchesContract() {
         ProfitBreakdown result = calculate("187.50", "205", "1.00");
 
-        assertThat(result.effectiveVolumeKg()).isEqualByComparingTo("969.25");
-        assertThat(result.grossRevenueLkr()).isEqualByComparingTo("181734.38");
-        assertThat(result.transportCostLkr()).isEqualByComparingTo("9282.40");
-        assertThat(result.netProfitLkr()).isEqualByComparingTo("169951.98");
+        assertThat(calculator.displayMoney(result.effectiveVolumeKg()))
+                .isEqualByComparingTo("969.25");
+        assertThat(calculator.displayMoney(result.grossRevenueLkr()))
+                .isEqualByComparingTo("181734.38");
+        assertThat(calculator.displayMoney(result.transportCostLkr()))
+                .isEqualByComparingTo("9282.40");
+        assertThat(calculator.displayMoney(result.netProfitLkr()))
+                .isEqualByComparingTo("169951.98");
     }
 
     @Test
@@ -42,7 +54,8 @@ class ProfitMarginCalculatorTest {
                 new BigDecimal("146713.40")
         );
 
-        assertThat(uplift).isEqualByComparingTo("15.84");
+        assertThat(calculator.displayPercentage(uplift))
+                .isEqualByComparingTo("15.84");
     }
 
     @Test
@@ -62,7 +75,8 @@ class ProfitMarginCalculatorTest {
         ProfitBreakdown flat = calculate("165", "175", "1.00");
         ProfitBreakdown hilly = calculate("165", "175", "1.25");
 
-        assertThat(hilly.effectiveVolumeKg()).isEqualByComparingTo(flat.effectiveVolumeKg());
+        assertThat(hilly.effectiveVolumeKg())
+                .isEqualByComparingTo(flat.effectiveVolumeKg());
         assertThat(hilly.transportCostLkr()).isGreaterThan(flat.transportCostLkr());
     }
 

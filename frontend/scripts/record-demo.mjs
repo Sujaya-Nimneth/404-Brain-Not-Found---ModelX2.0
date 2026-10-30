@@ -177,20 +177,20 @@ try {
     "Disable the fixture and run the same consignment through normal model inference.",
   );
   await page.getByRole("button", { name: "Analyze market route" }).click();
-  await page.getByRole("heading", { name: "Proceed to Dambulla" }).waitFor({
-    state: "visible",
-    timeout: 20_000,
-  });
+  await page
+    .getByText(/^(CRITICAL REROUTE|PROCEED DEFAULT|HOLD HARVEST)$/)
+    .first()
+    .waitFor({ state: "visible", timeout: 20_000 });
   await sleep(3_000);
 
-  const liveDirective = page.getByRole("heading", {
-    name: "Proceed to Dambulla",
-  });
+  const liveDirective = page
+    .getByText(/^(CRITICAL REROUTE|PROCEED DEFAULT|HOLD HARVEST)$/)
+    .first();
   await scrollTo(page, liveDirective);
   await setCaption(
     page,
     "07 / Live result",
-    "The model returns seven markets and PROCEED DEFAULT. The fixture is not special-cased.",
+    "Normal inference returns every reachable market and a safety-gated directive. The fixture is not special-cased.",
   );
   await sleep(16_000);
 

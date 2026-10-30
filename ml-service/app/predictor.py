@@ -3,19 +3,21 @@ from __future__ import annotations
 import json
 import logging
 import pickle
+import time
 from dataclasses import dataclass
 from datetime import date
-from pathlib import Path
 from typing import Any
 
 import joblib
 import pandas as pd
+import psycopg
 
 from app.config import Settings
 from app.schemas import (
     Direction,
     ForecastSource,
     GlutRisk,
+    InputDataState,
     MarketForecast,
     PredictBatchRequest,
     PredictBatchResponse,
@@ -24,6 +26,9 @@ from etl.feature_engineering import FEATURE_COLUMNS, build_features, movement_di
 from etl.seed_loader import generate_demo_history
 
 logger = logging.getLogger(__name__)
+
+SUPPORTED_CROPS = {"TOMATO", "CARROT", "GREEN_CHILI", "RED_ONION"}
+DEMO_REFERENCE_DATE = date(2026, 10, 27)
 
 
 @dataclass(frozen=True)
@@ -109,12 +114,13 @@ class Predictor:
         self.settings = settings
         self.artifact: dict[str, Any] | None = None
         self.metadata: dict[str, Any] = {}
-        self.history = generate_demo_history()
+        self.history = pd.DataFrame()
+        self.input_data_state = InputDataState.SEED
         self._feature_frame: pd.DataFrame | None = None
-        self._latest_rows: pd.DataFrame | None = None
+        self._history_loaded_at = 0.0
         self._load_artifacts()
         self._configure_model_runtime()
-        self._prepare_feature_cache()
+        self._replace_history(*self._load_history())
 
     def _load_artifacts(self) -> None:
         try:
@@ -162,39 +168,113 @@ class Predictor:
             return str(self.artifact.get("model_version", "unknown"))
         return "fallback-v1.0"
 
-    def _prepare_feature_cache(self) -> None:
-        """Build feature history once; inference only slices the latest rows."""
-        if not self.model_loaded:
+    def _load_history(self) -> tuple[pd.DataFrame, InputDataState]:
+        if self.settings.database_dsn:
+            try:
+                frame = self._load_database_history(self.settings.database_dsn)
+                if not frame.empty:
+                    return frame, _data_state(frame)
+            except (OSError, psycopg.Error, ValueError, KeyError, TypeError) as error:
+                logger.warning(
+                    "PostgreSQL feature history unavailable; using local snapshot: %s",
+                    error,
+                )
+
+        if self.settings.history_path.exists():
+            try:
+                frame = pd.read_csv(self.settings.history_path)
+                if not frame.empty:
+                    return frame, _data_state(frame)
+            except (OSError, pd.errors.ParserError, ValueError) as error:
+                logger.warning(
+                    "Local feature history unavailable; using generated seed: %s",
+                    error,
+                )
+
+        return generate_demo_history(), InputDataState.SEED
+
+    def _load_database_history(self, dsn: str) -> pd.DataFrame:
+        query = """
+            SELECT markets.code AS market_code,
+                   crops.code AS crop_code,
+                   history.recorded_date,
+                   history.wholesale_price_lkr_per_kg,
+                   COALESCE(history.arrival_volume_tonnes, 1.0)
+                       AS arrival_volume_tonnes,
+                   COALESCE(fuel.diesel_lkr_per_liter, 283.0)
+                       AS diesel_price_lkr,
+                   COALESCE(weather.precipitation_mm, 0.0)
+                       AS precipitation_mm,
+                   history.source
+            FROM historical_prices history
+            JOIN markets ON markets.id = history.market_id
+            JOIN crops ON crops.id = history.crop_id
+            LEFT JOIN LATERAL (
+                SELECT diesel_lkr_per_liter
+                FROM fuel_prices
+                WHERE effective_date <= history.recorded_date
+                ORDER BY effective_date DESC
+                LIMIT 1
+            ) fuel ON TRUE
+            LEFT JOIN weather_observations weather
+              ON weather.market_id = history.market_id
+             AND weather.observation_date = history.recorded_date
+            WHERE history.recorded_date >= CURRENT_DATE - INTERVAL '730 days'
+            ORDER BY history.recorded_date, markets.code, crops.code
+        """
+        with psycopg.connect(dsn) as connection:
+            return pd.read_sql_query(query, connection)
+
+    def _replace_history(
+        self,
+        history: pd.DataFrame,
+        data_state: InputDataState,
+    ) -> None:
+        self.history = history
+        self.input_data_state = data_state
+        self._history_loaded_at = time.monotonic()
+        self._prepare_feature_cache()
+
+    def _refresh_history_if_due(self) -> None:
+        if (
+            not self.settings.database_dsn
+            and not self.settings.history_path.exists()
+        ):
+            return
+        if (
+            time.monotonic() - self._history_loaded_at
+            < self.settings.feature_refresh_seconds
+        ):
             return
         try:
-            featured = build_features(self.history)
-            self._feature_frame = featured
-            self._latest_rows = (
-                featured.sort_values("recorded_date")
-                .groupby(["market_code", "crop_code"], sort=False)
-                .tail(1)
-                .set_index(["market_code", "crop_code"])
-            )
+            history, data_state = self._load_history()
+            if not history.empty:
+                self._replace_history(history, data_state)
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            logger.warning("Feature refresh failed; keeping previous snapshot: %s", error)
+            self._history_loaded_at = time.monotonic()
+
+    def _prepare_feature_cache(self) -> None:
+        try:
+            self._feature_frame = build_features(self.history)
         except (KeyError, TypeError, ValueError) as error:
             logger.warning("Feature cache unavailable; requests will fall back: %s", error)
             self._feature_frame = None
-            self._latest_rows = None
 
     def predict(self, request: PredictBatchRequest) -> PredictBatchResponse:
-        if request.crop_code not in {"TOMATO", "CARROT", "GREEN_CHILI", "RED_ONION"}:
+        if request.crop_code not in SUPPORTED_CROPS:
             raise ValueError(f"unsupported crop: {request.crop_code}")
         unknown_markets = set(request.markets).difference(DEMO_FIXTURE)
         if unknown_markets:
             raise ValueError(f"unsupported markets: {sorted(unknown_markets)}")
 
-        source = (
-            ForecastSource.MODEL
-            if self.model_loaded
-            else ForecastSource.FALLBACK
-        )
+        self._refresh_history_if_due()
+        reference_date = self._reference_date_for_request(request)
+        source = ForecastSource.MODEL if self.model_loaded else ForecastSource.FALLBACK
         if self.model_loaded:
             try:
-                predictions = self._model_predictions(request)
+                rows = self._select_rows(request, reference_date)
+                predictions = self._model_predictions(request, rows)
             except (KeyError, ValueError, TypeError) as error:
                 logger.warning("Model inference failed; using fallback: %s", error)
                 source = ForecastSource.FALLBACK
@@ -205,46 +285,97 @@ class Predictor:
         return PredictBatchResponse(
             crop_code=request.crop_code,
             horizon_hours=request.horizon_hours,
-            reference_date=request.reference_date,
+            reference_date=reference_date,
             forecast_source=source,
-            model_version=self.model_version if source == ForecastSource.MODEL else "fallback-v1.0",
+            input_data_state=self.input_data_state,
+            model_version=(
+                self.model_version
+                if source == ForecastSource.MODEL
+                else "fallback-v1.0"
+            ),
             predictions=predictions,
         )
 
+    def _reference_date_for_request(self, request: PredictBatchRequest) -> date:
+        history = self.history.copy()
+        if history.empty:
+            raise ValueError("feature history is unavailable")
+        history["recorded_date"] = pd.to_datetime(
+            history["recorded_date"], errors="raise"
+        )
+        requested = pd.Timestamp(request.reference_date)
+        eligible = history[
+            (history["crop_code"] == request.crop_code)
+            & (history["market_code"].isin(request.markets))
+            & (history["recorded_date"] <= requested)
+        ]
+        latest = eligible.groupby("market_code")["recorded_date"].max()
+        missing = set(request.markets).difference(latest.index)
+        if missing:
+            raise ValueError(
+                "no observations exist on or before reference_date for: "
+                + ", ".join(sorted(missing))
+            )
+        return min(latest).date()
+
+    def _select_rows(
+        self,
+        request: PredictBatchRequest,
+        reference_date: date,
+    ) -> dict[str, pd.Series]:
+        if self._feature_frame is None:
+            raise ValueError("feature cache is unavailable")
+        eligible = self._feature_frame[
+            (self._feature_frame["crop_code"] == request.crop_code)
+            & (self._feature_frame["market_code"].isin(request.markets))
+            & (self._feature_frame["recorded_date"] <= pd.Timestamp(reference_date))
+        ].dropna(subset=FEATURE_COLUMNS)
+        if eligible.empty:
+            raise ValueError("no complete feature rows exist for reference_date")
+        latest = (
+            eligible.sort_values("recorded_date")
+            .groupby("market_code", sort=False)
+            .tail(1)
+            .set_index("market_code")
+        )
+        missing = set(request.markets).difference(latest.index)
+        if missing:
+            raise ValueError(
+                "no complete feature rows exist for: " + ", ".join(sorted(missing))
+            )
+        return {
+            market_code: latest.loc[market_code]
+            for market_code in request.markets
+        }
+
     def _model_predictions(
-        self, request: PredictBatchRequest
+        self,
+        request: PredictBatchRequest,
+        rows: dict[str, pd.Series],
     ) -> list[MarketForecast]:
         assert self.artifact is not None
-        if self._latest_rows is None:
-            raise ValueError("feature cache is unavailable")
         model = self.artifact["models"][str(request.horizon_hours)]
-        rows: list[pd.Series] = []
-        for market_code in request.markets:
-            row = self._latest_rows.loc[(market_code, request.crop_code)]
-            rows.append(row)
         feature_matrix = pd.DataFrame(
-            [row[FEATURE_COLUMNS].to_numpy(dtype=float) for row in rows],
+            [
+                rows[market_code][FEATURE_COLUMNS].to_numpy(dtype=float)
+                for market_code in request.markets
+            ],
             columns=FEATURE_COLUMNS,
         )
         predicted_prices = model.predict(feature_matrix)
 
-        result: list[MarketForecast] = []
-        for market_code, row, predicted in zip(
-            request.markets,
-            rows,
-            predicted_prices,
-            strict=True,
-        ):
-            result.append(
-                self._market_forecast(
-                    market_code=market_code,
-                    current=float(row["wholesale_price_lkr_per_kg"]),
-                    predicted=float(predicted),
-                    ma7=float(row["rolling_mean_7d"]),
-                    source=ForecastSource.MODEL,
-                )
+        return [
+            self._market_forecast(
+                market_code=market_code,
+                row=rows[market_code],
+                predicted=float(predicted),
             )
-        return result
+            for market_code, predicted in zip(
+                request.markets,
+                predicted_prices,
+                strict=True,
+            )
+        ]
 
     def _fallback_predictions(
         self, request: PredictBatchRequest
@@ -295,28 +426,55 @@ class Predictor:
     def _market_forecast(
         self,
         market_code: str,
-        current: float,
+        row: pd.Series,
         predicted: float,
-        ma7: float,
-        source: ForecastSource,
     ) -> MarketForecast:
-        fixture = DEMO_FIXTURE[market_code]
-        pct_change = round((predicted - current) / current * 100, 2)
+        current = float(row["wholesale_price_lkr_per_kg"])
+        ma7 = float(row["rolling_mean_7d"])
+        pct_change = (predicted - current) / current * 100
+        direction = movement_direction(
+            current,
+            predicted,
+            self.settings.movement_threshold_pct,
+        )
+        arrivals = float(row["arrival_volume_tonnes"])
+        mean_arrivals = float(row.get("rolling_mean_7d_arrivals", arrivals))
+        volatility = abs(float(row["rolling_std_7d"]) / current)
+        confidence = max(0.55, min(0.9, 0.9 - volatility * 2))
+        if direction == "CRASH" or arrivals >= mean_arrivals * 1.15:
+            glut_risk = GlutRisk.HIGH
+        elif direction == "SURGE" or arrivals <= mean_arrivals * 0.85:
+            glut_risk = GlutRisk.LOW
+        else:
+            glut_risk = GlutRisk.MEDIUM
+
+        if direction == "CRASH":
+            driver = (
+                "Elevated recent arrivals and negative price momentum indicate "
+                "a localized supply glut."
+            )
+        elif direction == "SURGE":
+            driver = (
+                "Positive price momentum and relatively constrained arrivals "
+                "support the upward forecast."
+            )
+        else:
+            driver = (
+                "Recent price and arrival patterns indicate a broadly stable "
+                "market."
+            )
+
         return MarketForecast(
             market_code=market_code,
             current_price_lkr=round(current, 2),
             predicted_price_lkr=round(predicted, 2),
             baseline_naive_lkr=round(current, 2),
             baseline_ma7_lkr=round(ma7, 2),
-            pct_change=pct_change,
-            direction=Direction(
-                movement_direction(
-                    current, predicted, self.settings.movement_threshold_pct
-                )
-            ),
-            glut_risk_level=fixture.glut_risk,
-            confidence_score=fixture.confidence,
-            primary_driver=fixture.driver,
+            pct_change=round(pct_change, 2),
+            direction=Direction(direction),
+            glut_risk_level=glut_risk,
+            confidence_score=round(confidence, 2),
+            primary_driver=driver,
         )
 
     def predict_demo_fixture(
@@ -360,8 +518,9 @@ class Predictor:
         return PredictBatchResponse(
             crop_code=request.crop_code,
             horizon_hours=request.horizon_hours,
-            reference_date=request.reference_date,
+            reference_date=DEMO_REFERENCE_DATE,
             forecast_source=ForecastSource.DEMO_FIXTURE,
+            input_data_state=InputDataState.SEED,
             model_version="demo-fixture-v1.0",
             predictions=predictions,
         )
@@ -370,3 +529,20 @@ class Predictor:
         if not self.metadata:
             raise FileNotFoundError("evaluation report is unavailable")
         return self.metadata
+
+
+def _data_state(frame: pd.DataFrame) -> InputDataState:
+    if "source" not in frame.columns:
+        return InputDataState.SEED
+    sources = {
+        str(value)
+        for value in frame["source"].dropna().unique()
+    }
+    if sources and all(source.endswith("_LIVE") for source in sources):
+        return InputDataState.LIVE
+    if any(
+        source.endswith("_LIVE") or source.endswith("_CACHED")
+        for source in sources
+    ):
+        return InputDataState.CACHED
+    return InputDataState.SEED

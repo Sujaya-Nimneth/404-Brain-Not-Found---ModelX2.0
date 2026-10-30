@@ -8,7 +8,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.modelx.atie.config.AtieProperties;
-import com.modelx.atie.dto.MarketComparison;
+import com.modelx.atie.dto.ProfitBreakdown;
 
 class RoutingDecisionServiceTest {
     private final RoutingDecisionService service = new RoutingDecisionService(
@@ -18,7 +18,9 @@ class RoutingDecisionServiceTest {
                     new BigDecimal("1000.00"),
                     new BigDecimal("10.0"),
                     List.of("http://localhost:5173"),
-                    ""
+                    "",
+                    3,
+                    15
             )
     );
 
@@ -95,24 +97,42 @@ class RoutingDecisionServiceTest {
         assertThat(result.primaryDirective().severity()).isEqualTo("PROCEED_DEFAULT");
     }
 
-    private MarketComparison market(
+    @Test
+    void roundedDisplayValuesDoNotManufactureASafeMargin() {
+        RoutingDecisionService.Decision result = service.decide(
+                "DAMBULLA",
+                List.of(
+                        market("DAMBULLA", "100000.004", "0"),
+                        market("PETTAH_COLOMBO", "104999.996", "4.999992")
+                )
+        );
+
+        assertThat(result.primaryDirective().severity()).isEqualTo("PROCEED_DEFAULT");
+    }
+
+    private MarketEvaluation market(
             String code,
             String netProfit,
             String uplift
     ) {
-        return new MarketComparison(
+        BigDecimal net = new BigDecimal(netProfit);
+        return new MarketEvaluation(
                 code,
                 code,
                 new BigDecimal("100"),
                 new BigDecimal("100"),
-                new BigDecimal("100000"),
-                new BigDecimal("1000"),
-                new BigDecimal("0"),
-                new BigDecimal("0"),
-                new BigDecimal(netProfit),
+                new ProfitBreakdown(
+                        new BigDecimal("1000"),
+                        BigDecimal.ZERO,
+                        net.add(new BigDecimal("1000")),
+                        new BigDecimal("1000"),
+                        BigDecimal.ZERO,
+                        net,
+                        new BigDecimal("8"),
+                        BigDecimal.ONE
+                ),
                 new BigDecimal("100"),
                 uplift == null ? null : new BigDecimal(uplift),
-                false,
                 "STABLE"
         );
     }

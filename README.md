@@ -16,7 +16,7 @@ React + Vite dashboard (:15173 in Compose)
 Spring Boot API (:8080) -----> PostgreSQL 16 (:55432 on the host)
         |
         v
-FastAPI + RandomForest (:18000 in Compose)
+FastAPI + RandomForest (:8000, internal Compose network only)
 
 Ingestion worker -----> HDX WFP / Open-Meteo / optional CROPIX
         |
@@ -43,12 +43,17 @@ Open:
 - Dashboard: http://localhost:15173
 - Swagger UI: http://localhost:8080/swagger-ui.html
 - Backend health: http://localhost:8080/actuator/health
-- ML health: http://localhost:18000/health
-- ML metrics: http://localhost:18000/metrics
+
+The ML service is intentionally not published to the host. Inspect its health
+through the private Compose network when needed:
+
+```bash
+docker compose exec ml-service python -c \
+  "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/health').read().decode())"
+```
 
 The default ports avoid collisions with an existing local stack. Override
-`POSTGRES_PORT`, `BACKEND_PORT`, `ML_SERVICE_PORT`, or `FRONTEND_PORT` in
-`.env` when needed.
+`POSTGRES_PORT`, `BACKEND_PORT`, or `FRONTEND_PORT` in `.env` when needed.
 
 ## Live Data And Provenance
 
@@ -89,8 +94,10 @@ weights. This limitation is shown in the dashboard instead of being hidden.
 
 The competition demo is open by default. Set `ATIE_API_KEY` in `.env` to
 require `X-ATIE-API-Key` on protected API routes. The public provenance
-endpoint remains readable so judges can inspect source status. The frontend
-passes the key at build time through `VITE_ATIE_API_KEY`.
+endpoint remains readable so judges can inspect source status. The key is
+injected at runtime by the frontend Nginx proxy, so it is never embedded in
+the browser bundle. For local Vite development, start it with
+`ATIE_API_KEY=... npm run dev`; the dev proxy adds the header server-side.
 
 Every API response carries `X-Request-ID`. A valid caller-supplied ID is
 preserved when it matches `[A-Za-z0-9._-]{1,64}`; otherwise a UUID is
@@ -113,14 +120,15 @@ observations, not a production SLA.
 
 The GitHub Actions workflow in `.github/workflows/ci.yml` runs:
 
-1. ML tests with coverage
+1. ML tests with coverage against PostgreSQL, including provenance integration
 2. Backend tests on Java 21
-3. Frontend lint and production build
+3. Frontend unit tests, lint, and production build
 4. A Compose-backed Playwright smoke test
 
 The E2E test verifies the canonical fixture, the explicit `DEMO_FIXTURE` and
-`MODEL` labels, the safe routing decision, the seven-market route ledger, the
-forecast trace, and the expandable weather panel.
+`MODEL`/`FALLBACK` labels, a coherent safety-gated directive, the seven-market
+route ledger, both evaluation baselines, the forecast trace, and the
+expandable weather panel.
 
 ## Canonical Demo
 
@@ -175,9 +183,10 @@ horizons, thresholds, and fuel prices from:
 curl -sS http://localhost:8080/api/v1/metadata/config
 ```
 
-If the live analysis API is unavailable, the dashboard retains the verified
-fixture and displays the failure explicitly. It never silently presents a
-fixture as a successful live response.
+If the live analysis API is unavailable, the dashboard retains a previous
+result only when it matches the exact same consignment. Otherwise it shows a
+neutral failure state. It never substitutes the verified fixture for an
+unrelated live request.
 
 ## Local Development
 
@@ -230,6 +239,7 @@ mvn -Ppostgres-it \
 ```bash
 cd frontend
 npm ci
+npm test
 npm run dev
 npm run build
 ```
@@ -245,7 +255,7 @@ cd ../backend && mvn -q -Ppostgres-it \
   -DATIE_TEST_DATABASE_URL=jdbc:postgresql://localhost:55432/atie \
   -DATIE_TEST_DATABASE_USERNAME=atie \
   -DATIE_TEST_DATABASE_PASSWORD=atie_dev_password test
-cd ../frontend && npm run lint && npm run build
+cd ../frontend && npm test && npm run lint && npm run build
 CI=true ATIE_E2E_URL=http://localhost:15173 npm run test:e2e
 cd .. && docker compose --env-file .env.example config
 docker compose --env-file .env.example ps

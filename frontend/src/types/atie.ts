@@ -5,10 +5,11 @@ export type DirectiveSeverity =
 
 export type ForecastSource = "MODEL" | "FALLBACK" | "DEMO_FIXTURE";
 
+export type InputDataState = "LIVE" | "CACHED" | "SEED";
+
 export type AnalysisState =
   | { kind: "demo"; message: string }
-  | { kind: "live" }
-  | { kind: "offline"; message: string };
+  | { kind: "live" };
 
 export interface MarketComparison {
   marketCode: string;
@@ -21,7 +22,11 @@ export interface MarketComparison {
   handlingCostLkr: number;
   netProfitLkr: number;
   distanceKm: number;
+  profitDeltaLkr: number;
   profitUpliftPct: number | null;
+  fuelLitres: number;
+  trips: number;
+  vehicleCapacityKg: number;
   recommended: boolean;
   direction: "CRASH" | "STABLE" | "SURGE";
 }
@@ -47,14 +52,16 @@ export interface WeatherAlert {
 }
 
 export interface ModelEvaluationSummary {
-  modelDirectionalSymmetryPct: number;
-  modelMaeLkr: number;
+  available: boolean;
+  message: string | null;
+  modelDirectionalSymmetryPct: number | null;
+  modelMaeLkr: number | null;
   modelSafeMarginFpr: SafeMarginFpr | null;
-  naiveDirectionalSymmetryPct: number;
-  naiveMaeLkr: number;
+  naiveDirectionalSymmetryPct: number | null;
+  naiveMaeLkr: number | null;
   naiveSafeMarginFpr: SafeMarginFpr | null;
-  ma7DirectionalSymmetryPct: number;
-  ma7MaeLkr: number;
+  ma7DirectionalSymmetryPct: number | null;
+  ma7MaeLkr: number | null;
   ma7SafeMarginFpr: SafeMarginFpr | null;
 }
 
@@ -66,6 +73,7 @@ export interface SafeMarginFpr {
 
 export interface AnalyzeResponse {
   forecastSource: ForecastSource;
+  inputDataState: InputDataState;
   modelVersion: string;
   referenceDate: string;
   analysisState?: AnalysisState;
@@ -149,9 +157,9 @@ export interface MetadataConfig {
   vehicleTypes: MetadataVehicle[];
   horizons: Array<48 | 72>;
   fuelPrices: {
-    effectiveDate?: string;
-    dieselLkrPerLiter?: number;
-    petrolLkrPerLiter?: number;
+    effectiveDate: string | null;
+    dieselLkrPerLiter: number | null;
+    petrolLkrPerLiter: number | null;
   };
   thresholds: {
     safeMarginPct: number;

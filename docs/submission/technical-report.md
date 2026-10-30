@@ -277,13 +277,14 @@ can fail:
 
 Operational controls:
 
-- Optional API key: `ATIE_API_KEY` and `X-ATIE-API-Key`.
+- Optional API key: `ATIE_API_KEY` and `X-ATIE-API-Key`, injected by the
+  frontend proxy at runtime rather than embedded in the browser bundle.
 - Request tracing: `X-Request-ID` response header and request ID in logs.
 - Metrics: `/actuator/metrics`; ML metrics at `/metrics`.
 - Frontend security headers: CSP, HSTS, nosniff, frame denial, referrer and
   permissions policy.
-- CI: ML tests with coverage, backend tests, frontend lint/build, and a
-  Compose-backed Playwright smoke test.
+- CI: PostgreSQL-backed ML tests with coverage, backend tests, frontend unit
+  tests and lint/build, and a Compose-backed Playwright smoke test.
 
 Warm ML inference is approximately 4.2 ms median in-process and
 8.8-23.4 ms over local container HTTP samples. These are local observations,

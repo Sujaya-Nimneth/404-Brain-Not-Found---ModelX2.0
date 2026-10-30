@@ -104,12 +104,12 @@ def calculate_profit(
         gross_revenue_lkr - transport_cost_lkr - handling_cost_lkr
     )
     return ProfitBreakdown(
-        effective_volume_kg=_round(effective_volume_kg),
-        spoilage_loss_lkr=_round(spoilage_loss_kg * price_lkr_per_kg),
-        gross_revenue_lkr=_round(gross_revenue_lkr),
-        transport_cost_lkr=_round(transport_cost_lkr),
-        handling_cost_lkr=_round(handling_cost_lkr),
-        net_profit_lkr=_round(net_profit_lkr),
+        effective_volume_kg=effective_volume_kg,
+        spoilage_loss_lkr=spoilage_loss_kg * price_lkr_per_kg,
+        gross_revenue_lkr=gross_revenue_lkr,
+        transport_cost_lkr=transport_cost_lkr,
+        handling_cost_lkr=handling_cost_lkr,
+        net_profit_lkr=net_profit_lkr,
     )
 
 
@@ -119,7 +119,7 @@ def relative_uplift_pct(
 ) -> Decimal | None:
     if default_net_profit <= 0:
         return None
-    return _round(
+    return (
         (alternative_net_profit - default_net_profit)
         / default_net_profit
         * HUNDRED
@@ -170,7 +170,11 @@ def select_reroute(
     return None
 
 
-def _round(value: Decimal) -> Decimal:
+def display_money(value: Decimal) -> Decimal:
+    return value.quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+def display_percentage(value: Decimal) -> Decimal:
     return value.quantize(CENT, rounding=ROUND_HALF_UP)
 
 

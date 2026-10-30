@@ -22,6 +22,12 @@ class ForecastSource(str, Enum):
     DEMO_FIXTURE = "DEMO_FIXTURE"
 
 
+class InputDataState(str, Enum):
+    LIVE = "LIVE"
+    CACHED = "CACHED"
+    SEED = "SEED"
+
+
 class MarketForecast(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -71,6 +77,7 @@ class PredictBatchResponse(BaseModel):
     horizon_hours: int
     reference_date: date
     forecast_source: ForecastSource
+    input_data_state: InputDataState
     model_version: str
     predictions: list[MarketForecast]
 
