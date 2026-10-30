@@ -9,6 +9,7 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 ENV NGINX_ENVSUBST_FILTER=ATIE_API_KEY
+ENV ATIE_API_KEY=""
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /workspace/dist /usr/share/nginx/html
 EXPOSE 80
