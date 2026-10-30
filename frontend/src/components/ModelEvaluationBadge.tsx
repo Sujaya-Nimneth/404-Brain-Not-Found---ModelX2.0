@@ -6,6 +6,20 @@ export function ModelEvaluationBadge({
 }: {
   summary: ModelEvaluationSummary;
 }) {
+  if (!summary.available) {
+    return (
+      <div
+        className="flex items-center gap-2 rounded-2xl border border-amber/30 bg-[#f4e6bd]/75 px-3 py-2.5 text-[0.66rem] text-[#6b4f16]"
+        title={summary.message ?? undefined}
+      >
+        <Activity className="h-3.5 w-3.5" />
+        <span className="font-mono font-semibold uppercase tracking-[0.1em]">
+          Evaluation unavailable
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-ink/10 bg-cream/70 px-3 py-2.5 text-[0.66rem] text-ink/60 shadow-sm backdrop-blur">
       <span className="inline-flex items-center gap-1.5 font-mono font-semibold uppercase tracking-[0.1em] text-moss">
@@ -16,13 +30,17 @@ export function ModelEvaluationBadge({
       <span>
         DS{" "}
         <strong className="text-ink">
-          {summary.modelDirectionalSymmetryPct.toFixed(1)}%
+          {summary.modelDirectionalSymmetryPct == null
+            ? "n/a"
+            : `${summary.modelDirectionalSymmetryPct.toFixed(1)}%`}
         </strong>
       </span>
       <span>
         MAE{" "}
         <strong className="text-ink">
-          {summary.modelMaeLkr.toFixed(2)} LKR
+          {summary.modelMaeLkr == null
+            ? "n/a"
+            : `${summary.modelMaeLkr.toFixed(2)} LKR`}
         </strong>
       </span>
       <span>

@@ -24,14 +24,16 @@ export function RoutingLogisticsPanel({ markets }: Props) {
       </div>
 
       <div className="mt-5 -mx-1 overflow-x-auto px-1">
-        <table className="w-full min-w-[46rem] border-collapse text-left lg:min-w-full">
+        <table className="w-full min-w-[76rem] border-collapse text-left">
           <thead>
             <tr className="border-b border-ink/15 font-mono text-[0.58rem] uppercase tracking-[0.13em] text-ink/45">
               <th className="px-2 py-3 font-medium">Market</th>
-              <th className="px-2 py-3 font-medium">Distance</th>
+              <th className="px-2 py-3 font-medium">Round trip</th>
+              <th className="px-2 py-3 font-medium">Vehicle load</th>
               <th className="px-2 py-3 font-medium">Fuel</th>
               <th className="px-2 py-3 font-medium">Spoilage</th>
               <th className="px-2 py-3 font-medium">Handling</th>
+              <th className="px-2 py-3 font-medium">vs default</th>
               <th className="px-2 py-3 font-medium">Net profit</th>
             </tr>
           </thead>
@@ -69,20 +71,43 @@ export function RoutingLogisticsPanel({ markets }: Props) {
                 <td className="px-2 py-4 font-mono text-xs text-ink/65">
                   <span className="inline-flex items-center gap-1.5">
                     <Route className="h-3.5 w-3.5 text-ink/35" />
-                    {market.distanceKm.toFixed(0)} km
+                    {(market.distanceKm * 2).toFixed(0)} km
                   </span>
+                  <p className="mt-1 pl-5 text-[0.62rem] text-ink/40">
+                    {market.distanceKm.toFixed(0)} km one way
+                  </p>
+                </td>
+                <td className="px-2 py-4 font-mono text-xs text-ink/65">
+                  <p>
+                    {market.trips} {market.trips === 1 ? "trip" : "trips"}
+                  </p>
+                  <p className="mt-1 text-[0.62rem] text-ink/40">
+                    {formatKg(market.vehicleCapacityKg)} capacity
+                  </p>
                 </td>
                 <td className="px-2 py-4 font-mono text-xs text-ink/65">
                   <span className="inline-flex items-center gap-1.5">
                     <Fuel className="h-3.5 w-3.5 text-ink/35" />
                     {formatLkr(market.transportCostLkr)}
                   </span>
+                  <p className="mt-1 pl-5 text-[0.62rem] text-ink/40">
+                    {market.fuelLitres.toFixed(1)} L
+                  </p>
                 </td>
                 <td className="px-2 py-4 font-mono text-xs text-ink/65">
                   {formatLkr(market.spoilageLossLkr)}
                 </td>
                 <td className="px-2 py-4 font-mono text-xs text-ink/65">
                   {formatLkr(market.handlingCostLkr)}
+                </td>
+                <td
+                  className={`px-2 py-4 font-mono text-xs font-semibold ${
+                    market.profitDeltaLkr > 0 ? "text-moss" : "text-ink/45"
+                  }`}
+                >
+                  {market.profitDeltaLkr === 0
+                    ? "baseline"
+                    : formatSignedLkr(market.profitDeltaLkr)}
                 </td>
                 <td className="px-2 py-4">
                   <p
@@ -101,4 +126,15 @@ export function RoutingLogisticsPanel({ markets }: Props) {
       </div>
     </section>
   );
+}
+
+function formatKg(value: number) {
+  return `${new Intl.NumberFormat("en-LK", {
+    maximumFractionDigits: 0,
+  }).format(value)} kg`;
+}
+
+function formatSignedLkr(value: number) {
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${formatLkr(value)}`;
 }
