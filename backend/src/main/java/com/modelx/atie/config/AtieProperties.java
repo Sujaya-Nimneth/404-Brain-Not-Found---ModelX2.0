@@ -25,26 +25,6 @@ public record AtieProperties(
         @Min(1) @Max(60) int mlConnectTimeoutSeconds,
         @Min(1) @Max(120) int mlReadTimeoutSeconds
 ) {
-    public AtieProperties(
-            String mlServiceUrl,
-            BigDecimal safeMarginPct,
-            BigDecimal safeAbsoluteFloorLkr,
-            BigDecimal movementThresholdPct,
-            List<String> corsAllowedOrigins,
-            String apiKey
-    ) {
-        this(
-                mlServiceUrl,
-                safeMarginPct,
-                safeAbsoluteFloorLkr,
-                movementThresholdPct,
-                corsAllowedOrigins,
-                apiKey,
-                3,
-                15
-        );
-    }
-
     public boolean apiKeyRequired() {
         return apiKey != null && !apiKey.isBlank();
     }

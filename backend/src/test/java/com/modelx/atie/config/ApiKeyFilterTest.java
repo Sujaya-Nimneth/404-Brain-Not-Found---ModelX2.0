@@ -68,7 +68,9 @@ class ApiKeyFilterTest {
                 new java.math.BigDecimal("1000.00"),
                 new java.math.BigDecimal("10.0"),
                 java.util.List.of("http://localhost:5173"),
-                key
+                key,
+                3,
+                15
         );
     }
 }

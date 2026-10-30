@@ -66,7 +66,9 @@ class MlMetricsClientTest {
                 new BigDecimal("1000.00"),
                 new BigDecimal("10.0"),
                 List.of("http://localhost:5173"),
-                ""
+                "",
+                3,
+                15
         );
     }
 
