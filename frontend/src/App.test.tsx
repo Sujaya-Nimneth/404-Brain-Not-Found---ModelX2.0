@@ -25,7 +25,7 @@ vi.mock("./components/ForecastTrajectoryChart", () => ({
   ForecastTrajectoryChart: () => null,
 }));
 
-describe("App request failure handling", () => {
+describe("App state handling", () => {
   beforeEach(() => {
     vi.mocked(atieClient.fetchDataStatus).mockRejectedValue(
       new Error("status offline"),
@@ -69,5 +69,17 @@ describe("App request failure handling", () => {
         screen.queryByRole("heading", { name: "Reroute to Colombo Pettah" }),
       ).toBeNull();
     });
+  });
+
+  it("dismisses the active data-source notice", () => {
+    render(<App />);
+
+    expect(screen.getByText("Demo fixture is active.")).toBeVisible();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dismiss data-source notice" }),
+    );
+
+    expect(screen.queryByText("Demo fixture is active.")).toBeNull();
   });
 });

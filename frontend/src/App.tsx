@@ -182,7 +182,7 @@ export default function App() {
         />
       )}
 
-      {response && shouldShowSourceNotice(response) && (
+      {response && response.analysisState && shouldShowSourceNotice(response) && (
         <AnalysisNotice
           response={response}
           onDismiss={() =>
@@ -404,7 +404,7 @@ function errorMessage(error: unknown) {
     const requestId = error.requestId
       ? ` Request ${error.requestId}.`
       : "";
-    return `${error.message}${code}.${requestId}`;
+    return `${error.message.replace(/[.!?]+$/, "")}${code}.${requestId}`;
   }
   return error instanceof Error
     ? error.message

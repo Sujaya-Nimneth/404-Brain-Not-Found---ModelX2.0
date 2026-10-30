@@ -9,8 +9,7 @@ export type InputDataState = "LIVE" | "CACHED" | "SEED";
 
 export type AnalysisState =
   | { kind: "demo"; message: string }
-  | { kind: "live" }
-  | { kind: "offline"; message: string };
+  | { kind: "live" };
 
 export interface MarketComparison {
   marketCode: string;
