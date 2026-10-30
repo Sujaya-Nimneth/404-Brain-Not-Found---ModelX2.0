@@ -30,6 +30,7 @@ services:
       CROPIX_URL: ${CROPIX_URL:-}
       CROPIX_CACHE_PATH: /app/data/cache/cropix_prices.csv
       OPEN_METEO_URL: https://api.open-meteo.com/v1/forecast
+      OPEN_METEO_CACHE_PATH: /app/data/cache/weather_forecasts.json
       INGESTION_SCHEMA_PATH: /app/ingestion_schema.sql
     volumes:
       - ./db/ingestion_schema.sql:/app/ingestion_schema.sql:ro
