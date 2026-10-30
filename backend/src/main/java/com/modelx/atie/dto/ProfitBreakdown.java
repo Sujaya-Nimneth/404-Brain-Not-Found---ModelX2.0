@@ -8,6 +8,8 @@ public record ProfitBreakdown(
         BigDecimal grossRevenueLkr,
         BigDecimal transportCostLkr,
         BigDecimal handlingCostLkr,
-        BigDecimal netProfitLkr
+        BigDecimal netProfitLkr,
+        BigDecimal fuelLitres,
+        BigDecimal trips
 ) {
 }

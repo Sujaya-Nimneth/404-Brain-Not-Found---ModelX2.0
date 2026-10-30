@@ -1,8 +1,8 @@
 package com.modelx.atie.service;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -110,11 +110,11 @@ public class ArbitrageRoutingService {
         List<String> marketCodes = originRoutes.stream()
                 .map(route -> route.getDestinationMarket().getCode())
                 .toList();
-        LocalDate referenceDate = LocalDate.now();
+        LocalDate requestedReferenceDate = LocalDate.now(ZoneId.of("Asia/Colombo"));
         MlServiceClient.MlForecastResponse forecast = forecastClient.predictBatch(
                 crop.getCode(),
                 request.horizonHours(),
-                referenceDate,
+                requestedReferenceDate,
                 marketCodes,
                 request.demoRequested()
         );
@@ -127,62 +127,72 @@ public class ArbitrageRoutingService {
         Map<String, MarketForecast> forecasts = forecast.predictions().stream()
                 .collect(java.util.stream.Collectors.toMap(
                         MarketForecast::marketCode,
-                        item -> item
+                        item -> item,
+                        (first, duplicate) -> {
+                            throw new IllegalArgumentException(
+                                    "ML service returned duplicate market forecasts"
+                            );
+                        }
                 ));
-        List<MarketComparison> comparisons = originRoutes.stream()
-                .map(route -> compare(
+        List<MarketEvaluation> evaluations = originRoutes.stream()
+                .map(route -> evaluate(
                         route,
                         forecasts.get(route.getDestinationMarket().getCode()),
                         crop,
                         fuel,
                         request.quantityKg(),
-                        request.vehicleType(),
-                        defaultMarketCode
+                        request.vehicleType()
                 ))
-                .sorted(Comparator.comparing(MarketComparison::netProfitLkr).reversed())
+                .sorted(Comparator.comparing(
+                        (MarketEvaluation market) -> market.profit().netProfitLkr()
+                ).reversed())
                 .toList();
-        MarketComparison defaultMarket = comparisons.stream()
+        MarketEvaluation defaultMarket = evaluations.stream()
                 .filter(market -> market.marketCode().equals(defaultMarketCode))
                 .findFirst()
                 .orElseThrow();
-        comparisons = comparisons.stream()
-                .map(market -> new MarketComparison(
+        evaluations = evaluations.stream()
+                .map(market -> new MarketEvaluation(
                         market.marketCode(),
                         market.marketName(),
                         market.currentPriceLkr(),
                         market.predictedPriceLkr(),
-                        market.grossRevenueLkr(),
-                        market.transportCostLkr(),
-                        market.spoilageLossLkr(),
-                        market.handlingCostLkr(),
-                        market.netProfitLkr(),
+                        market.profit(),
                         market.distanceKm(),
                         calculator.relativeUpliftPct(
-                                market.netProfitLkr(),
-                                defaultMarket.netProfitLkr()
+                                market.profit().netProfitLkr(),
+                                defaultMarket.profit().netProfitLkr()
                         ),
-                        false,
                         market.direction()
                 ))
                 .toList();
         RoutingDecisionService.Decision decision = decisions.decide(
                 defaultMarketCode,
-                comparisons
+                evaluations
         );
         String recommendedMarketCode = decision.recommendedMarketCode();
-        comparisons = comparisons.stream()
+        MarketEvaluation finalDefaultMarket = defaultMarket;
+        List<MarketComparison> comparisons = evaluations.stream()
                 .map(market -> new MarketComparison(
                         market.marketCode(),
                         market.marketName(),
-                        market.currentPriceLkr(),
-                        market.predictedPriceLkr(),
-                        market.grossRevenueLkr(),
-                        market.transportCostLkr(),
-                        market.spoilageLossLkr(),
-                        market.handlingCostLkr(),
-                        market.netProfitLkr(),
-                        market.distanceKm(),
-                        market.profitUpliftPct(),
+                        calculator.displayMoney(market.currentPriceLkr()),
+                        calculator.displayMoney(market.predictedPriceLkr()),
+                        calculator.displayMoney(market.profit().grossRevenueLkr()),
+                        calculator.displayMoney(market.profit().transportCostLkr()),
+                        calculator.displayMoney(market.profit().spoilageLossLkr()),
+                        calculator.displayMoney(market.profit().handlingCostLkr()),
+                        calculator.displayMoney(market.profit().netProfitLkr()),
+                        calculator.displayMoney(market.distanceKm()),
+                        calculator.displayMoney(
+                                market.profit().netProfitLkr().subtract(
+                                        finalDefaultMarket.profit().netProfitLkr()
+                                )
+                        ),
+                        displayPercentage(market.profitUpliftPct()),
+                        calculator.displayMoney(market.profit().fuelLitres()),
+                        market.profit().trips().intValueExact(),
+                        calculator.displayMoney(request.vehicleType().getCapacityKg()),
                         market.marketCode().equals(recommendedMarketCode),
                         market.direction()
                 ))
@@ -194,7 +204,7 @@ public class ArbitrageRoutingService {
         return new AnalyzeResponse(
                 forecast.forecastSource(),
                 forecast.modelVersion(),
-                referenceDate,
+                forecast.referenceDate(),
                 decision.primaryDirective(),
                 comparisons,
                 alerts,
@@ -202,14 +212,13 @@ public class ArbitrageRoutingService {
         );
     }
 
-    private MarketComparison compare(
+    private MarketEvaluation evaluate(
             MarketRoute route,
             MarketForecast forecast,
             Crop crop,
             FuelPrice fuel,
             BigDecimal quantityKg,
-            VehicleType vehicleType,
-            String defaultMarketCode
+            VehicleType vehicleType
     ) {
         if (forecast == null) {
             throw new IllegalArgumentException(
@@ -231,21 +240,20 @@ public class ArbitrageRoutingService {
                 crop.getSpoilageRatePer100KmPct(),
                 vehicleType
         );
-        return new MarketComparison(
+        return new MarketEvaluation(
                 market.getCode(),
                 market.getName(),
                 forecast.currentPriceLkr(),
                 forecast.predictedPriceLkr(),
-                profit.grossRevenueLkr(),
-                profit.transportCostLkr(),
-                profit.spoilageLossLkr(),
-                profit.handlingCostLkr(),
-                profit.netProfitLkr(),
+                profit,
                 route.getDistanceKm(),
                 null,
-                false,
                 forecast.direction()
         );
+    }
+
+    private BigDecimal displayPercentage(BigDecimal value) {
+        return value == null ? null : calculator.displayPercentage(value);
     }
 
     private Optional<WeatherAlert> weatherAlert(String marketCode) {

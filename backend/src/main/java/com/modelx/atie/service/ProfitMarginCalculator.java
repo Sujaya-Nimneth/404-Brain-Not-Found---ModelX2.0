@@ -56,21 +56,28 @@ public class ProfitMarginCalculator {
                 .multiply(vehicleType.getLitresPerKm())
                 .multiply(fuelPriceLkrPerLitre)
                 .multiply(trips);
+        BigDecimal fuelLitres = TWO
+                .multiply(distanceKm)
+                .multiply(terrainFactor)
+                .multiply(vehicleType.getLitresPerKm())
+                .multiply(trips);
         BigDecimal handlingCost = quantityKg.multiply(handlingFeePerKgLkr);
         BigDecimal netProfit = grossRevenue
                 .subtract(transportCost)
                 .subtract(handlingCost);
 
         return new ProfitBreakdown(
-                round(effectiveVolumeKg),
-                round(spoilageLossKg.multiply(
+                effectiveVolumeKg,
+                spoilageLossKg.multiply(
                         predictedPriceLkrPerKg,
                         MathContext.DECIMAL128
-                )),
-                round(grossRevenue),
-                round(transportCost),
-                round(handlingCost),
-                round(netProfit)
+                ),
+                grossRevenue,
+                transportCost,
+                handlingCost,
+                netProfit,
+                fuelLitres,
+                trips
         );
     }
 
@@ -84,11 +91,14 @@ public class ProfitMarginCalculator {
         return alternativeNetProfit
                 .subtract(defaultNetProfit)
                 .divide(defaultNetProfit, MathContext.DECIMAL128)
-                .multiply(ONE_HUNDRED)
-                .setScale(2, RoundingMode.HALF_UP);
+                .multiply(ONE_HUNDRED);
     }
 
-    private BigDecimal round(BigDecimal value) {
+    public BigDecimal displayMoney(BigDecimal value) {
+        return value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal displayPercentage(BigDecimal value) {
         return value.setScale(2, RoundingMode.HALF_UP);
     }
 
