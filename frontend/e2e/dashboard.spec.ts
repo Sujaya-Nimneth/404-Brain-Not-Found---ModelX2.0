@@ -24,21 +24,34 @@ test("renders the canonical fixture and switches to live model output", async ({
 
   await page.getByRole("button", { name: "Analyze market route" }).click();
 
+  const liveSource = page.getByText(/^(MODEL|FALLBACK)$/).first();
+  await expect(liveSource).toBeVisible({ timeout: 20_000 });
   await expect(
-    page.getByRole("heading", { name: "Proceed to Dambulla" }),
-  ).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText("MODEL", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("PROCEED DEFAULT")).toBeVisible();
+    page.getByText(/^(CRITICAL REROUTE|PROCEED DEFAULT|HOLD HARVEST)$/).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/^INPUTS (LIVE|CACHED|SEED)$/).first(),
+  ).toBeVisible();
   await expect(page.getByText("Showing verified demo fixture")).not.toBeVisible();
+  await expect(page.getByText("DEMO FIXTURE").first()).not.toBeVisible();
 
-  const routeLedger = page.getByRole("table");
-  await expect(routeLedger.locator("tbody tr")).toHaveCount(7);
+  const routeSection = page.locator("section").filter({
+    has: page.getByRole("heading", { name: "Every rupee accounted for." }),
+  });
+  await expect(routeSection.getByRole("table").locator("tbody tr")).toHaveCount(
+    7,
+  );
   await expect(
     page.getByRole("img", { name: /Historical and forecast prices/ }),
   ).toBeVisible();
   await expect(page.getByText(/observed days · 2 forecast horizons/)).toBeVisible({
     timeout: 20_000,
   });
+  await expect(
+    page.getByRole("heading", { name: "Accuracy is not the only safety test." }),
+  ).toBeVisible();
+  await expect(page.getByText("Naive persistence")).toBeVisible();
+  await expect(page.getByText("7-day moving average")).toBeVisible();
 
   await page.screenshot({
     path: "../docs/evidence/live-dashboard.png",

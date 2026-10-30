@@ -13,7 +13,7 @@ import {
 } from "./mappers";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api/v1";
+  import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
 const fieldMap: Record<keyof AnalyzeRequest, string> = {
   originCode: "origin_code",

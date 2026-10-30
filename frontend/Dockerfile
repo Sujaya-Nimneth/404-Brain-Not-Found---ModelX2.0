@@ -5,12 +5,11 @@ RUN npm ci
 COPY . .
 ARG VITE_API_BASE_URL=/api/v1
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
-ARG VITE_ATIE_API_KEY=
-ENV VITE_ATIE_API_KEY=${VITE_ATIE_API_KEY}
 RUN npm run build
 
 FROM nginx:1.27-alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+ENV NGINX_ENVSUBST_FILTER=ATIE_API_KEY
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /workspace/dist /usr/share/nginx/html
 EXPOSE 80
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \

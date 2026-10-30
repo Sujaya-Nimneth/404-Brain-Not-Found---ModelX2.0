@@ -96,8 +96,8 @@ retrain the model or relabel retail data as wholesale.
 - A failed live call is visibly labeled and never presented as a live answer.
 - The API returns `X-Request-ID`; the backend exposes health and metrics.
 - Optional API-key protection is disabled by default for judging.
-- CI covers ML tests, backend tests, frontend lint/build, and a Compose-backed
-  Playwright browser test.
+- CI covers PostgreSQL-backed ML tests, backend tests, frontend unit tests,
+  lint/build, and a Compose-backed Playwright browser test.
 - The final dashboard evidence is `docs/evidence/live-dashboard.png`; the
   three-minute walkthrough is `docs/evidence/atie-demo.mp4`.
 
