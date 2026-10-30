@@ -9,7 +9,7 @@ test("renders the canonical fixture and switches to live model output", async ({
     page.getByRole("heading", { name: "Reroute to Colombo Pettah" }),
   ).toBeVisible();
   await expect(page.getByText("DEMO FIXTURE").first()).toBeVisible();
-  await expect(page.getByText("23,239")).toBeVisible();
+  await expect(page.getByText("23,239", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("15.84%").first()).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Live where it can be." }),
@@ -19,7 +19,7 @@ test("renders the canonical fixture and switches to live model output", async ({
   await page.getByRole("button", { name: "Load Northern glut demo" }).click();
   await expect(page.getByText("DEMO FIXTURE").first()).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Reroute to Colombo Pettah" }),
+    page.getByRole("heading", { name: /Reroute to Colombo Pettah/ }),
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Analyze market route" }).click();
@@ -30,7 +30,7 @@ test("renders the canonical fixture and switches to live model output", async ({
     page.getByText(/^(CRITICAL REROUTE|PROCEED DEFAULT|HOLD HARVEST)$/).first(),
   ).toBeVisible();
   await expect(
-    page.getByText(/^INPUTS (LIVE|CACHED|SEED)$/).first(),
+    page.getByText(/^Inputs (LIVE|CACHED|SEED)$/).first(),
   ).toBeVisible();
   await expect(page.getByText("Showing verified demo fixture")).not.toBeVisible();
   await expect(page.getByText("DEMO FIXTURE").first()).not.toBeVisible();
@@ -50,8 +50,12 @@ test("renders the canonical fixture and switches to live model output", async ({
   await expect(
     page.getByRole("heading", { name: "Accuracy is not the only safety test." }),
   ).toBeVisible();
-  await expect(page.getByText("Naive persistence")).toBeVisible();
-  await expect(page.getByText("7-day moving average")).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "Naive persistence", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "7-day moving average", exact: true }),
+  ).toBeVisible();
 
   await page.screenshot({
     path: "../docs/evidence/live-dashboard.png",
