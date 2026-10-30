@@ -203,6 +203,7 @@ public class ArbitrageRoutingService {
                 .toList();
         return new AnalyzeResponse(
                 forecast.forecastSource(),
+                forecast.inputDataState(),
                 forecast.modelVersion(),
                 forecast.referenceDate(),
                 decision.primaryDirective(),

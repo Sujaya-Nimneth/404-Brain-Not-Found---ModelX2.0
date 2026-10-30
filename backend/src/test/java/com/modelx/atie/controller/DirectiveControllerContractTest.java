@@ -56,6 +56,7 @@ class DirectiveControllerContractTest {
                         .content(objectMapper.writeValueAsString(request())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.forecast_source").value("DEMO_FIXTURE"))
+                .andExpect(jsonPath("$.input_data_state").value("SEED"))
                 .andExpect(jsonPath("$.primary_directive.default_market_code")
                         .value("DAMBULLA"))
                 .andExpect(jsonPath("$.primary_directive.profit_delta_lkr")
@@ -109,6 +110,7 @@ class DirectiveControllerContractTest {
     private AnalyzeResponse response() {
         return new AnalyzeResponse(
                 "DEMO_FIXTURE",
+                "SEED",
                 "demo-fixture-v1.0",
                 LocalDate.of(2026, 10, 27),
                 new PrimaryDirective(
@@ -149,6 +151,8 @@ class DirectiveControllerContractTest {
                         LocalDate.of(2026, 10, 27)
                 )),
                 new ModelEvaluationSummary(
+                        true,
+                        "Evaluation report loaded from the ML service.",
                         new BigDecimal("67.89"),
                         new BigDecimal("6.05"),
                         null,

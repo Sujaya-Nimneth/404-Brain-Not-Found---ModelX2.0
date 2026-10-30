@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record AnalyzeResponse(
         @JsonProperty("forecast_source") String forecastSource,
+        @JsonProperty("input_data_state") String inputDataState,
         @JsonProperty("model_version") String modelVersion,
         @JsonProperty("reference_date") LocalDate referenceDate,
         @JsonProperty("primary_directive") PrimaryDirective primaryDirective,

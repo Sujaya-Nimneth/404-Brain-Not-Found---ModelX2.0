@@ -1,34 +1,34 @@
 package com.modelx.atie.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 
 import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.modelx.atie.config.AtieProperties;
 
 class MlServiceClientTest {
     @Test
-    void unavailableServiceUsesLabeledFallback() {
+    void unavailableServiceUsesCropCorrectLabeledFallback() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         server.expect(requestTo("http://localhost:8000/predict-batch?demo_mode=false"))
-                .andRespond(withServerError().contentType(MediaType.APPLICATION_JSON));
+                .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
 
-        MlServiceClient client = new MlServiceClient(
-                builder,
-                properties()
-        );
+        MlServiceClient client = client(builder);
         MlServiceClient.MlForecastResponse response = client.predictBatch(
-                "TOMATO",
+                "CARROT",
                 48,
                 LocalDate.of(2026, 10, 27),
                 List.of("DAMBULLA", "PETTAH_COLOMBO"),
@@ -36,21 +36,23 @@ class MlServiceClientTest {
         );
 
         assertThat(response.forecastSource()).isEqualTo("FALLBACK");
+        assertThat(response.inputDataState()).isEqualTo("SEED");
+        assertThat(response.referenceDate()).isEqualTo(LocalDate.of(2026, 10, 27));
         assertThat(response.predictions()).hasSize(2);
-        assertThat(response.predictions().get(0).predictedPriceLkr())
-                .isEqualByComparingTo("154.00");
+        assertThat(response.predictions())
+                .allSatisfy(forecast -> assertThat(forecast.currentPriceLkr())
+                        .isNotEqualByComparingTo("220.00"));
         server.verify();
     }
 
     @Test
-    void demoRequestIsForwardedToMlService() {
+    void demoRequestFallsBackToTheExplicitFixture() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         server.expect(requestTo("http://localhost:8000/predict-batch?demo_mode=true"))
-                .andRespond(withServerError().contentType(MediaType.APPLICATION_JSON));
+                .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
 
-        MlServiceClient client = new MlServiceClient(builder, properties());
-        MlServiceClient.MlForecastResponse response = client.predictBatch(
+        MlServiceClient.MlForecastResponse response = client(builder).predictBatch(
                 "TOMATO",
                 48,
                 LocalDate.of(2026, 10, 27),
@@ -59,6 +61,33 @@ class MlServiceClientTest {
         );
 
         assertThat(response.forecastSource()).isEqualTo("DEMO_FIXTURE");
+        assertThat(response.predictions().get(0).predictedPriceLkr())
+                .isEqualByComparingTo("154.00");
+        server.verify();
+    }
+
+    @Test
+    void fourHundredResponsesArePropagatedWithoutFallback() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("http://localhost:8000/predict-batch?demo_mode=false"))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"detail\":\"unsupported crop\"}"));
+
+        MlServiceClient client = client(builder);
+
+        assertThatThrownBy(() -> client.predictBatch(
+                "TOMATO",
+                48,
+                LocalDate.of(2026, 10, 27),
+                List.of("DAMBULLA"),
+                false
+        ))
+                .isInstanceOfSatisfying(MlServiceException.class, error -> {
+                    assertThat(error.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+                    assertThat(error.code()).isEqualTo("ML_REJECTED_REQUEST");
+                });
         server.verify();
     }
 
@@ -74,6 +103,7 @@ class MlServiceClientTest {
                           "reference_date": "2026-10-27",
                           "forecast_source": "DEMO_FIXTURE",
                           "model_version": "demo-fixture-v1.0",
+                          "input_data_state": "SEED",
                           "predictions": [
                             {
                               "market_code": "DAMBULLA",
@@ -91,8 +121,7 @@ class MlServiceClientTest {
                         }
                         """, MediaType.APPLICATION_JSON));
 
-        MlServiceClient client = new MlServiceClient(builder, properties());
-        MlServiceClient.MlForecastResponse response = client.predictBatch(
+        MlServiceClient.MlForecastResponse response = client(builder).predictBatch(
                 "TOMATO",
                 48,
                 LocalDate.of(2026, 10, 27),
@@ -100,11 +129,48 @@ class MlServiceClientTest {
                 true
         );
 
+        assertThat(response.inputDataState()).isEqualTo("SEED");
         assertThat(response.predictions()).hasSize(1);
         assertThat(response.predictions().get(0).marketCode()).isEqualTo("DAMBULLA");
         assertThat(response.predictions().get(0).predictedPriceLkr())
                 .isEqualByComparingTo("154.00");
         server.verify();
+    }
+
+    @Test
+    void malformedMlResponsesBecomeContractErrors() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("http://localhost:8000/predict-batch?demo_mode=false"))
+                .andRespond(withSuccess("""
+                        {
+                          "crop_code": "TOMATO",
+                          "horizon_hours": 48,
+                          "reference_date": "2026-10-27",
+                          "forecast_source": "MODEL",
+                          "model_version": "rf-v1.0",
+                          "input_data_state": "CACHED",
+                          "predictions": []
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        MlServiceClient client = client(builder);
+
+        assertThatThrownBy(() -> client.predictBatch(
+                "TOMATO",
+                48,
+                LocalDate.of(2026, 10, 27),
+                List.of("DAMBULLA"),
+                false
+        ))
+                .isInstanceOfSatisfying(MlServiceException.class, error -> {
+                    assertThat(error.status()).isEqualTo(HttpStatus.BAD_GATEWAY);
+                    assertThat(error.code()).isEqualTo("ML_CONTRACT_ERROR");
+                });
+    }
+
+    private MlServiceClient client(RestClient.Builder builder) {
+        return new MlServiceClient(builder, properties(), new ObjectMapper());
     }
 
     private AtieProperties properties() {

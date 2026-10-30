@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.modelx.atie.client.MlServiceException;
 import com.modelx.atie.config.RequestIdFilter;
 import com.modelx.atie.dto.ApiErrorResponse;
 
@@ -51,6 +52,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<ApiErrorResponse> notFound(NoSuchElementException error) {
         return error(HttpStatus.NOT_FOUND, "NOT_FOUND", error.getMessage());
+    }
+
+    @ExceptionHandler(MlServiceException.class)
+    public ResponseEntity<ApiErrorResponse> mlService(MlServiceException error) {
+        return error(error.status(), error.code(), error.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

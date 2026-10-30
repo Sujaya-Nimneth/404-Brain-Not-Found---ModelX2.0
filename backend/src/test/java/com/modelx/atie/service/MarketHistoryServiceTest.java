@@ -101,6 +101,7 @@ class MarketHistoryServiceTest {
                 LocalDate.of(2026, 10, 27),
                 "MODEL",
                 "rf-v1.0",
+                "CACHED",
                 List.of(new MarketForecast(
                         "DAMBULLA",
                         current,

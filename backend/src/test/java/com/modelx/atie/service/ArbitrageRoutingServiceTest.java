@@ -145,6 +145,7 @@ class ArbitrageRoutingServiceTest {
                 LocalDate.of(2026, 10, 27),
                 "DEMO_FIXTURE",
                 "demo-fixture-v1.0",
+                "SEED",
                 List.of(
                         forecast("DAMBULLA", "220", "154", "HIGH"),
                         forecast("PETTAH_COLOMBO", "170", "187.50", "LOW"),

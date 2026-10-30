@@ -58,6 +58,8 @@ services:
       ML_MODEL_PATH: /app/models/atie_forecaster.joblib
       ML_METADATA_PATH: /app/models/evaluation_report.json
       ML_FALLBACK_DATA_PATH: /app/data/fallback_forecasts.json
+      ML_DATABASE_DSN: postgresql://${POSTGRES_USER:-atie}:${POSTGRES_PASSWORD:-atie_dev_password}@postgres:5432/${POSTGRES_DB:-atie}
+      ML_FEATURE_REFRESH_SECONDS: ${ML_FEATURE_REFRESH_SECONDS:-900}
       ML_MOVEMENT_THRESHOLD_PCT: ${MOVEMENT_THRESHOLD_PCT:-10.0}
     ports:
       - "${ML_SERVICE_PORT:-8000}:8000"
@@ -85,6 +87,8 @@ services:
       DATABASE_USERNAME: ${POSTGRES_USER:-atie}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-atie_dev_password}
       ML_SERVICE_URL: http://ml-service:8000
+      ML_CONNECT_TIMEOUT_SECONDS: ${ML_CONNECT_TIMEOUT_SECONDS:-3}
+      ML_READ_TIMEOUT_SECONDS: ${ML_READ_TIMEOUT_SECONDS:-15}
       SAFE_MARGIN_PCT: ${SAFE_MARGIN_PCT:-5.0}
       SAFE_ABSOLUTE_FLOOR_LKR: ${SAFE_ABSOLUTE_FLOOR_LKR:-1000.00}
       MOVEMENT_THRESHOLD_PCT: ${MOVEMENT_THRESHOLD_PCT:-10.0}

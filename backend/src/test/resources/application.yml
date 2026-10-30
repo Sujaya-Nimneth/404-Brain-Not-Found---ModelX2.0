@@ -10,6 +10,8 @@ spring:
 
 atie:
   ml-service-url: http://localhost:18000
+  ml-connect-timeout-seconds: 1
+  ml-read-timeout-seconds: 5
   safe-margin-pct: 5.0
   safe-absolute-floor-lkr: 1000.00
   movement-threshold-pct: 10.0

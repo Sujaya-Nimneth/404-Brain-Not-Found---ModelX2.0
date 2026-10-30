@@ -38,6 +38,8 @@ def test_canonical_fixture_matches_cross_service_contract():
     assert response.status_code == 200
     body = response.json()
     assert body["forecast_source"] == "DEMO_FIXTURE"
+    assert body["input_data_state"] == "SEED"
+    assert body["reference_date"] == "2026-10-27"
     dambulla = next(
         item for item in body["predictions"] if item["market_code"] == "DAMBULLA"
     )
