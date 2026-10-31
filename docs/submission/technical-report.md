@@ -149,7 +149,9 @@ lagged prices, rolling mean and volatility, momentum, weather features, fuel
 prices, and calendar features. The model produces 48-hour and 72-hour
 forecasts for the supported market/crop combinations.
 
-Evaluation uses a chronological holdout rather than a random split. The
+Evaluation uses a chronological holdout rather than a random split, enforcing a
+3-day horizon embargo between training (`2026-07-09`) and holdout start
+(`2026-07-12`) so multi-step targets never overlap across the boundary. The
 mandatory baselines are:
 
 1. Naive forecast: future price equals the current price.
@@ -162,12 +164,15 @@ and safe-margin rule to realized holdout prices.
 
 | Horizon | Model DS | Model MAE | Model SM-FPR | Reroutes |
 |---|---:|---:|---:|---:|
-| 48h | 67.89% | 6.05 LKR/kg | 3.00% | 6,502 |
-| 72h | 68.74% | 6.62 LKR/kg | 4.96% | 6,669 |
+| 48h | 67.45% | 5.45 LKR/kg | 2.59% | 6,369 |
+| 72h | 68.03% | 5.95 LKR/kg | 2.93% | 6,624 |
 
-For the 48h holdout, the naive baseline reports DS `0.00%`, MAE `6.98`, and
-SM-FPR `4.43%`; the MA7 baseline reports DS `46.67%`, MAE `9.41`, and SM-FPR
-`7.25%`. The 72h model remains below the five-percent SM-FPR target.
+For the 48h holdout, the naive baseline reports DS `0.00%`, MAE `6.23`, and
+SM-FPR `3.75%`; the MA7 baseline reports DS `52.21%`, MAE `8.19`, and SM-FPR
+`5.15%`. For the 72h holdout, the naive baseline reports DS `0.00%`, MAE
+`7.00`, and SM-FPR `4.44%`, while MA7 reports DS `46.50%`, MAE `9.45`, and
+SM-FPR `7.63%`. Both the 48h and 72h models remain well below the five-percent
+SM-FPR target.
 
 SM-FPR is calculated across a finite, versioned matrix of 60 route profiles
 per horizon: five origins, three vehicle types, four quantities, four crops,

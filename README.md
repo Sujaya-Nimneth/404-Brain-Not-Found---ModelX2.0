@@ -250,11 +250,10 @@ The Vite dev server proxies `/api` to `http://localhost:8080`.
 
 ```bash
 cd ml-service && python -m pytest -q
-cd ../backend && mvn -q -Ppostgres-it \
-  -Dnet.bytebuddy.experimental=true \
-  -DATIE_TEST_DATABASE_URL=jdbc:postgresql://localhost:55432/atie \
-  -DATIE_TEST_DATABASE_USERNAME=atie \
-  -DATIE_TEST_DATABASE_PASSWORD=atie_dev_password test
+cd ../backend && ATIE_TEST_DATABASE_URL=jdbc:postgresql://localhost:55432/atie \
+  ATIE_TEST_DATABASE_USERNAME=atie \
+  ATIE_TEST_DATABASE_PASSWORD=atie_dev_password \
+  mvn -q -Ppostgres-it -Dnet.bytebuddy.experimental=true test
 cd ../frontend && npm test && npm run lint && npm run build
 CI=true ATIE_E2E_URL=http://localhost:15173 npm run test:e2e
 cd .. && docker compose --env-file .env.example config
@@ -276,22 +275,24 @@ three-minute demo is
 
 ## Evaluation Snapshot
 
-Chronological holdout results are stored in
+Chronological holdout results (with a 3-day horizon embargo between training
+end `2026-07-09` and holdout start `2026-07-12`) are stored in
 `ml-service/models/evaluation_report.json`. The trained model currently reports:
 
 | Horizon | DS | MAE (LKR/kg) | SM-FPR | Reroutes |
 |---|---:|---:|---:|---:|
-| 48h | 67.89% | 6.05 | 3.00% | 6,502 |
-| 72h | 68.74% | 6.62 | 4.96% | 6,669 |
+| 48h | 67.45% | 5.45 | 2.59% | 6,369 |
+| 72h | 68.03% | 5.95 | 2.93% | 6,624 |
 
 Naive and 7-day moving-average baselines are evaluated alongside the model.
 SM-FPR is `null` when no reroute decisions occur, never silently reported as
 zero.
 
-For the 48h holdout, the naive baseline has DS `0.00%`, MAE `6.98`, and SM-FPR
-`4.43%`; the MA7 baseline has DS `46.67%`, MAE `9.41`, and SM-FPR `7.25%`.
-For 72h, the corresponding model figures are DS `68.74%`, MAE `6.62`, and
-SM-FPR `4.96%`.
+For the 48h holdout, the naive baseline has DS `0.00%`, MAE `6.23`, and SM-FPR
+`3.75%`; the MA7 baseline has DS `52.21%`, MAE `8.19`, and SM-FPR `5.15%`.
+For 72h, the corresponding model figures are DS `68.03%`, MAE `5.95`, and
+SM-FPR `2.93%` (versus naive MAE `7.00` / SM-FPR `4.44%` and MA7 DS `46.50%` /
+MAE `9.45` / SM-FPR `7.63%`).
 
 The fallback snapshot covers all four crops across all seven markets at both
 horizons. SM-FPR backtests 60 route profiles per horizon (five origins, three

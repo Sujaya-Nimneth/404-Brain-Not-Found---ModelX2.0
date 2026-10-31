@@ -74,12 +74,11 @@ or relabel retail data as wholesale.
 
 ```bash
 cd ml-service && python -m pytest -q
-cd ../backend && mvn -q -Ppostgres-it \
-  -Dnet.bytebuddy.experimental=true \
-  -DATIE_TEST_DATABASE_URL=jdbc:postgresql://localhost:55432/atie \
-  -DATIE_TEST_DATABASE_USERNAME=atie \
-  -DATIE_TEST_DATABASE_PASSWORD=atie_dev_password test
-cd ../frontend && npm run lint && npm run build
+cd ../backend && ATIE_TEST_DATABASE_URL=jdbc:postgresql://localhost:55432/atie \
+  ATIE_TEST_DATABASE_USERNAME=atie \
+  ATIE_TEST_DATABASE_PASSWORD=atie_dev_password \
+  mvn -q -Ppostgres-it -Dnet.bytebuddy.experimental=true test
+cd ../frontend && npm test && npm run lint && npm run build
 CI=true ATIE_E2E_URL=http://localhost:15173 npm run test:e2e
 cd .. && docker compose --env-file .env.example config
 docker compose --env-file .env.example ps

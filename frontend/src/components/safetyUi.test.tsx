@@ -65,8 +65,8 @@ describe("safety-critical dashboard presentation", () => {
     expect(screen.getByText("Trained model")).toBeVisible();
     expect(screen.getByText("Naive persistence")).toBeVisible();
     expect(screen.getByText("7-day moving average")).toBeVisible();
-    expect(screen.getByText("67.89%")).toBeVisible();
-    expect(screen.getByText("LKR 6.05")).toBeVisible();
+    expect(screen.getByText("67.45%")).toBeVisible();
+    expect(screen.getByText("LKR 5.45")).toBeVisible();
   });
 
   it("formats positive, negative, baseline, and undefined profit uplifts cleanly", () => {

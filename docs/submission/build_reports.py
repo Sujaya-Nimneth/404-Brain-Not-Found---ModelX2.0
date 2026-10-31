@@ -559,8 +559,8 @@ def draw_cover(canv: canvas.Canvas, doc: BaseDocTemplate) -> None:
     cards = [
         ("48-72h", "forecast horizon"),
         ("5% + LKR 1k", "safe-margin rule"),
-        ("67.89% / 68.74%", "48h / 72h DS"),
-        ("3.00% / 4.96%", "48h / 72h SM-FPR"),
+        ("67.45% / 68.03%", "48h / 72h DS"),
+        ("2.59% / 2.93%", "48h / 72h SM-FPR"),
     ]
     card_width = (CONTENT_WIDTH - 18) / 2
     card_height = 70
@@ -782,8 +782,8 @@ def build_summary() -> None:
             summary_table(
                 ["Horizon", "Model DS", "MAE", "SM-FPR", "Reroutes"],
                 [
-                    ["48h", "67.89%", "6.05", "3.00%", "6,502"],
-                    ["72h", "68.74%", "6.62", "4.96%", "6,669"],
+                    ["48h", "67.45%", "5.45", "2.59%", "6,369"],
+                    ["72h", "68.03%", "5.95", "2.93%", "6,624"],
                 ],
                 CONTENT_WIDTH,
             ),
@@ -917,9 +917,9 @@ def build_summary() -> None:
             summary_table(
                 ["Baseline 48h", "DS", "MAE", "SM-FPR"],
                 [
-                    ["Model", "67.89%", "6.05", "3.00%"],
-                    ["Naive", "0.00%", "6.98", "4.43%"],
-                    ["MA7", "46.67%", "9.41", "7.25%"],
+                    ["Model", "67.45%", "5.45", "2.59%"],
+                    ["Naive", "0.00%", "6.23", "3.75%"],
+                    ["MA7", "52.21%", "8.19", "5.15%"],
                 ],
                 236,
             ),
