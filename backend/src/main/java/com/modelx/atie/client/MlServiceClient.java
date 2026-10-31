@@ -185,8 +185,16 @@ public class MlServiceClient implements ForecastClient {
             List<String> markets,
             boolean demoMode
     ) {
-        JsonNode cropData = fallbackSnapshot.path("markets").path(cropCode);
+        String section = demoMode ? "demo_fixture" : "markets";
+        JsonNode cropData = fallbackSnapshot.path(section).path(cropCode);
         if (!cropData.isObject()) {
+            if (demoMode) {
+                throw new MlServiceException(
+                        HttpStatus.BAD_REQUEST,
+                        "ML_REJECTED_REQUEST",
+                        "the canonical demo fixture is only available for TOMATO"
+                );
+            }
             throw fallbackUnavailable("No fallback snapshot exists for " + cropCode);
         }
         String source = demoMode ? "DEMO_FIXTURE" : "FALLBACK";

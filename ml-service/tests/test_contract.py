@@ -150,3 +150,39 @@ def test_evaluation_origins_match_versioned_origin_config():
 
     assert payload["version"] == "1.0"
     assert EVALUATION_ORIGINS == configured_codes
+
+
+def test_fallback_snapshots_match_across_services_and_separate_demo_fixture():
+    from app.schemas import PredictBatchRequest
+
+    ml_fallback = ROOT / "data" / "fallback_forecasts.json"
+    backend_fallback = (
+        ROOT.parent
+        / "backend"
+        / "src"
+        / "main"
+        / "resources"
+        / "fallback_forecasts.json"
+    )
+    assert ml_fallback.read_bytes() == backend_fallback.read_bytes()
+
+    predictor = Predictor(
+        Settings(model_path=ROOT / "models" / "does_not_exist.joblib")
+    )
+    request = PredictBatchRequest(
+        crop_code="TOMATO",
+        horizon_hours=48,
+        reference_date=date(2026, 10, 27),
+        markets=["DAMBULLA", "PETTAH_COLOMBO"],
+    )
+    live_fallback = predictor.predict(request)
+    demo_fixture = predictor.predict_demo_fixture(request)
+
+    assert live_fallback.forecast_source.value == "FALLBACK"
+    assert demo_fixture.forecast_source.value == "DEMO_FIXTURE"
+    assert (
+        live_fallback.predictions[0].predicted_price_lkr
+        != demo_fixture.predictions[0].predicted_price_lkr
+    )
+    assert demo_fixture.predictions[0].predicted_price_lkr == 154.0
+
