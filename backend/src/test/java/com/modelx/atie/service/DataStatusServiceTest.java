@@ -2,6 +2,7 @@ package com.modelx.atie.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -82,5 +83,45 @@ class DataStatusServiceTest {
         );
 
         assertThat(result.overallStatus()).isEqualTo("FALLBACK");
+    }
+
+    @Test
+    void bareSeedProvenanceAndStaleOpenMeteoRefreshAreClassifiedAccurately() {
+        Instant now = Instant.parse("2026-10-27T12:00:00Z");
+        var result = DataStatusService.build(
+                List.of(
+                        new DataStatusService.SourceRow(
+                                "OPEN_METEO",
+                                "LIVE",
+                                now,
+                                now.minus(Duration.ofHours(36)),
+                                LocalDate.of(2026, 10, 30),
+                                "https://example.test/weather",
+                                49,
+                                "last live weather refresh was 36h ago"
+                        )
+                ),
+                List.of(
+                        new DataStatusService.CoverageRow(
+                                "DAMBULLA",
+                                "TOMATO",
+                                LocalDate.of(2026, 10, 27),
+                                "SEED"
+                        )
+                ),
+                LocalDate.of(2026, 10, 27),
+                now
+        );
+
+        assertThat(result.sources())
+                .filteredOn(source -> source.sourceCode().equals("OPEN_METEO"))
+                .singleElement()
+                .extracting("freshness")
+                .isEqualTo("STALE");
+        assertThat(result.overallStatus()).isEqualTo("UNAVAILABLE");
+        assertThat(result.priceCoverage())
+                .singleElement()
+                .extracting("state")
+                .isEqualTo("SEED");
     }
 }
