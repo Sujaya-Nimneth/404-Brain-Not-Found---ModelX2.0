@@ -105,11 +105,13 @@ async function apiError(
 
 export async function analyzeConsignment(
   request: AnalyzeRequest,
+  signal?: AbortSignal,
 ): Promise<AnalyzeResponse> {
   const response = await fetch(`${API_BASE_URL}/directives/analyze`, {
     method: "POST",
     headers: authHeaders(true),
     body: JSON.stringify(toApiRequest(request)),
+    signal,
   });
   return mapAnalyzeResponse(
     await responseJson(response, "The directive analysis"),
@@ -143,9 +145,12 @@ export async function fetchMetadataConfig(): Promise<MetadataConfig> {
   );
 }
 
-export async function fetchDataStatus(): Promise<DataStatus> {
+export async function fetchDataStatus(
+  signal?: AbortSignal,
+): Promise<DataStatus> {
   const response = await fetch(`${API_BASE_URL}/metadata/data-status`, {
     headers: authHeaders(),
+    signal,
   });
   return mapDataStatus(
     await responseJson(response, "The data provenance request"),

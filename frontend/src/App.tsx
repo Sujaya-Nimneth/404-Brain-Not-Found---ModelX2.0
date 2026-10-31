@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { CloudOff, Leaf, Map, RefreshCw, TriangleAlert, X } from "lucide-react";
 import {
   analyzeConsignment,
@@ -63,29 +63,54 @@ export default function App() {
     useState<AnalysisFailure | null>(null);
   const [dataStatus, setDataStatus] = useState<DataStatus | null>(null);
   const [dataStatusUnavailable, setDataStatusUnavailable] = useState(false);
+  const activeControllerRef = useRef<AbortController | null>(null);
+  const runIdRef = useRef(0);
+  const resultRef = useRef<ResultSnapshot | null>(result);
+  resultRef.current = result;
   const response = result?.response ?? null;
   const activeRequest = result?.request ?? request;
 
-  useEffect(() => {
-    let active = true;
-    fetchDataStatus()
+  const refreshDataStatus = useCallback((signal?: AbortSignal) => {
+    fetchDataStatus(signal)
       .then((status) => {
-        if (active) setDataStatus(status);
+        if (!signal?.aborted) {
+          setDataStatus(status);
+          setDataStatusUnavailable(false);
+        }
       })
       .catch(() => {
-        if (active) setDataStatusUnavailable(true);
+        if (!signal?.aborted) {
+          setDataStatusUnavailable(true);
+        }
       });
-    return () => {
-      active = false;
-    };
   }, []);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    refreshDataStatus(controller.signal);
+    return () => {
+      controller.abort();
+      activeControllerRef.current?.abort();
+    };
+  }, [refreshDataStatus]);
+
   async function run(nextRequest: AnalyzeRequest) {
+    activeControllerRef.current?.abort();
+    const controller = new AbortController();
+    activeControllerRef.current = controller;
+    const currentRunId = ++runIdRef.current;
+
     setRequest(nextRequest);
     setLoading(true);
     setAnalysisFailure(null);
     try {
-      const apiResponse = await analyzeConsignment(nextRequest);
+      const apiResponse = await analyzeConsignment(
+        nextRequest,
+        controller.signal,
+      );
+      if (currentRunId !== runIdRef.current || controller.signal.aborted) {
+        return;
+      }
       setResult({
         request: nextRequest,
         response: {
@@ -101,8 +126,16 @@ export default function App() {
         },
       });
     } catch (error) {
+      if (
+        currentRunId !== runIdRef.current ||
+        controller.signal.aborted ||
+        isAbortError(error)
+      ) {
+        return;
+      }
+      const latestResult = resultRef.current;
       const keepPrevious =
-        result !== null && sameRequest(result.request, nextRequest);
+        latestResult !== null && sameRequest(latestResult.request, nextRequest);
       if (!keepPrevious) {
         setResult(null);
       }
@@ -111,7 +144,9 @@ export default function App() {
         keptPreviousResult: keepPrevious,
       });
     } finally {
-      setLoading(false);
+      if (currentRunId === runIdRef.current) {
+        setLoading(false);
+      }
     }
   }
 
@@ -137,7 +172,10 @@ export default function App() {
           )}
           <button
             type="button"
-            onClick={() => run({ ...request, demoMode: false })}
+            onClick={() => {
+              refreshDataStatus();
+              void run({ ...request, demoMode: false });
+            }}
             disabled={loading}
             className="grid h-10 w-10 place-items-center rounded-full border border-ink/15 bg-cream text-ink/65 transition hover:border-moss hover:text-moss disabled:opacity-40"
             aria-label="Refresh analysis"
@@ -409,6 +447,10 @@ function errorMessage(error: unknown) {
   return error instanceof Error
     ? error.message
     : "The ATIE API is unavailable.";
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof Error && error.name === "AbortError";
 }
 
 function sameRequest(left: AnalyzeRequest, right: AnalyzeRequest) {
