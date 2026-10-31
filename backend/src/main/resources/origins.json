@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "origins": [
+    {
+      "code": "ANURADHAPURA",
+      "name": "Anuradhapura",
+      "district": "Anuradhapura",
+      "province": "North Central",
+      "latitude": 8.311400,
+      "longitude": 80.403700,
+      "supply_zone": "NORTHERN"
+    },
+    {
+      "code": "JAFFNA",
+      "name": "Jaffna",
+      "district": "Jaffna",
+      "province": "Northern",
+      "latitude": 9.661500,
+      "longitude": 80.025500,
+      "supply_zone": "NORTHERN"
+    },
+    {
+      "code": "DAMBULLA",
+      "name": "Dambulla",
+      "district": "Matale",
+      "province": "Central",
+      "latitude": 7.867500,
+      "longitude": 80.651700,
+      "supply_zone": "CENTRAL"
+    },
+    {
+      "code": "NUWARA_ELIYA",
+      "name": "Nuwara Eliya",
+      "district": "Nuwara Eliya",
+      "province": "Central",
+      "latitude": 6.949700,
+      "longitude": 80.789100,
+      "supply_zone": "UPCOUNTRY"
+    },
+    {
+      "code": "THAMBUTTEGAMA",
+      "name": "Thambuttegama",
+      "district": "Anuradhapura",
+      "province": "North Central",
+      "latitude": 8.150000,
+      "longitude": 80.440000,
+      "supply_zone": "NORTH_CENTRAL"
+    }
+  ]
+}

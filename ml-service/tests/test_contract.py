@@ -136,3 +136,17 @@ def test_ingestion_schema_ddl_is_consolidated_and_reentrant():
     assert "DROP TABLE IF EXISTS data_source_status;" in init_sql
     assert "CREATE OR REPLACE FUNCTION atie_source_priority" in init_sql
     assert "DEFAULT 'HDX_SEED'" in init_sql
+
+
+def test_evaluation_origins_match_versioned_origin_config():
+    import json
+    from training.evaluate import EVALUATION_ORIGINS
+
+    origins_path = (
+        ROOT.parent / "backend" / "src" / "main" / "resources" / "origins.json"
+    )
+    payload = json.loads(origins_path.read_text(encoding="utf-8"))
+    configured_codes = tuple(item["code"] for item in payload["origins"])
+
+    assert payload["version"] == "1.0"
+    assert EVALUATION_ORIGINS == configured_codes
