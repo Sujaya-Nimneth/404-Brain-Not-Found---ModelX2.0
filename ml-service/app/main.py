@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import re
+import uuid
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 
 from app.config import get_settings
 from app.predictor import Predictor
@@ -11,6 +13,9 @@ from app.schemas import (
     PredictBatchRequest,
     PredictBatchResponse,
 )
+
+REQUEST_ID_HEADER = "X-Request-ID"
+SAFE_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 
 
 @asynccontextmanager
@@ -25,6 +30,20 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    incoming = request.headers.get(REQUEST_ID_HEADER, "")
+    request_id = (
+        incoming
+        if incoming and SAFE_REQUEST_ID.match(incoming)
+        else str(uuid.uuid4())
+    )
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers[REQUEST_ID_HEADER] = request_id
+    return response
 
 
 def predictor() -> Predictor:

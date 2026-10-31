@@ -208,3 +208,66 @@ def test_model_metadata_is_not_reused_from_the_demo_fixture():
         item.primary_driver != DEMO_FIXTURE[item.market_code].driver
         for item in response.predictions
     )
+
+
+def test_transient_db_refresh_failure_preserves_live_history_snapshot(monkeypatch):
+    import psycopg
+    from etl.seed_loader import generate_demo_history
+
+    live_frame = generate_demo_history().copy()
+    live_frame["source"] = "HDX_LIVE"
+    calls = {"count": 0}
+
+    def fake_load_db(self, dsn: str):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            return live_frame
+        raise psycopg.OperationalError("transient database timeout")
+
+    monkeypatch.setattr(Predictor, "_load_database_history", fake_load_db)
+    predictor = Predictor(
+        Settings(
+            database_dsn="postgresql://atie:test@127.0.0.1:5432/atie",
+            feature_refresh_seconds=30,
+        )
+    )
+    assert predictor.input_data_state.value == "LIVE"
+    predictor._history_loaded_at -= 60.0
+
+    response = predictor.predict(CANONICAL_REQUEST)
+
+    assert calls["count"] >= 2
+    assert predictor.input_data_state.value == "LIVE"
+    assert response.input_data_state.value == "LIVE"
+    assert response.forecast_source.value == "MODEL"
+
+
+def test_concurrent_predictions_during_refresh_are_thread_safe():
+    from concurrent.futures import ThreadPoolExecutor
+
+    predictor = Predictor(Settings())
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        futures = [
+            pool.submit(predictor.predict, CANONICAL_REQUEST)
+            for _ in range(18)
+        ]
+        results = [future.result() for future in futures]
+
+    assert all(item.forecast_source.value == "MODEL" for item in results)
+    assert all(len(item.predictions) == 7 for item in results)
+
+
+def test_request_id_middleware_echoes_valid_header_and_sanitizes_invalid():
+    app.state.predictor = Predictor(Settings())
+    with TestClient(app) as client:
+        valid = client.get("/health", headers={"X-Request-ID": "trace-backend-42"})
+        invalid = client.get(
+            "/health", headers={"X-Request-ID": "bad header with spaces!"}
+        )
+
+    assert valid.status_code == 200
+    assert valid.headers["X-Request-ID"] == "trace-backend-42"
+    assert invalid.status_code == 200
+    assert invalid.headers["X-Request-ID"] != "bad header with spaces!"
+    assert len(invalid.headers["X-Request-ID"]) == 36
+
