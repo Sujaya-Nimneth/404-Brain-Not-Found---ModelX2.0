@@ -143,9 +143,10 @@ public class ArbitrageRoutingService {
                         request.quantityKg(),
                         request.vehicleType()
                 ))
-                .sorted(Comparator.comparing(
-                        (MarketEvaluation market) -> market.profit().netProfitLkr()
-                ).reversed())
+                .sorted(Comparator
+                        .comparing((MarketEvaluation market) -> market.profit().netProfitLkr())
+                        .reversed()
+                        .thenComparing(MarketEvaluation::marketCode))
                 .toList();
         MarketEvaluation defaultMarket = evaluations.stream()
                 .filter(market -> market.marketCode().equals(defaultMarketCode))

@@ -129,3 +129,79 @@ def test_safe_margin_uses_raw_decimal_values_not_display_rounding():
         Decimal("5"),
         Decimal("1000"),
     )
+
+
+def test_shared_golden_routing_fixtures():
+    import json
+    from pathlib import Path
+
+    fixture_path = Path(__file__).resolve().parent / "fixtures" / "routing_golden.json"
+    golden = json.loads(fixture_path.read_text(encoding="utf-8"))
+    diesel = Decimal(golden["diesel_price_lkr"])
+    petrol = Decimal(golden["petrol_price_lkr"])
+    safe_margin_pct = Decimal(golden["safe_margin_pct"])
+    safe_floor_lkr = Decimal(golden["safe_absolute_floor_lkr"])
+
+    for case in golden["profit_cases"]:
+        breakdown = calculate_profit(
+            Decimal(case["price_lkr_per_kg"]),
+            Decimal(case["quantity_kg"]),
+            Route(
+                origin_code="ANURADHAPURA",
+                market_code=case["name"],
+                distance_km=Decimal(case["distance_km"]),
+                terrain_factor=Decimal(case["terrain_factor"]),
+                handling_fee_per_kg_lkr=Decimal(case["handling_fee_per_kg_lkr"]),
+            ),
+            VEHICLES[case["vehicle_type"]],
+            diesel,
+            petrol,
+            Decimal(case["spoilage_rate_per_100km_pct"]),
+        )
+        expected = case["expected"]
+        assert display_money(breakdown.effective_volume_kg) == Decimal(
+            expected["effective_volume_kg"]
+        ), case["name"]
+        assert display_money(breakdown.gross_revenue_lkr) == Decimal(
+            expected["gross_revenue_lkr"]
+        ), case["name"]
+        assert display_money(breakdown.transport_cost_lkr) == Decimal(
+            expected["transport_cost_lkr"]
+        ), case["name"]
+        assert display_money(breakdown.handling_cost_lkr) == Decimal(
+            expected["handling_cost_lkr"]
+        ), case["name"]
+        assert display_money(breakdown.spoilage_loss_lkr) == Decimal(
+            expected["spoilage_loss_lkr"]
+        ), case["name"]
+        assert display_money(breakdown.net_profit_lkr) == Decimal(
+            expected["net_profit_lkr"]
+        ), case["name"]
+
+    for case in golden["decision_cases"]:
+        net_profits = {
+            market: Decimal(value)
+            for market, value in case["net_profits"].items()
+        }
+        selected = select_reroute(
+            case["default_market_code"],
+            net_profits,
+            safe_margin_pct,
+            safe_floor_lkr,
+        )
+        expected = case["expected"]
+        assert selected == expected["recommended_market_code"], case["name"]
+        default_net = net_profits[case["default_market_code"]]
+        if selected is not None:
+            winner_net = net_profits[selected]
+            assert display_money(winner_net - default_net) == Decimal(
+                expected["profit_delta_lkr"]
+            ), case["name"]
+            uplift = relative_uplift_pct(winner_net, default_net)
+            if expected["profit_uplift_pct"] is None:
+                assert uplift is None, case["name"]
+            else:
+                assert uplift is not None
+                assert display_percentage(uplift) == Decimal(
+                    expected["profit_uplift_pct"]
+                ), case["name"]

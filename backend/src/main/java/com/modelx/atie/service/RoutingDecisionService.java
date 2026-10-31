@@ -33,9 +33,10 @@ public class RoutingDecisionService {
 
         List<MarketEvaluation> alternatives = comparisons.stream()
                 .filter(market -> !market.marketCode().equals(defaultMarketCode))
-                .sorted(Comparator.comparing(
-                        (MarketEvaluation market) -> market.profit().netProfitLkr()
-                ).reversed())
+                .sorted(Comparator
+                        .comparing((MarketEvaluation market) -> market.profit().netProfitLkr())
+                        .reversed()
+                        .thenComparing(MarketEvaluation::marketCode))
                 .toList();
 
         Optional<MarketEvaluation> selected = alternatives.stream()

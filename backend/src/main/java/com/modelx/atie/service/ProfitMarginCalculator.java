@@ -35,7 +35,8 @@ public class ProfitMarginCalculator {
         BigDecimal spoilageFraction = distanceKm
                 .divide(ONE_HUNDRED, MathContext.DECIMAL128)
                 .multiply(spoilageRatePer100KmPct)
-                .divide(ONE_HUNDRED, MathContext.DECIMAL128);
+                .divide(ONE_HUNDRED, MathContext.DECIMAL128)
+                .min(BigDecimal.ONE);
         BigDecimal effectiveVolumeKg = quantityKg.multiply(
                 BigDecimal.ONE.subtract(spoilageFraction),
                 MathContext.DECIMAL128

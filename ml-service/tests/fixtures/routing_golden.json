@@ -1,0 +1,170 @@
+{
+  "version": "1.0",
+  "safe_margin_pct": "5.0",
+  "safe_absolute_floor_lkr": "1000.00",
+  "diesel_price_lkr": "283.00",
+  "petrol_price_lkr": "311.00",
+  "profit_cases": [
+    {
+      "name": "canonical_dambulla",
+      "price_lkr_per_kg": "154.00",
+      "quantity_kg": "1000",
+      "distance_km": "70",
+      "terrain_factor": "1.00",
+      "handling_fee_per_kg_lkr": "2.50",
+      "spoilage_rate_per_100km_pct": "1.50",
+      "vehicle_type": "MINI_TRUCK_BATTA",
+      "expected": {
+        "effective_volume_kg": "989.50",
+        "gross_revenue_lkr": "152383.00",
+        "transport_cost_lkr": "3169.60",
+        "handling_cost_lkr": "2500.00",
+        "spoilage_loss_lkr": "1617.00",
+        "net_profit_lkr": "146713.40"
+      }
+    },
+    {
+      "name": "canonical_pettah_colombo",
+      "price_lkr_per_kg": "187.50",
+      "quantity_kg": "1000",
+      "distance_km": "205",
+      "terrain_factor": "1.00",
+      "handling_fee_per_kg_lkr": "2.50",
+      "spoilage_rate_per_100km_pct": "1.50",
+      "vehicle_type": "MINI_TRUCK_BATTA",
+      "expected": {
+        "effective_volume_kg": "969.25",
+        "gross_revenue_lkr": "181734.38",
+        "transport_cost_lkr": "9282.40",
+        "handling_cost_lkr": "2500.00",
+        "spoilage_loss_lkr": "5765.63",
+        "net_profit_lkr": "169951.98"
+      }
+    },
+    {
+      "name": "canonical_keppetipola_hilly",
+      "price_lkr_per_kg": "165.00",
+      "quantity_kg": "1000",
+      "distance_km": "175",
+      "terrain_factor": "1.25",
+      "handling_fee_per_kg_lkr": "2.50",
+      "spoilage_rate_per_100km_pct": "1.50",
+      "vehicle_type": "MINI_TRUCK_BATTA",
+      "expected": {
+        "effective_volume_kg": "973.75",
+        "gross_revenue_lkr": "160668.75",
+        "transport_cost_lkr": "9905.00",
+        "handling_cost_lkr": "2500.00",
+        "spoilage_loss_lkr": "4331.25",
+        "net_profit_lkr": "148263.75"
+      }
+    },
+    {
+      "name": "extreme_spoilage_clamped_to_zero_volume",
+      "price_lkr_per_kg": "200.00",
+      "quantity_kg": "500",
+      "distance_km": "400",
+      "terrain_factor": "1.00",
+      "handling_fee_per_kg_lkr": "2.50",
+      "spoilage_rate_per_100km_pct": "30.00",
+      "vehicle_type": "THREE_WHEELER",
+      "expected": {
+        "effective_volume_kg": "0.00",
+        "gross_revenue_lkr": "0.00",
+        "transport_cost_lkr": "19904.00",
+        "handling_cost_lkr": "1250.00",
+        "spoilage_loss_lkr": "100000.00",
+        "net_profit_lkr": "-21154.00"
+      }
+    }
+  ],
+  "decision_cases": [
+    {
+      "name": "canonical_reroute_to_pettah",
+      "default_market_code": "DAMBULLA",
+      "net_profits": {
+        "DAMBULLA": "146713.40",
+        "PETTAH_COLOMBO": "169951.975",
+        "MEEGODA": "155639.40",
+        "KEPPETIPOLA": "148263.75"
+      },
+      "expected": {
+        "severity": "CRITICAL_REROUTE",
+        "recommended_market_code": "PETTAH_COLOMBO",
+        "profit_delta_lkr": "23238.58",
+        "profit_uplift_pct": "15.84"
+      }
+    },
+    {
+      "name": "unrounded_just_below_five_percent_proceeds_default",
+      "default_market_code": "DAMBULLA",
+      "net_profits": {
+        "DAMBULLA": "100000.004",
+        "PETTAH_COLOMBO": "104999.996"
+      },
+      "expected": {
+        "severity": "PROCEED_DEFAULT",
+        "recommended_market_code": null,
+        "profit_delta_lkr": "0.00",
+        "profit_uplift_pct": "0.00"
+      }
+    },
+    {
+      "name": "below_absolute_floor_proceeds_default",
+      "default_market_code": "DAMBULLA",
+      "net_profits": {
+        "DAMBULLA": "100.00",
+        "PETTAH_COLOMBO": "106.00"
+      },
+      "expected": {
+        "severity": "PROCEED_DEFAULT",
+        "recommended_market_code": null,
+        "profit_delta_lkr": "0.00",
+        "profit_uplift_pct": "0.00"
+      }
+    },
+    {
+      "name": "non_positive_default_with_viable_alternative_reroutes_with_null_uplift",
+      "default_market_code": "DAMBULLA",
+      "net_profits": {
+        "DAMBULLA": "-5000.00",
+        "PETTAH_COLOMBO": "15000.00"
+      },
+      "expected": {
+        "severity": "CRITICAL_REROUTE",
+        "recommended_market_code": "PETTAH_COLOMBO",
+        "profit_delta_lkr": "20000.00",
+        "profit_uplift_pct": null
+      }
+    },
+    {
+      "name": "non_positive_default_without_viable_alternative_holds_harvest",
+      "default_market_code": "DAMBULLA",
+      "net_profits": {
+        "DAMBULLA": "-5000.00",
+        "PETTAH_COLOMBO": "-1000.00"
+      },
+      "expected": {
+        "severity": "HOLD_HARVEST",
+        "recommended_market_code": null,
+        "profit_delta_lkr": null,
+        "profit_uplift_pct": null
+      }
+    },
+    {
+      "name": "tied_net_profit_breaks_deterministically_by_market_code",
+      "default_market_code": "DAMBULLA",
+      "net_profits": {
+        "DAMBULLA": "100000.00",
+        "PETTAH_COLOMBO": "120000.00",
+        "MEEGODA": "120000.00"
+      },
+      "expected": {
+        "severity": "CRITICAL_REROUTE",
+        "recommended_market_code": "MEEGODA",
+        "profit_delta_lkr": "20000.00",
+        "profit_uplift_pct": "20.00"
+      }
+    }
+  ]
+}
