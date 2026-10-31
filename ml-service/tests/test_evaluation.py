@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pandas as pd
 import pytest
 
@@ -42,6 +44,18 @@ def test_safe_margin_fpr_counts_realized_underperformance():
     assert result["reroute_count"] == 4
     assert result["false_reroute_count"] == 2
     assert result["safe_margin_fpr_pct"] == pytest.approx(50.0)
+
+
+def test_safe_margin_fpr_preserves_decimal_precision_without_float_coercion():
+    alt = Decimal("10000000000000000.01")
+    default = Decimal("10000000000000000.02")
+    assert float(alt) == float(default)
+
+    result = safe_margin_fpr([alt], [default])
+
+    assert result["reroute_count"] == 1
+    assert result["false_reroute_count"] == 1
+    assert result["safe_margin_fpr_pct"] == pytest.approx(100.0)
 
 
 def test_routing_backtest_uses_realized_prices_for_settlement():

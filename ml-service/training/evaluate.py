@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -170,22 +171,34 @@ def evaluate_predictions(
     }
 
 
+def _to_decimal(value: Decimal | float | int | str) -> Decimal:
+    return value if isinstance(value, Decimal) else Decimal(str(value))
+
+
 def safe_margin_fpr(
-    recommended_alternative_realized_net: pd.Series,
-    default_realized_net: pd.Series,
+    recommended_alternative_realized_net: Sequence[Decimal | float | int | str]
+    | pd.Series,
+    default_realized_net: Sequence[Decimal | float | int | str] | pd.Series,
 ) -> dict[str, Any]:
-    reroute_count = int(len(recommended_alternative_realized_net))
+    alternatives = [_to_decimal(item) for item in recommended_alternative_realized_net]
+    defaults = [_to_decimal(item) for item in default_realized_net]
+    if len(alternatives) != len(defaults):
+        raise ValueError(
+            "recommended alternative and default realized net series must align"
+        )
+    reroute_count = len(alternatives)
     if reroute_count == 0:
         return {
             "safe_margin_fpr_pct": None,
             "reroute_count": 0,
             "false_reroute_count": 0,
         }
-    false_count = int(
-        (
-            recommended_alternative_realized_net.to_numpy()
-            < default_realized_net.to_numpy()
-        ).sum()
+    false_count = sum(
+        1
+        for alternative_net, default_net in zip(
+            alternatives, defaults, strict=True
+        )
+        if alternative_net < default_net
     )
     return {
         "safe_margin_fpr_pct": round(false_count / reroute_count * 100, 2),
@@ -275,8 +288,8 @@ def evaluate_routing_decisions(
         default_realized.append(realized_net[DEFAULT_MARKET])
 
     return safe_margin_fpr(
-        pd.Series(recommended_alternative_realized, dtype=float),
-        pd.Series(default_realized, dtype=float),
+        recommended_alternative_realized,
+        default_realized,
     )
 
 
