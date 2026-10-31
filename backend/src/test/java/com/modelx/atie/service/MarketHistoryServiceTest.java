@@ -1,6 +1,7 @@
 package com.modelx.atie.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -18,18 +19,22 @@ import com.modelx.atie.client.ForecastClient;
 import com.modelx.atie.client.MlServiceClient;
 import com.modelx.atie.dto.MarketForecast;
 import com.modelx.atie.dto.MarketHistoryResponse;
+import com.modelx.atie.entity.Crop;
 import com.modelx.atie.entity.HistoricalPrice;
 import com.modelx.atie.entity.Market;
+import com.modelx.atie.repository.CropRepository;
 import com.modelx.atie.repository.HistoricalPriceRepository;
 import com.modelx.atie.repository.MarketRepository;
 
 class MarketHistoryServiceTest {
     private final HistoricalPriceRepository prices = mock(HistoricalPriceRepository.class);
     private final MarketRepository markets = mock(MarketRepository.class);
+    private final CropRepository crops = mock(CropRepository.class);
     private final ForecastClient forecasts = mock(ForecastClient.class);
     private final MarketHistoryService service = new MarketHistoryService(
             prices,
             markets,
+            crops,
             forecasts
     );
 
@@ -39,6 +44,9 @@ class MarketHistoryServiceTest {
                 Market.class,
                 "code", "DAMBULLA",
                 "name", "Dambulla Dedicated Economic Centre"
+        );
+        when(crops.findByCode("TOMATO")).thenReturn(
+                Optional.of(entity(Crop.class, "code", "TOMATO"))
         );
         when(markets.findByCode("DAMBULLA")).thenReturn(Optional.of(market));
         when(prices.findByMarketCodeAndCropCodeOrderByRecordedDateDesc(
@@ -79,6 +87,56 @@ class MarketHistoryServiceTest {
         assertThat(response.forecastSource()).isEqualTo("MODEL");
     }
 
+    @Test
+    void rejectsUnknownCropWithBadRequestInsteadOf404NoHistory() {
+        when(crops.findByCode("DRAGONFRUIT")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.history("DAMBULLA", "dragonfruit", 30))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unknown crop: DRAGONFRUIT");
+    }
+
+    @Test
+    void convergesToConsistentSourceWhenMlDegradesMidTrajectory() {
+        Market market = entity(
+                Market.class,
+                "code", "DAMBULLA",
+                "name", "Dambulla Dedicated Economic Centre"
+        );
+        when(crops.findByCode("TOMATO")).thenReturn(
+                Optional.of(entity(Crop.class, "code", "TOMATO"))
+        );
+        when(markets.findByCode("DAMBULLA")).thenReturn(Optional.of(market));
+        when(prices.findByMarketCodeAndCropCodeOrderByRecordedDateDesc(
+                eq("DAMBULLA"),
+                eq("TOMATO"),
+                any()
+        )).thenReturn(List.of(price("2026-10-27", "203.05")));
+
+        when(forecasts.predictBatch(
+                eq("TOMATO"),
+                eq(48),
+                eq(LocalDate.of(2026, 10, 27)),
+                eq(List.of("DAMBULLA")),
+                eq(false)
+        )).thenReturn(
+                forecast(48, "210.00", "STABLE", "MODEL"),
+                forecast(48, "211.81", "STABLE", "FALLBACK")
+        );
+        when(forecasts.predictBatch(
+                eq("TOMATO"),
+                eq(72),
+                eq(LocalDate.of(2026, 10, 27)),
+                eq(List.of("DAMBULLA")),
+                eq(false)
+        )).thenReturn(forecast(72, "215.56", "STABLE", "FALLBACK"));
+
+        MarketHistoryResponse response = service.history("DAMBULLA", "TOMATO", 14, false);
+
+        assertThat(response.forecastSource()).isEqualTo("FALLBACK");
+        assertThat(response.forecastTrajectory()).hasSize(2);
+    }
+
     private HistoricalPrice price(String date, String value) {
         return entity(
                 HistoricalPrice.class,
@@ -93,13 +151,22 @@ class MarketHistoryServiceTest {
             String predicted,
             String direction
     ) {
+        return forecast(horizon, predicted, direction, "MODEL");
+    }
+
+    private MlServiceClient.MlForecastResponse forecast(
+            int horizon,
+            String predicted,
+            String direction,
+            String source
+    ) {
         BigDecimal current = new BigDecimal("220.00");
         BigDecimal predictedValue = new BigDecimal(predicted);
         return new MlServiceClient.MlForecastResponse(
                 "TOMATO",
                 horizon,
                 LocalDate.of(2026, 10, 27),
-                "MODEL",
+                source,
                 "rf-v1.0",
                 "CACHED",
                 List.of(new MarketForecast(

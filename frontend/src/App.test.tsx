@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import * as atieClient from "./api/atieClient";
+import { demoResponse } from "./data/demoResponse";
+import type { AnalyzeResponse } from "./types/atie";
 
 vi.mock("./api/atieClient", async () => {
   const actual =
@@ -81,5 +83,62 @@ describe("App state handling", () => {
     );
 
     expect(screen.queryByText("Demo fixture is active.")).toBeNull();
+  });
+
+  it("cancels superseded in-flight analysis requests and refreshes data status", async () => {
+    let resolveSlowLive!: (value: AnalyzeResponse) => void;
+    const signals: Array<AbortSignal | undefined> = [];
+
+    vi.mocked(atieClient.analyzeConsignment).mockImplementation(
+      (req, signal) => {
+        signals.push(signal);
+        if (!req.demoMode) {
+          return new Promise<AnalyzeResponse>((resolve) => {
+            resolveSlowLive = resolve;
+          });
+        }
+        return Promise.resolve({
+          ...demoResponse,
+          primaryDirective: {
+            ...demoResponse.primaryDirective,
+            headline: "Demo fixture winner",
+          },
+        });
+      },
+    );
+
+    render(<App />);
+    expect(atieClient.fetchDataStatus).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Refresh analysis" }),
+    );
+    expect(atieClient.fetchDataStatus).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Load Northern glut demo" }),
+    );
+    expect(signals[0]?.aborted).toBe(true);
+    expect(
+      await screen.findByRole("heading", { name: "Demo fixture winner" }),
+    ).toBeVisible();
+
+    resolveSlowLive({
+      ...demoResponse,
+      forecastSource: "MODEL",
+      primaryDirective: {
+        ...demoResponse.primaryDirective,
+        headline: "Stale live response",
+      },
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: "Demo fixture winner" }),
+      ).toBeVisible();
+      expect(
+        screen.queryByRole("heading", { name: "Stale live response" }),
+      ).toBeNull();
+    });
   });
 });

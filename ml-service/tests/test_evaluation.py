@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pandas as pd
 import pytest
 
@@ -42,6 +44,18 @@ def test_safe_margin_fpr_counts_realized_underperformance():
     assert result["reroute_count"] == 4
     assert result["false_reroute_count"] == 2
     assert result["safe_margin_fpr_pct"] == pytest.approx(50.0)
+
+
+def test_safe_margin_fpr_preserves_decimal_precision_without_float_coercion():
+    alt = Decimal("10000000000000000.01")
+    default = Decimal("10000000000000000.02")
+    assert float(alt) == float(default)
+
+    result = safe_margin_fpr([alt], [default])
+
+    assert result["reroute_count"] == 1
+    assert result["false_reroute_count"] == 1
+    assert result["safe_margin_fpr_pct"] == pytest.approx(100.0)
 
 
 def test_routing_backtest_uses_realized_prices_for_settlement():
@@ -135,3 +149,33 @@ def test_routing_matrix_covers_origins_vehicles_and_quantities():
     assert {
         scenario["origin"] for scenario in result["scenarios"]
     } == {"ANURADHAPURA", "JAFFNA", "DAMBULLA", "NUWARA_ELIYA", "THAMBUTTEGAMA"}
+
+
+def test_train_enforces_three_day_embargo_between_train_and_holdout(tmp_path):
+    from training.train_model import EMBARGO_DAYS, train
+
+    dates = pd.date_range("2026-01-01", periods=50, freq="D")
+    rows = []
+    for recorded_date in dates:
+        for market_code in ("DAMBULLA", "PETTAH_COLOMBO", "THAMBUTTEGAMA"):
+            rows.append(
+                {
+                    "market_code": market_code,
+                    "crop_code": "TOMATO",
+                    "recorded_date": recorded_date,
+                    "wholesale_price_lkr_per_kg": 180.0 + (recorded_date.day % 11),
+                    "arrival_volume_tonnes": 60.0 + (recorded_date.day % 7),
+                    "diesel_price_lkr": 283.0,
+                    "precipitation_mm": 4.0,
+                }
+            )
+    report = train(
+        tmp_path / "model.joblib",
+        tmp_path / "report.json",
+        history=pd.DataFrame(rows),
+    )
+
+    trained_through = pd.Timestamp(report["trained_through"])
+    holdout_start = pd.Timestamp(report["holdout_start"])
+    assert (holdout_start - trained_through) >= pd.Timedelta(days=EMBARGO_DAYS)
+

@@ -59,19 +59,20 @@ fuel, and handling. Decimal arithmetic is used for every routing decision.
 
 ## Evaluation
 
-The model is evaluated on a chronological holdout against two required
-baselines: naive persistence and a seven-day moving average.
+The model is evaluated on a chronological holdout (with a 3-day horizon
+embargo) against two required baselines: naive persistence and a seven-day
+moving average.
 
 | Horizon | Model DS | Model MAE | Model SM-FPR | Reroutes |
 |---|---:|---:|---:|---:|
-| 48h | 67.89% | 6.05 LKR/kg | 3.00% | 6,502 |
-| 72h | 68.74% | 6.62 LKR/kg | 4.96% | 6,669 |
+| 48h | 67.45% | 5.45 LKR/kg | 2.59% | 6,369 |
+| 72h | 68.03% | 5.95 LKR/kg | 2.93% | 6,624 |
 
 SM-FPR is the rate at which a reroute recommendation loses against the default
 market after realized holdout prices are substituted. It is a routing
-backtest, not a price-error proxy. The 48h naive baseline has SM-FPR `4.43%`;
-the MA7 baseline has `7.25%`. The 72h model remains under the five-percent
-target.
+backtest, not a price-error proxy. The 48h naive baseline has SM-FPR `3.75%`;
+the MA7 baseline has `5.15%`. Both 48h and 72h models remain well under the
+five-percent target.
 
 ## Data Honesty
 

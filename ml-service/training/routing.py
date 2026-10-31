@@ -76,8 +76,9 @@ def calculate_profit(
         spoilage_rate_per_100km_pct, "spoilage_rate_per_100km_pct"
     )
 
-    spoilage_fraction = (
-        route.distance_km / HUNDRED * spoilage_rate_per_100km_pct / HUNDRED
+    spoilage_fraction = min(
+        Decimal("1"),
+        route.distance_km / HUNDRED * spoilage_rate_per_100km_pct / HUNDRED,
     )
     effective_volume_kg = quantity_kg * (Decimal("1") - spoilage_fraction)
     spoilage_loss_kg = quantity_kg - effective_volume_kg
@@ -156,8 +157,7 @@ def select_reroute(
             for market_code, net_profit in net_profits.items()
             if market_code != default_market_code
         ),
-        key=lambda item: item[1],
-        reverse=True,
+        key=lambda item: (-item[1], item[0]),
     )
     for market_code, net_profit in candidates:
         if passes_safe_margin(

@@ -28,9 +28,12 @@ public class MarketHistoryController {
     public ResponseEntity<MarketHistoryResponse> history(
             @PathVariable String marketCode,
             @RequestParam(name = "cropCode", defaultValue = "TOMATO") String cropCode,
-            @RequestParam(name = "days", defaultValue = "30") int days
+            @RequestParam(name = "days", defaultValue = "30") int days,
+            @RequestParam(name = "demoMode", defaultValue = "false") boolean demoMode
     ) {
-        return ResponseEntity.ok(history.history(marketCode, cropCode, days));
+        return ResponseEntity.ok(
+                history.history(marketCode, cropCode, days, demoMode)
+        );
     }
 
 }

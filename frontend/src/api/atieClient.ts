@@ -105,11 +105,13 @@ async function apiError(
 
 export async function analyzeConsignment(
   request: AnalyzeRequest,
+  signal?: AbortSignal,
 ): Promise<AnalyzeResponse> {
   const response = await fetch(`${API_BASE_URL}/directives/analyze`, {
     method: "POST",
     headers: authHeaders(true),
     body: JSON.stringify(toApiRequest(request)),
+    signal,
   });
   return mapAnalyzeResponse(
     await responseJson(response, "The directive analysis"),
@@ -120,14 +122,19 @@ export async function fetchMarketHistory(
   marketCode: string,
   cropCode: string,
   days = 14,
+  demoMode = false,
+  signal?: AbortSignal,
 ): Promise<MarketHistoryResponse> {
   const query = new URLSearchParams({
     cropCode,
     days: String(days),
   });
+  if (demoMode) {
+    query.set("demoMode", "true");
+  }
   const response = await fetch(
     `${API_BASE_URL}/markets/${encodeURIComponent(marketCode)}/history?${query}`,
-    { headers: authHeaders() },
+    { headers: authHeaders(), signal },
   );
   return mapMarketHistoryResponse(
     await responseJson(response, "The market history request"),
@@ -143,9 +150,12 @@ export async function fetchMetadataConfig(): Promise<MetadataConfig> {
   );
 }
 
-export async function fetchDataStatus(): Promise<DataStatus> {
+export async function fetchDataStatus(
+  signal?: AbortSignal,
+): Promise<DataStatus> {
   const response = await fetch(`${API_BASE_URL}/metadata/data-status`, {
     headers: authHeaders(),
+    signal,
   });
   return mapDataStatus(
     await responseJson(response, "The data provenance request"),

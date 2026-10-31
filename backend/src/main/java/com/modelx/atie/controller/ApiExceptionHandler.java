@@ -8,9 +8,14 @@ import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.modelx.atie.client.MlServiceException;
 import com.modelx.atie.config.RequestIdFilter;
@@ -46,6 +51,48 @@ public class ApiExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "MALFORMED_JSON",
                 "Request body could not be parsed"
+        );
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> typeMismatch(
+            MethodArgumentTypeMismatchException error
+    ) {
+        return error(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_PARAMETER",
+                "Invalid value for parameter '" + error.getName() + "'"
+        );
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiErrorResponse> missingParameter(
+            MissingServletRequestParameterException error
+    ) {
+        return error(
+                HttpStatus.BAD_REQUEST,
+                "MISSING_PARAMETER",
+                "Missing required parameter '" + error.getParameterName() + "'"
+        );
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> methodNotSupported(
+            HttpRequestMethodNotSupportedException error
+    ) {
+        return error(
+                HttpStatus.METHOD_NOT_ALLOWED,
+                "METHOD_NOT_ALLOWED",
+                error.getMessage()
+        );
+    }
+
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    public ResponseEntity<ApiErrorResponse> missingResource(Exception error) {
+        return error(
+                HttpStatus.NOT_FOUND,
+                "NOT_FOUND",
+                "Requested resource was not found"
         );
     }
 

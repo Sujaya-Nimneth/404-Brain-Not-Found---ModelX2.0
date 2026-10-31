@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -159,7 +160,12 @@ def evaluate_predictions(
     target_column: str,
     prediction_column: str,
 ) -> dict[str, float]:
-    current = frame["price_lag_1d"]
+    current_column = (
+        "wholesale_price_lkr_per_kg"
+        if "wholesale_price_lkr_per_kg" in frame.columns
+        else "price_lag_1d"
+    )
+    current = frame[current_column]
     actual = frame[target_column]
     predicted = frame[prediction_column]
     return {
@@ -170,22 +176,34 @@ def evaluate_predictions(
     }
 
 
+def _to_decimal(value: Decimal | float | int | str) -> Decimal:
+    return value if isinstance(value, Decimal) else Decimal(str(value))
+
+
 def safe_margin_fpr(
-    recommended_alternative_realized_net: pd.Series,
-    default_realized_net: pd.Series,
+    recommended_alternative_realized_net: Sequence[Decimal | float | int | str]
+    | pd.Series,
+    default_realized_net: Sequence[Decimal | float | int | str] | pd.Series,
 ) -> dict[str, Any]:
-    reroute_count = int(len(recommended_alternative_realized_net))
+    alternatives = [_to_decimal(item) for item in recommended_alternative_realized_net]
+    defaults = [_to_decimal(item) for item in default_realized_net]
+    if len(alternatives) != len(defaults):
+        raise ValueError(
+            "recommended alternative and default realized net series must align"
+        )
+    reroute_count = len(alternatives)
     if reroute_count == 0:
         return {
             "safe_margin_fpr_pct": None,
             "reroute_count": 0,
             "false_reroute_count": 0,
         }
-    false_count = int(
-        (
-            recommended_alternative_realized_net.to_numpy()
-            < default_realized_net.to_numpy()
-        ).sum()
+    false_count = sum(
+        1
+        for alternative_net, default_net in zip(
+            alternatives, defaults, strict=True
+        )
+        if alternative_net < default_net
     )
     return {
         "safe_margin_fpr_pct": round(false_count / reroute_count * 100, 2),
@@ -209,11 +227,15 @@ def evaluate_routing_decisions(
         "recorded_date",
         "market_code",
         "crop_code",
-        "price_lag_1d",
         target_column,
         prediction_column,
     }
     missing = required.difference(frame.columns)
+    if (
+        "wholesale_price_lkr_per_kg" not in frame.columns
+        and "price_lag_1d" not in frame.columns
+    ):
+        missing.add("wholesale_price_lkr_per_kg")
     if missing:
         raise ValueError(f"routing backtest missing columns: {sorted(missing)}")
 
@@ -275,8 +297,8 @@ def evaluate_routing_decisions(
         default_realized.append(realized_net[DEFAULT_MARKET])
 
     return safe_margin_fpr(
-        pd.Series(recommended_alternative_realized, dtype=float),
-        pd.Series(default_realized, dtype=float),
+        recommended_alternative_realized,
+        default_realized,
     )
 
 

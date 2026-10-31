@@ -67,6 +67,50 @@ class MlServiceClientTest {
     }
 
     @Test
+    void nonDemoTomatoFallbackDiffersFromDemoFixture() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("http://localhost:8000/predict-batch?demo_mode=false"))
+                .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+
+        MlServiceClient.MlForecastResponse response = client(builder).predictBatch(
+                "TOMATO",
+                48,
+                LocalDate.of(2026, 10, 27),
+                List.of("DAMBULLA", "PETTAH_COLOMBO"),
+                false
+        );
+
+        assertThat(response.forecastSource()).isEqualTo("FALLBACK");
+        assertThat(response.predictions().get(0).predictedPriceLkr())
+                .isNotEqualByComparingTo("154.00");
+        assertThat(response.predictions().get(0).currentPriceLkr())
+                .isNotEqualByComparingTo("220.00");
+        server.verify();
+    }
+
+    @Test
+    void demoRequestForUnsupportedCropFailsWithoutMislabelingFallback() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("http://localhost:8000/predict-batch?demo_mode=true"))
+                .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+
+        assertThatThrownBy(() -> client(builder).predictBatch(
+                "CARROT",
+                48,
+                LocalDate.of(2026, 10, 27),
+                List.of("DAMBULLA"),
+                true
+        ))
+                .isInstanceOfSatisfying(MlServiceException.class, error -> {
+                    assertThat(error.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+                    assertThat(error.code()).isEqualTo("ML_REJECTED_REQUEST");
+                });
+        server.verify();
+    }
+
+    @Test
     void fourHundredResponsesArePropagatedWithoutFallback() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

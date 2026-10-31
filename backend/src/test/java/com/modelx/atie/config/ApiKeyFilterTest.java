@@ -28,11 +28,17 @@ class ApiKeyFilterTest {
         var missing = new MockHttpServletRequest("POST", "/api/v1/directives/analyze");
         var response = new MockHttpServletResponse();
         var chain = mock(jakarta.servlet.FilterChain.class);
-
-        filter.doFilter(missing, response, chain);
+        org.slf4j.MDC.put(RequestIdFilter.MDC_KEY, "req-auth-401");
+        try {
+            filter.doFilter(missing, response, chain);
+        } finally {
+            org.slf4j.MDC.remove(RequestIdFilter.MDC_KEY);
+        }
 
         assertThat(response.getStatus()).isEqualTo(401);
-        assertThat(response.getContentAsString()).contains("UNAUTHORIZED");
+        assertThat(response.getContentAsString())
+                .contains("\"code\":\"UNAUTHORIZED\"")
+                .contains("\"request_id\":\"req-auth-401\"");
         verifyNoInteractions(chain);
     }
 

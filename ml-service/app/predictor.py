@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 import logging
 import pickle
+import threading
 import time
 from dataclasses import dataclass
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 import joblib
@@ -112,15 +114,17 @@ DEMO_FIXTURE = {
 class Predictor:
     def __init__(self, settings: Settings):
         self.settings = settings
+        self._lock = threading.Lock()
         self.artifact: dict[str, Any] | None = None
         self.metadata: dict[str, Any] = {}
         self.history = pd.DataFrame()
         self.input_data_state = InputDataState.SEED
         self._feature_frame: pd.DataFrame | None = None
         self._history_loaded_at = 0.0
+        self._fallback_cache: tuple[Path, int, dict[str, Any]] | None = None
         self._load_artifacts()
         self._configure_model_runtime()
-        self._replace_history(*self._load_history())
+        self._replace_history(*self._load_history(allow_seed_fallback=True))
 
     def _load_artifacts(self) -> None:
         try:
@@ -168,28 +172,52 @@ class Predictor:
             return str(self.artifact.get("model_version", "unknown"))
         return "fallback-v1.0"
 
-    def _load_history(self) -> tuple[pd.DataFrame, InputDataState]:
+    def _load_history(
+        self,
+        *,
+        allow_seed_fallback: bool = True,
+    ) -> tuple[pd.DataFrame, InputDataState]:
+        last_error: Exception | None = None
         if self.settings.database_dsn:
             try:
                 frame = self._load_database_history(self.settings.database_dsn)
                 if not frame.empty:
                     return frame, _data_state(frame)
+                last_error = ValueError("PostgreSQL returned an empty price history")
             except (OSError, psycopg.Error, ValueError, KeyError, TypeError) as error:
+                last_error = error
                 logger.warning(
-                    "PostgreSQL feature history unavailable; using local snapshot: %s",
+                    "PostgreSQL feature history unavailable; %s: %s",
+                    "checking local snapshot"
+                    if allow_seed_fallback
+                    else "retaining active in-memory snapshot",
                     error,
                 )
+                if not allow_seed_fallback:
+                    raise
 
         if self.settings.history_path.exists():
             try:
                 frame = pd.read_csv(self.settings.history_path)
                 if not frame.empty:
                     return frame, _data_state(frame)
+                last_error = ValueError("Local CSV feature history is empty")
             except (OSError, pd.errors.ParserError, ValueError) as error:
+                last_error = error
                 logger.warning(
-                    "Local feature history unavailable; using generated seed: %s",
+                    "Local feature history unavailable; %s: %s",
+                    "using generated seed"
+                    if allow_seed_fallback
+                    else "retaining active in-memory snapshot",
                     error,
                 )
+                if not allow_seed_fallback:
+                    raise
+
+        if not allow_seed_fallback:
+            if last_error is not None:
+                raise last_error
+            return pd.DataFrame(), self.input_data_state
 
         return generate_demo_history(), InputDataState.SEED
 
@@ -219,10 +247,12 @@ class Predictor:
             LEFT JOIN weather_observations weather
               ON weather.market_id = history.market_id
              AND weather.observation_date = history.recorded_date
-            WHERE history.recorded_date >= CURRENT_DATE - INTERVAL '730 days'
+            WHERE history.recorded_date >= (
+                SELECT MAX(recorded_date) FROM historical_prices
+            ) - INTERVAL '730 days'
             ORDER BY history.recorded_date, markets.code, crops.code
         """
-        with psycopg.connect(dsn) as connection:
+        with psycopg.connect(dsn, connect_timeout=3) as connection:
             return pd.read_sql_query(query, connection)
 
     def _replace_history(
@@ -230,10 +260,17 @@ class Predictor:
         history: pd.DataFrame,
         data_state: InputDataState,
     ) -> None:
-        self.history = history
-        self.input_data_state = data_state
-        self._history_loaded_at = time.monotonic()
-        self._prepare_feature_cache()
+        normalized = history.copy()
+        if not normalized.empty and "recorded_date" in normalized.columns:
+            normalized["recorded_date"] = pd.to_datetime(
+                normalized["recorded_date"], errors="raise"
+            )
+        feature_frame = self._build_feature_cache(normalized)
+        with self._lock:
+            self.history = normalized
+            self.input_data_state = data_state
+            self._feature_frame = feature_frame
+            self._history_loaded_at = time.monotonic()
 
     def _refresh_history_if_due(self) -> None:
         if (
@@ -247,19 +284,40 @@ class Predictor:
         ):
             return
         try:
-            history, data_state = self._load_history()
+            history, data_state = self._load_history(
+                allow_seed_fallback=self.history.empty
+            )
             if not history.empty:
                 self._replace_history(history, data_state)
-        except (OSError, ValueError, KeyError, TypeError) as error:
-            logger.warning("Feature refresh failed; keeping previous snapshot: %s", error)
-            self._history_loaded_at = time.monotonic()
+            else:
+                with self._lock:
+                    self._history_loaded_at = time.monotonic()
+        except (
+            OSError,
+            psycopg.Error,
+            pd.errors.ParserError,
+            ValueError,
+            KeyError,
+            TypeError,
+        ) as error:
+            logger.warning(
+                "Feature refresh failed; keeping previous snapshot: %s", error
+            )
+            with self._lock:
+                self._history_loaded_at = time.monotonic()
 
-    def _prepare_feature_cache(self) -> None:
+    def _build_feature_cache(
+        self, history: pd.DataFrame
+    ) -> pd.DataFrame | None:
+        if history.empty:
+            return None
         try:
-            self._feature_frame = build_features(self.history)
+            return build_features(history)
         except (KeyError, TypeError, ValueError) as error:
-            logger.warning("Feature cache unavailable; requests will fall back: %s", error)
-            self._feature_frame = None
+            logger.warning(
+                "Feature cache unavailable; requests will fall back: %s", error
+            )
+            return None
 
     def predict(self, request: PredictBatchRequest) -> PredictBatchResponse:
         if request.crop_code not in SUPPORTED_CROPS:
@@ -269,11 +327,16 @@ class Predictor:
             raise ValueError(f"unsupported markets: {sorted(unknown_markets)}")
 
         self._refresh_history_if_due()
-        reference_date = self._reference_date_for_request(request)
+        with self._lock:
+            history = self.history
+            feature_frame = self._feature_frame
+            data_state = self.input_data_state
+
+        reference_date = self._reference_date_for_request(request, history)
         source = ForecastSource.MODEL if self.model_loaded else ForecastSource.FALLBACK
         if self.model_loaded:
             try:
-                rows = self._select_rows(request, reference_date)
+                rows = self._select_rows(request, reference_date, feature_frame)
                 predictions = self._model_predictions(request, rows)
             except (KeyError, ValueError, TypeError) as error:
                 logger.warning("Model inference failed; using fallback: %s", error)
@@ -287,7 +350,7 @@ class Predictor:
             horizon_hours=request.horizon_hours,
             reference_date=reference_date,
             forecast_source=source,
-            input_data_state=self.input_data_state,
+            input_data_state=data_state,
             model_version=(
                 self.model_version
                 if source == ForecastSource.MODEL
@@ -296,20 +359,33 @@ class Predictor:
             predictions=predictions,
         )
 
-    def _reference_date_for_request(self, request: PredictBatchRequest) -> date:
-        history = self.history.copy()
-        if history.empty:
+    def _reference_date_for_request(
+        self,
+        request: PredictBatchRequest,
+        history: pd.DataFrame | None = None,
+    ) -> date:
+        active_history = self.history if history is None else history
+        if active_history.empty:
             raise ValueError("feature history is unavailable")
-        history["recorded_date"] = pd.to_datetime(
-            history["recorded_date"], errors="raise"
-        )
+        recorded_dates = active_history["recorded_date"]
+        if not pd.api.types.is_datetime64_any_dtype(recorded_dates):
+            recorded_dates = pd.to_datetime(recorded_dates, errors="raise")
         requested = pd.Timestamp(request.reference_date)
-        eligible = history[
-            (history["crop_code"] == request.crop_code)
-            & (history["market_code"].isin(request.markets))
-            & (history["recorded_date"] <= requested)
+        eligible = active_history[
+            (active_history["crop_code"] == request.crop_code)
+            & (active_history["market_code"].isin(request.markets))
+            & (recorded_dates <= requested)
         ]
-        latest = eligible.groupby("market_code")["recorded_date"].max()
+        if eligible.empty:
+            raise ValueError(
+                "no observations exist on or before reference_date for: "
+                + ", ".join(sorted(request.markets))
+            )
+        latest = (
+            recorded_dates.loc[eligible.index]
+            .groupby(eligible["market_code"])
+            .max()
+        )
         missing = set(request.markets).difference(latest.index)
         if missing:
             raise ValueError(
@@ -322,13 +398,17 @@ class Predictor:
         self,
         request: PredictBatchRequest,
         reference_date: date,
+        feature_frame: pd.DataFrame | None = None,
     ) -> dict[str, pd.Series]:
-        if self._feature_frame is None:
+        active_features = (
+            self._feature_frame if feature_frame is None else feature_frame
+        )
+        if active_features is None:
             raise ValueError("feature cache is unavailable")
-        eligible = self._feature_frame[
-            (self._feature_frame["crop_code"] == request.crop_code)
-            & (self._feature_frame["market_code"].isin(request.markets))
-            & (self._feature_frame["recorded_date"] <= pd.Timestamp(reference_date))
+        eligible = active_features[
+            (active_features["crop_code"] == request.crop_code)
+            & (active_features["market_code"].isin(request.markets))
+            & (active_features["recorded_date"] <= pd.Timestamp(reference_date))
         ].dropna(subset=FEATURE_COLUMNS)
         if eligible.empty:
             raise ValueError("no complete feature rows exist for reference_date")
@@ -377,13 +457,28 @@ class Predictor:
             )
         ]
 
+    def _load_fallback_data(self) -> dict[str, Any]:
+        path = self.settings.fallback_data_path
+        mtime_ns = path.stat().st_mtime_ns
+        with self._lock:
+            if (
+                self._fallback_cache is not None
+                and self._fallback_cache[0] == path
+                and self._fallback_cache[1] == mtime_ns
+            ):
+                return self._fallback_cache[2]
+        parsed = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(parsed, dict):
+            raise ValueError("fallback snapshot root must be a JSON object")
+        with self._lock:
+            self._fallback_cache = (path, mtime_ns, parsed)
+        return parsed
+
     def _fallback_predictions(
         self, request: PredictBatchRequest
     ) -> list[MarketForecast]:
         try:
-            data = json.loads(
-                self.settings.fallback_data_path.read_text(encoding="utf-8")
-            )
+            data = self._load_fallback_data()
             crop_data = data["markets"][request.crop_code]
             result: list[MarketForecast] = []
             for market_code in request.markets:

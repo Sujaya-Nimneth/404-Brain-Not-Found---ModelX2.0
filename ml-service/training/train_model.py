@@ -19,6 +19,9 @@ from etl.seed_loader import generate_demo_history
 from training.evaluate import evaluate_routing_matrix, write_evaluation_report
 
 
+EMBARGO_DAYS = 3
+
+
 def train(
     output_path: Path,
     metadata_path: Path,
@@ -30,11 +33,14 @@ def train(
     )
     frame = frame.sort_values(["recorded_date", "market_code", "crop_code"])
 
-    unique_dates = sorted(frame["recorded_date"].unique())
-    split_index = max(1, int(len(unique_dates) * 0.8))
-    train_dates = set(unique_dates[:split_index])
-    train = frame[frame["recorded_date"].isin(train_dates)]
-    test = frame[~frame["recorded_date"].isin(train_dates)]
+    unique_dates = sorted(pd.to_datetime(frame["recorded_date"]).unique())
+    split_index = max(EMBARGO_DAYS + 1, int(len(unique_dates) * 0.8))
+    if split_index >= len(unique_dates):
+        raise ValueError("insufficient unique dates for holdout split with embargo")
+    holdout_start = pd.Timestamp(unique_dates[split_index])
+    train_cutoff = holdout_start - pd.Timedelta(days=EMBARGO_DAYS)
+    train = frame[frame["recorded_date"] <= train_cutoff]
+    test = frame[frame["recorded_date"] >= holdout_start]
     if train.empty or test.empty:
         raise ValueError("training and holdout sets must both be non-empty")
 
@@ -58,7 +64,7 @@ def train(
 
         actual = horizon_test[target]
         predicted = horizon_test[f"prediction_{horizon}h"]
-        current = horizon_test["price_lag_1d"]
+        current = horizon_test["wholesale_price_lkr_per_kg"]
         naive = current
         ma7 = horizon_test["rolling_mean_7d"]
 
@@ -86,7 +92,7 @@ def train(
                     horizon_test, horizon, f"prediction_{horizon}h"
                 ),
                 "baseline_naive": evaluate_routing_matrix(
-                    horizon_test, horizon, "price_lag_1d"
+                    horizon_test, horizon, "wholesale_price_lkr_per_kg"
                 ),
                 "baseline_ma7": evaluate_routing_matrix(
                     horizon_test, horizon, "rolling_mean_7d"

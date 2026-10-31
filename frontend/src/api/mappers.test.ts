@@ -228,6 +228,26 @@ describe("ATIE API contract mappers", () => {
     expect(metadata.origins[0].supplyZone).toBe("NORTH_CENTRAL");
     expect(metadata.vehicleTypes[0].capacityKg).toBe(1500);
     expect(metadata.thresholds.safeMarginPct).toBe(5);
+
+    const withoutFuel = mapMetadataConfig({
+      origins: [],
+      markets: [],
+      crops: [],
+      routes: [],
+      vehicle_types: [],
+      horizons: [48, 72],
+      fuel_prices: null,
+      thresholds: {
+        safe_margin_pct: 5,
+        safe_absolute_floor_lkr: 1000,
+        movement_threshold_pct: 10,
+      },
+    });
+    expect(withoutFuel.fuelPrices).toEqual({
+      effectiveDate: null,
+      dieselLkrPerLiter: null,
+      petrolLkrPerLiter: null,
+    });
   });
 
   it("maps source provenance without leaking snake_case into the UI model", () => {

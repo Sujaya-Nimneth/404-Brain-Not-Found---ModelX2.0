@@ -5,14 +5,18 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import com.modelx.atie.client.ForecastClient;
 import com.modelx.atie.client.MlServiceClient;
+import com.modelx.atie.client.MlServiceException;
 import com.modelx.atie.dto.MarketHistoryResponse;
 import com.modelx.atie.entity.HistoricalPrice;
 import com.modelx.atie.entity.Market;
+import com.modelx.atie.repository.CropRepository;
 import com.modelx.atie.repository.HistoricalPriceRepository;
 import com.modelx.atie.repository.MarketRepository;
 
@@ -20,16 +24,28 @@ import com.modelx.atie.repository.MarketRepository;
 public class MarketHistoryService {
     private final HistoricalPriceRepository prices;
     private final MarketRepository markets;
+    private final CropRepository crops;
     private final ForecastClient forecastClient;
+
+    @Autowired
+    public MarketHistoryService(
+            HistoricalPriceRepository prices,
+            MarketRepository markets,
+            CropRepository crops,
+            ForecastClient forecastClient
+    ) {
+        this.prices = prices;
+        this.markets = markets;
+        this.crops = crops;
+        this.forecastClient = forecastClient;
+    }
 
     public MarketHistoryService(
             HistoricalPriceRepository prices,
             MarketRepository markets,
             ForecastClient forecastClient
     ) {
-        this.prices = prices;
-        this.markets = markets;
-        this.forecastClient = forecastClient;
+        this(prices, markets, null, forecastClient);
     }
 
     public MarketHistoryResponse history(
@@ -37,12 +53,29 @@ public class MarketHistoryService {
             String requestedCropCode,
             int requestedDays
     ) {
+        return history(requestedMarketCode, requestedCropCode, requestedDays, false);
+    }
+
+    public MarketHistoryResponse history(
+            String requestedMarketCode,
+            String requestedCropCode,
+            int requestedDays,
+            boolean demoMode
+    ) {
         if (requestedDays < 1 || requestedDays > 365) {
             throw new IllegalArgumentException("days must be between 1 and 365");
         }
 
         String marketCode = normalize(requestedMarketCode);
         String cropCode = normalize(requestedCropCode);
+        if (crops != null && crops.findByCode(cropCode).isEmpty()) {
+            throw new IllegalArgumentException("Unknown crop: " + cropCode);
+        }
+        if (demoMode && !"TOMATO".equals(cropCode)) {
+            throw new IllegalArgumentException(
+                    "Canonical demo trajectory is only available for TOMATO"
+            );
+        }
         Market market = markets.findByCode(marketCode).orElseThrow(
                 () -> new NoSuchElementException("Unknown market: " + marketCode)
         );
@@ -67,17 +100,30 @@ public class MarketHistoryService {
                 cropCode,
                 48,
                 referenceDate,
-                marketCode
+                marketCode,
+                demoMode
         );
         MlServiceClient.MlForecastResponse forecast72 = forecast(
                 cropCode,
                 72,
                 referenceDate,
-                marketCode
+                marketCode,
+                demoMode
         );
         if (!forecast48.forecastSource().equals(forecast72.forecastSource())) {
-            throw new IllegalStateException(
-                    "Forecast trajectory mixed MODEL, FALLBACK, or DEMO_FIXTURE sources"
+            forecast48 = forecast(
+                    cropCode,
+                    48,
+                    referenceDate,
+                    marketCode,
+                    demoMode
+            );
+        }
+        if (!forecast48.forecastSource().equals(forecast72.forecastSource())) {
+            throw new MlServiceException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "TRAJECTORY_SOURCE_MISMATCH",
+                    "Forecast trajectory changed source mid-request; please retry"
             );
         }
 
@@ -86,7 +132,9 @@ public class MarketHistoryService {
                 market.getName(),
                 cropCode,
                 requestedDays,
-                referenceDate,
+                forecast48.referenceDate() != null
+                        ? forecast48.referenceDate()
+                        : referenceDate,
                 forecast48.forecastSource(),
                 forecast48.modelVersion(),
                 chronological.stream().map(record ->
@@ -107,17 +155,20 @@ public class MarketHistoryService {
             String cropCode,
             int horizonHours,
             java.time.LocalDate referenceDate,
-            String marketCode
+            String marketCode,
+            boolean demoMode
     ) {
         MlServiceClient.MlForecastResponse response = forecastClient.predictBatch(
                 cropCode,
                 horizonHours,
                 referenceDate,
                 List.of(marketCode),
-                false
+                demoMode
         );
         if (response.predictions() == null || response.predictions().isEmpty()) {
-            throw new IllegalStateException(
+            throw new MlServiceException(
+                    HttpStatus.BAD_GATEWAY,
+                    "ML_CONTRACT_ERROR",
                     "Forecast trajectory is unavailable for " + marketCode
             );
         }

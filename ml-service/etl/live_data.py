@@ -4,6 +4,7 @@ import csv
 import io
 import json
 import logging
+import os
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -122,13 +123,21 @@ def parse_open_meteo_weather(
     ):
         if precipitation is None:
             continue
+        parsed_max = None if maximum is None else round(float(maximum), 2)
+        parsed_min = None if minimum is None else round(float(minimum), 2)
+        if (
+            parsed_max is not None
+            and parsed_min is not None
+            and parsed_max < parsed_min
+        ):
+            parsed_max, parsed_min = parsed_min, parsed_max
         result.append(
             WeatherObservation(
                 market_code=market_code,
                 observation_date=date.fromisoformat(day),
                 precipitation_mm=max(0.0, round(float(precipitation), 2)),
-                temp_max_c=None if maximum is None else round(float(maximum), 2),
-                temp_min_c=None if minimum is None else round(float(minimum), 2),
+                temp_max_c=parsed_max,
+                temp_min_c=parsed_min,
                 source=source_label,
             )
         )
@@ -153,10 +162,25 @@ def fetch_text(
             active_client.close()
 
 
+def atomic_write_text(
+    path: Path,
+    content: str,
+    *,
+    encoding: str = "utf-8",
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        temp_path.write_text(content, encoding=encoding)
+        temp_path.replace(path)
+    except Exception:
+        temp_path.unlink(missing_ok=True)
+        raise
+
+
 def read_or_write_cache(path: Path, payload: str | None) -> str | None:
     if payload is not None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(payload, encoding="utf-8")
+        atomic_write_text(path, payload, encoding="utf-8")
         return payload
     if path.exists():
         return path.read_text(encoding="utf-8")

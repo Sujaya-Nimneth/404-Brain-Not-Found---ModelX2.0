@@ -7,20 +7,534 @@
     "TOMATO": {
       "DAMBULLA": {
         "48": {
+          "current_price_lkr": 203.05,
+          "predicted_price_lkr": 211.81,
+          "baseline_ma7_lkr": 228.08,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 203.05,
+          "predicted_price_lkr": 215.56,
+          "baseline_ma7_lkr": 228.08,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "JAFFNA": {
+        "48": {
+          "current_price_lkr": 193.42,
+          "predicted_price_lkr": 194.3,
+          "baseline_ma7_lkr": 195.94,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 193.42,
+          "predicted_price_lkr": 194.68,
+          "baseline_ma7_lkr": 195.94,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "KEPPETIPOLA": {
+        "48": {
+          "current_price_lkr": 194.47,
+          "predicted_price_lkr": 193.75,
+          "baseline_ma7_lkr": 192.41,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 194.47,
+          "predicted_price_lkr": 193.44,
+          "baseline_ma7_lkr": 192.41,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "MEEGODA": {
+        "48": {
+          "current_price_lkr": 195.65,
+          "predicted_price_lkr": 195.41,
+          "baseline_ma7_lkr": 194.95,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 195.65,
+          "predicted_price_lkr": 195.3,
+          "baseline_ma7_lkr": 194.95,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "NUWARA_ELIYA": {
+        "48": {
+          "current_price_lkr": 206.34,
+          "predicted_price_lkr": 204.11,
+          "baseline_ma7_lkr": 199.97,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 206.34,
+          "predicted_price_lkr": 203.16,
+          "baseline_ma7_lkr": 199.97,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "PETTAH_COLOMBO": {
+        "48": {
+          "current_price_lkr": 207.78,
+          "predicted_price_lkr": 207.09,
+          "baseline_ma7_lkr": 205.8,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 207.78,
+          "predicted_price_lkr": 206.79,
+          "baseline_ma7_lkr": 205.8,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "THAMBUTTEGAMA": {
+        "48": {
+          "current_price_lkr": 181.59,
+          "predicted_price_lkr": 182.1,
+          "baseline_ma7_lkr": 183.05,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 181.59,
+          "predicted_price_lkr": 182.32,
+          "baseline_ma7_lkr": 183.05,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      }
+    },
+    "CARROT": {
+      "DAMBULLA": {
+        "48": {
+          "current_price_lkr": 264.94,
+          "predicted_price_lkr": 263.9,
+          "baseline_ma7_lkr": 261.96,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 264.94,
+          "predicted_price_lkr": 263.45,
+          "baseline_ma7_lkr": 261.96,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "JAFFNA": {
+        "48": {
+          "current_price_lkr": 284.65,
+          "predicted_price_lkr": 282.38,
+          "baseline_ma7_lkr": 278.15,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 284.65,
+          "predicted_price_lkr": 281.4,
+          "baseline_ma7_lkr": 278.15,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "KEPPETIPOLA": {
+        "48": {
+          "current_price_lkr": 267.57,
+          "predicted_price_lkr": 270.4,
+          "baseline_ma7_lkr": 275.65,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 267.57,
+          "predicted_price_lkr": 271.61,
+          "baseline_ma7_lkr": 275.65,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "MEEGODA": {
+        "48": {
+          "current_price_lkr": 270.66,
+          "predicted_price_lkr": 271.77,
+          "baseline_ma7_lkr": 273.82,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 270.66,
+          "predicted_price_lkr": 272.24,
+          "baseline_ma7_lkr": 273.82,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "NUWARA_ELIYA": {
+        "48": {
+          "current_price_lkr": 283.77,
+          "predicted_price_lkr": 284.04,
+          "baseline_ma7_lkr": 284.55,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 283.77,
+          "predicted_price_lkr": 284.16,
+          "baseline_ma7_lkr": 284.55,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "PETTAH_COLOMBO": {
+        "48": {
+          "current_price_lkr": 308.13,
+          "predicted_price_lkr": 304.7,
+          "baseline_ma7_lkr": 298.34,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 308.13,
+          "predicted_price_lkr": 303.24,
+          "baseline_ma7_lkr": 298.34,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "THAMBUTTEGAMA": {
+        "48": {
+          "current_price_lkr": 257.97,
+          "predicted_price_lkr": 258.19,
+          "baseline_ma7_lkr": 258.6,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 257.97,
+          "predicted_price_lkr": 258.29,
+          "baseline_ma7_lkr": 258.6,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      }
+    },
+    "GREEN_CHILI": {
+      "DAMBULLA": {
+        "48": {
+          "current_price_lkr": 627.98,
+          "predicted_price_lkr": 624.06,
+          "baseline_ma7_lkr": 616.78,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 627.98,
+          "predicted_price_lkr": 622.38,
+          "baseline_ma7_lkr": 616.78,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "JAFFNA": {
+        "48": {
+          "current_price_lkr": 670.47,
+          "predicted_price_lkr": 665.12,
+          "baseline_ma7_lkr": 655.17,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 670.47,
+          "predicted_price_lkr": 662.82,
+          "baseline_ma7_lkr": 655.17,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "KEPPETIPOLA": {
+        "48": {
+          "current_price_lkr": 646.36,
+          "predicted_price_lkr": 648.4,
+          "baseline_ma7_lkr": 652.19,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 646.36,
+          "predicted_price_lkr": 649.28,
+          "baseline_ma7_lkr": 652.19,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "MEEGODA": {
+        "48": {
+          "current_price_lkr": 659.53,
+          "predicted_price_lkr": 660.73,
+          "baseline_ma7_lkr": 662.97,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 659.53,
+          "predicted_price_lkr": 661.25,
+          "baseline_ma7_lkr": 662.97,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "NUWARA_ELIYA": {
+        "48": {
+          "current_price_lkr": 680.73,
+          "predicted_price_lkr": 677.18,
+          "baseline_ma7_lkr": 670.58,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 680.73,
+          "predicted_price_lkr": 675.65,
+          "baseline_ma7_lkr": 670.58,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "PETTAH_COLOMBO": {
+        "48": {
+          "current_price_lkr": 730.18,
+          "predicted_price_lkr": 723.76,
+          "baseline_ma7_lkr": 711.84,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 730.18,
+          "predicted_price_lkr": 721.01,
+          "baseline_ma7_lkr": 711.84,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "THAMBUTTEGAMA": {
+        "48": {
+          "current_price_lkr": 614.79,
+          "predicted_price_lkr": 613.79,
+          "baseline_ma7_lkr": 611.92,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 614.79,
+          "predicted_price_lkr": 613.36,
+          "baseline_ma7_lkr": 611.92,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      }
+    },
+    "RED_ONION": {
+      "DAMBULLA": {
+        "48": {
+          "current_price_lkr": 383.34,
+          "predicted_price_lkr": 381.82,
+          "baseline_ma7_lkr": 379.0,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 383.34,
+          "predicted_price_lkr": 381.17,
+          "baseline_ma7_lkr": 379.0,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "JAFFNA": {
+        "48": {
+          "current_price_lkr": 404.59,
+          "predicted_price_lkr": 402.18,
+          "baseline_ma7_lkr": 397.7,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 404.59,
+          "predicted_price_lkr": 401.14,
+          "baseline_ma7_lkr": 397.7,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "KEPPETIPOLA": {
+        "48": {
+          "current_price_lkr": 381.41,
+          "predicted_price_lkr": 385.65,
+          "baseline_ma7_lkr": 393.52,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 381.41,
+          "predicted_price_lkr": 387.47,
+          "baseline_ma7_lkr": 393.52,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "MEEGODA": {
+        "48": {
+          "current_price_lkr": 382.46,
+          "predicted_price_lkr": 386.15,
+          "baseline_ma7_lkr": 392.99,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 382.46,
+          "predicted_price_lkr": 387.73,
+          "baseline_ma7_lkr": 392.99,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "NUWARA_ELIYA": {
+        "48": {
+          "current_price_lkr": 397.36,
+          "predicted_price_lkr": 400.46,
+          "baseline_ma7_lkr": 406.21,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 397.36,
+          "predicted_price_lkr": 401.78,
+          "baseline_ma7_lkr": 406.21,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "PETTAH_COLOMBO": {
+        "48": {
+          "current_price_lkr": 429.22,
+          "predicted_price_lkr": 428.6,
+          "baseline_ma7_lkr": 427.45,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 429.22,
+          "predicted_price_lkr": 428.34,
+          "baseline_ma7_lkr": 427.45,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "THAMBUTTEGAMA": {
+        "48": {
+          "current_price_lkr": 373.96,
+          "predicted_price_lkr": 373.81,
+          "baseline_ma7_lkr": 373.53,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 373.96,
+          "predicted_price_lkr": 373.75,
+          "baseline_ma7_lkr": 373.53,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+        }
+      }
+    }
+  },
+  "demo_fixture": {
+    "TOMATO": {
+      "DAMBULLA": {
+        "48": {
           "current_price_lkr": 220.0,
           "predicted_price_lkr": 154.0,
           "baseline_ma7_lkr": 237.76,
           "glut_risk_level": "HIGH",
           "confidence_score": 0.89,
-          "primary_driver": "Northern harvest arrivals are pressuring Dambulla supply."
+          "primary_driver": "Supply glut from Northern province harvest and elevated arrivals."
         },
         "72": {
           "current_price_lkr": 220.0,
           "predicted_price_lkr": 155.0,
           "baseline_ma7_lkr": 237.76,
           "glut_risk_level": "HIGH",
-          "confidence_score": 0.86,
-          "primary_driver": "Sustained Northern arrivals are expected to keep Dambulla prices depressed."
+          "confidence_score": 0.87,
+          "primary_driver": "Supply glut from Northern province harvest and elevated arrivals."
         }
       },
       "PETTAH_COLOMBO": {
@@ -30,7 +544,7 @@
           "baseline_ma7_lkr": 171.2,
           "glut_risk_level": "LOW",
           "confidence_score": 0.86,
-          "primary_driver": "Urban demand remains firm while arrivals stay near seasonal norms."
+          "primary_driver": "High urban demand with constrained upcountry arrivals."
         },
         "72": {
           "current_price_lkr": 170.0,
@@ -38,7 +552,7 @@
           "baseline_ma7_lkr": 171.2,
           "glut_risk_level": "LOW",
           "confidence_score": 0.84,
-          "primary_driver": "Urban demand and steady wholesale off-take support Colombo prices."
+          "primary_driver": "High urban demand with constrained upcountry arrivals."
         }
       },
       "KEPPETIPOLA": {
@@ -48,7 +562,7 @@
           "baseline_ma7_lkr": 176.4,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.75,
-          "primary_driver": "Hill-country arrivals are offset by elevated transit spoilage."
+          "primary_driver": "Hill-country arrivals offset by elevated transit spoilage."
         },
         "72": {
           "current_price_lkr": 175.0,
@@ -56,7 +570,7 @@
           "baseline_ma7_lkr": 176.4,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.73,
-          "primary_driver": "Hill-country transit risk is limiting effective market supply."
+          "primary_driver": "Hill-country arrivals offset by elevated transit spoilage."
         }
       },
       "MEEGODA": {
@@ -74,7 +588,7 @@
           "baseline_ma7_lkr": 181.3,
           "glut_risk_level": "LOW",
           "confidence_score": 0.72,
-          "primary_driver": "Western market supply is expected to remain broadly balanced."
+          "primary_driver": "Western market arrivals remain close to recent demand levels."
         }
       },
       "NUWARA_ELIYA": {
@@ -92,7 +606,7 @@
           "baseline_ma7_lkr": 186.1,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.7,
-          "primary_driver": "Upcountry supply is expected to remain near seasonal norms."
+          "primary_driver": "Upcountry arrivals remain close to seasonal demand."
         }
       },
       "THAMBUTTEGAMA": {
@@ -110,7 +624,7 @@
           "baseline_ma7_lkr": 191.2,
           "glut_risk_level": "HIGH",
           "confidence_score": 0.76,
-          "primary_driver": "Sustained regional arrivals are expected to weigh on prices."
+          "primary_driver": "Northern and North Central arrivals are elevating supply."
         }
       },
       "JAFFNA": {
@@ -127,392 +641,8 @@
           "predicted_price_lkr": 159.0,
           "baseline_ma7_lkr": 161.4,
           "glut_risk_level": "LOW",
-          "confidence_score": 0.69,
-          "primary_driver": "Northern market supply is expected to remain stable."
-        }
-      }
-    },
-    "CARROT": {
-      "DAMBULLA": {
-        "48": {
-          "current_price_lkr": 319.0,
-          "predicted_price_lkr": 223.3,
-          "baseline_ma7_lkr": 348.2,
-          "glut_risk_level": "HIGH",
-          "confidence_score": 0.89,
-          "primary_driver": "Upcountry carrot arrivals are easing into Dambulla."
-        },
-        "72": {
-          "current_price_lkr": 319.0,
-          "predicted_price_lkr": 224.75,
-          "baseline_ma7_lkr": 348.2,
-          "glut_risk_level": "HIGH",
-          "confidence_score": 0.86,
-          "primary_driver": "Upcountry carrot arrivals are easing into Dambulla."
-        }
-      },
-      "PETTAH_COLOMBO": {
-        "48": {
-          "current_price_lkr": 246.5,
-          "predicted_price_lkr": 271.88,
-          "baseline_ma7_lkr": 250.72,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.86,
-          "primary_driver": "Urban demand supports steady Colombo carrot prices."
-        },
-        "72": {
-          "current_price_lkr": 246.5,
-          "predicted_price_lkr": 273.32,
-          "baseline_ma7_lkr": 250.72,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.84,
-          "primary_driver": "Urban demand supports steady Colombo carrot prices."
-        }
-      },
-      "KEPPETIPOLA": {
-        "48": {
-          "current_price_lkr": 253.75,
-          "predicted_price_lkr": 239.25,
-          "baseline_ma7_lkr": 258.34,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.75,
-          "primary_driver": "Cooler production conditions keep Keppetipola supply steady."
-        },
-        "72": {
-          "current_price_lkr": 253.75,
-          "predicted_price_lkr": 240.7,
-          "baseline_ma7_lkr": 258.34,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.73,
-          "primary_driver": "Cooler production conditions keep Keppetipola supply steady."
-        }
-      },
-      "MEEGODA": {
-        "48": {
-          "current_price_lkr": 261.0,
-          "predicted_price_lkr": 249.4,
-          "baseline_ma7_lkr": 265.51,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.74,
-          "primary_driver": "Western wholesale arrivals remain close to demand."
-        },
-        "72": {
-          "current_price_lkr": 261.0,
-          "predicted_price_lkr": 250.85,
-          "baseline_ma7_lkr": 265.51,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.72,
-          "primary_driver": "Western wholesale arrivals remain close to demand."
-        }
-      },
-      "NUWARA_ELIYA": {
-        "48": {
-          "current_price_lkr": 268.25,
-          "predicted_price_lkr": 263.9,
-          "baseline_ma7_lkr": 272.54,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.72,
-          "primary_driver": "Highland harvest timing keeps Nuwara Eliya supply balanced."
-        },
-        "72": {
-          "current_price_lkr": 268.25,
-          "predicted_price_lkr": 265.35,
-          "baseline_ma7_lkr": 272.54,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.7,
-          "primary_driver": "Highland harvest timing keeps Nuwara Eliya supply balanced."
-        }
-      },
-      "THAMBUTTEGAMA": {
-        "48": {
-          "current_price_lkr": 275.5,
-          "predicted_price_lkr": 252.3,
-          "baseline_ma7_lkr": 280.01,
-          "glut_risk_level": "HIGH",
-          "confidence_score": 0.78,
-          "primary_driver": "Regional arrivals are expected to remain near seasonal norms."
-        },
-        "72": {
-          "current_price_lkr": 275.5,
-          "predicted_price_lkr": 253.75,
-          "baseline_ma7_lkr": 280.01,
-          "glut_risk_level": "HIGH",
-          "confidence_score": 0.76,
-          "primary_driver": "Regional arrivals are expected to remain near seasonal norms."
-        }
-      },
-      "JAFFNA": {
-        "48": {
-          "current_price_lkr": 232.0,
-          "predicted_price_lkr": 229.1,
-          "baseline_ma7_lkr": 236.37,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.7,
-          "primary_driver": "Northern demand is balanced against current arrivals."
-        },
-        "72": {
-          "current_price_lkr": 232.0,
-          "predicted_price_lkr": 230.55,
-          "baseline_ma7_lkr": 236.37,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.69,
-          "primary_driver": "Northern demand is balanced against current arrivals."
-        }
-      }
-    },
-    "GREEN_CHILI": {
-      "DAMBULLA": {
-        "48": {
-          "current_price_lkr": 726.0,
-          "predicted_price_lkr": 508.2,
-          "baseline_ma7_lkr": 780.68,
-          "glut_risk_level": "HIGH",
-          "confidence_score": 0.89,
-          "primary_driver": "Irregular green chili arrivals are tightening Dambulla supply."
-        },
-        "72": {
-          "current_price_lkr": 726.0,
-          "predicted_price_lkr": 511.5,
-          "baseline_ma7_lkr": 780.68,
-          "glut_risk_level": "HIGH",
-          "confidence_score": 0.86,
-          "primary_driver": "Irregular green chili arrivals are tightening Dambulla supply."
-        }
-      },
-      "PETTAH_COLOMBO": {
-        "48": {
-          "current_price_lkr": 561.0,
-          "predicted_price_lkr": 618.75,
-          "baseline_ma7_lkr": 562.14,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.86,
-          "primary_driver": "Urban restaurants sustain firm Colombo green chili demand."
-        },
-        "72": {
-          "current_price_lkr": 561.0,
-          "predicted_price_lkr": 622.05,
-          "baseline_ma7_lkr": 562.14,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.84,
-          "primary_driver": "Urban restaurants sustain firm Colombo green chili demand."
-        }
-      },
-      "KEPPETIPOLA": {
-        "48": {
-          "current_price_lkr": 577.5,
-          "predicted_price_lkr": 544.5,
-          "baseline_ma7_lkr": 579.21,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.75,
-          "primary_driver": "Hill-country transit losses are limiting effective supply."
-        },
-        "72": {
-          "current_price_lkr": 577.5,
-          "predicted_price_lkr": 547.8,
-          "baseline_ma7_lkr": 579.21,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.73,
-          "primary_driver": "Hill-country transit losses are limiting effective supply."
-        }
-      },
-      "MEEGODA": {
-        "48": {
-          "current_price_lkr": 594.0,
-          "predicted_price_lkr": 567.6,
-          "baseline_ma7_lkr": 595.3,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.74,
-          "primary_driver": "Western arrivals are expected to remain broadly stable."
-        },
-        "72": {
-          "current_price_lkr": 594.0,
-          "predicted_price_lkr": 570.9,
-          "baseline_ma7_lkr": 595.3,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.72,
-          "primary_driver": "Western arrivals are expected to remain broadly stable."
-        }
-      },
-      "NUWARA_ELIYA": {
-        "48": {
-          "current_price_lkr": 610.5,
-          "predicted_price_lkr": 600.6,
-          "baseline_ma7_lkr": 611.06,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.72,
-          "primary_driver": "Upcountry harvest volumes remain near seasonal levels."
-        },
-        "72": {
-          "current_price_lkr": 610.5,
-          "predicted_price_lkr": 603.9,
-          "baseline_ma7_lkr": 611.06,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.7,
-          "primary_driver": "Upcountry harvest volumes remain near seasonal levels."
-        }
-      },
-      "THAMBUTTEGAMA": {
-        "48": {
-          "current_price_lkr": 627.0,
-          "predicted_price_lkr": 574.2,
-          "baseline_ma7_lkr": 627.81,
-          "glut_risk_level": "HIGH",
-          "confidence_score": 0.78,
-          "primary_driver": "Regional supply is expected to stay close to demand."
-        },
-        "72": {
-          "current_price_lkr": 627.0,
-          "predicted_price_lkr": 577.5,
-          "baseline_ma7_lkr": 627.81,
-          "glut_risk_level": "HIGH",
-          "confidence_score": 0.76,
-          "primary_driver": "Regional supply is expected to stay close to demand."
-        }
-      },
-      "JAFFNA": {
-        "48": {
-          "current_price_lkr": 528.0,
-          "predicted_price_lkr": 521.4,
-          "baseline_ma7_lkr": 529.96,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.7,
-          "primary_driver": "Northern arrivals are balanced against local demand."
-        },
-        "72": {
-          "current_price_lkr": 528.0,
-          "predicted_price_lkr": 524.7,
-          "baseline_ma7_lkr": 529.96,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.69,
-          "primary_driver": "Northern arrivals are balanced against local demand."
-        }
-      }
-    },
-    "RED_ONION": {
-      "DAMBULLA": {
-        "48": {
-          "current_price_lkr": 462.0,
-          "predicted_price_lkr": 323.4,
-          "baseline_ma7_lkr": 501.79,
-          "glut_risk_level": "HIGH",
-          "confidence_score": 0.89,
-          "primary_driver": "Import and regional red onion arrivals are keeping Dambulla supplied."
-        },
-        "72": {
-          "current_price_lkr": 462.0,
-          "predicted_price_lkr": 325.5,
-          "baseline_ma7_lkr": 501.79,
-          "glut_risk_level": "HIGH",
-          "confidence_score": 0.86,
-          "primary_driver": "Import and regional red onion arrivals are keeping Dambulla supplied."
-        }
-      },
-      "PETTAH_COLOMBO": {
-        "48": {
-          "current_price_lkr": 357.0,
-          "predicted_price_lkr": 393.75,
-          "baseline_ma7_lkr": 361.32,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.86,
-          "primary_driver": "Urban demand supports stable Colombo red onion prices."
-        },
-        "72": {
-          "current_price_lkr": 357.0,
-          "predicted_price_lkr": 395.85,
-          "baseline_ma7_lkr": 361.32,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.84,
-          "primary_driver": "Urban demand supports stable Colombo red onion prices."
-        }
-      },
-      "KEPPETIPOLA": {
-        "48": {
-          "current_price_lkr": 367.5,
-          "predicted_price_lkr": 346.5,
-          "baseline_ma7_lkr": 372.29,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.75,
-          "primary_driver": "Upcountry arrivals are expected to remain near seasonal levels."
-        },
-        "72": {
-          "current_price_lkr": 367.5,
-          "predicted_price_lkr": 348.6,
-          "baseline_ma7_lkr": 372.29,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.73,
-          "primary_driver": "Upcountry arrivals are expected to remain near seasonal levels."
-        }
-      },
-      "MEEGODA": {
-        "48": {
-          "current_price_lkr": 378.0,
-          "predicted_price_lkr": 361.2,
-          "baseline_ma7_lkr": 382.63,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.74,
-          "primary_driver": "Western wholesale supply is broadly balanced."
-        },
-        "72": {
-          "current_price_lkr": 378.0,
-          "predicted_price_lkr": 363.3,
-          "baseline_ma7_lkr": 382.63,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.72,
-          "primary_driver": "Western wholesale supply is broadly balanced."
-        }
-      },
-      "NUWARA_ELIYA": {
-        "48": {
-          "current_price_lkr": 388.5,
-          "predicted_price_lkr": 382.2,
-          "baseline_ma7_lkr": 392.76,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.72,
-          "primary_driver": "Highland market supply remains close to demand."
-        },
-        "72": {
-          "current_price_lkr": 388.5,
-          "predicted_price_lkr": 384.3,
-          "baseline_ma7_lkr": 392.76,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.7,
-          "primary_driver": "Highland market supply remains close to demand."
-        }
-      },
-      "THAMBUTTEGAMA": {
-        "48": {
-          "current_price_lkr": 399.0,
-          "predicted_price_lkr": 365.4,
-          "baseline_ma7_lkr": 403.53,
-          "glut_risk_level": "HIGH",
-          "confidence_score": 0.78,
-          "primary_driver": "North Central arrivals are expected to remain steady."
-        },
-        "72": {
-          "current_price_lkr": 399.0,
-          "predicted_price_lkr": 367.5,
-          "baseline_ma7_lkr": 403.53,
-          "glut_risk_level": "HIGH",
-          "confidence_score": 0.76,
-          "primary_driver": "North Central arrivals are expected to remain steady."
-        }
-      },
-      "JAFFNA": {
-        "48": {
-          "current_price_lkr": 336.0,
-          "predicted_price_lkr": 331.8,
-          "baseline_ma7_lkr": 340.63,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.7,
-          "primary_driver": "Northern market supply is balanced against local demand."
-        },
-        "72": {
-          "current_price_lkr": 336.0,
-          "predicted_price_lkr": 333.9,
-          "baseline_ma7_lkr": 340.63,
-          "glut_risk_level": "LOW",
-          "confidence_score": 0.69,
-          "primary_driver": "Northern market supply is balanced against local demand."
+          "confidence_score": 0.68,
+          "primary_driver": "Local demand is balanced against steady arrivals."
         }
       }
     }

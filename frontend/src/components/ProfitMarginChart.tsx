@@ -9,6 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import type { MarketComparison } from "../types/atie";
+import { formatUpliftLabel, shortMarketName } from "./profitFormat";
 
 interface Props {
   markets: MarketComparison[];
@@ -122,18 +123,11 @@ export function ProfitMarginChart({ markets }: Props) {
               {Math.round(market.netProfitLkr / 1000)}k
             </p>
             <p className="text-[0.68rem] text-ink/45">
-              {market.profitUpliftPct === null
-                ? "baseline"
-                : `+${market.profitUpliftPct.toFixed(1)}%`}
+              {formatUpliftLabel(market)}
             </p>
           </div>
         ))}
       </div>
     </section>
   );
-}
-
-function shortMarketName(name: string) {
-  if (name.includes("Pettah")) return "Pettah";
-  return name.split(" ")[0];
 }

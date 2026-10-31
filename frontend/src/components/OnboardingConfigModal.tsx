@@ -23,6 +23,13 @@ export function OnboardingConfigModal({
 }: Props) {
   const [metadata, setMetadata] = useState<MetadataConfig | null>(null);
   const [metadataError, setMetadataError] = useState(false);
+  const [quantityDraft, setQuantityDraft] = useState(() =>
+    String(value.quantityKg),
+  );
+
+  useEffect(() => {
+    setQuantityDraft(String(value.quantityKg));
+  }, [value.quantityKg]);
 
   useEffect(() => {
     let active = true;
@@ -151,10 +158,32 @@ export function OnboardingConfigModal({
             type="number"
             min={1}
             max={100000}
-            value={value.quantityKg}
-            onChange={(event) =>
-              update("quantityKg", Number(event.target.value))
-            }
+            value={quantityDraft}
+            onChange={(event) => {
+              const raw = event.target.value;
+              setQuantityDraft(raw);
+              const parsed = Number(raw);
+              if (raw.trim() !== "" && Number.isFinite(parsed) && parsed > 0) {
+                const clamped = Math.min(100_000, parsed);
+                update("quantityKg", clamped);
+              }
+            }}
+            onBlur={() => {
+              const parsed = Number(quantityDraft);
+              if (
+                quantityDraft.trim() === "" ||
+                !Number.isFinite(parsed) ||
+                parsed <= 0
+              ) {
+                setQuantityDraft(String(value.quantityKg));
+                return;
+              }
+              const clamped = Math.min(100_000, Math.max(1, parsed));
+              setQuantityDraft(String(clamped));
+              if (clamped !== value.quantityKg) {
+                update("quantityKg", clamped);
+              }
+            }}
             className="field"
           />
         </Field>

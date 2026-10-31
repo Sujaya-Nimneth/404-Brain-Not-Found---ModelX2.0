@@ -119,3 +119,70 @@ def test_safe_margin_uses_decimal_floor_and_percentage():
         Decimal("5"),
         Decimal("1"),
     )
+
+
+def test_ingestion_schema_ddl_is_consolidated_and_reentrant():
+    repo_root = ROOT.parent
+    init_sql = (repo_root / "db" / "init.sql").read_text(encoding="utf-8")
+    ingestion_sql = (repo_root / "db" / "ingestion_schema.sql").read_text(
+        encoding="utf-8"
+    )
+    migration_sql = (
+        repo_root / "db" / "migrations" / "001_ingestion_schema.sql"
+    ).read_text(encoding="utf-8")
+
+    assert ingestion_sql == migration_sql
+    assert "DROP TABLE IF EXISTS data_ingestion_runs;" in init_sql
+    assert "DROP TABLE IF EXISTS data_source_status;" in init_sql
+    assert "CREATE OR REPLACE FUNCTION atie_source_priority" in init_sql
+    assert "DEFAULT 'HDX_SEED'" in init_sql
+
+
+def test_evaluation_origins_match_versioned_origin_config():
+    import json
+    from training.evaluate import EVALUATION_ORIGINS
+
+    origins_path = (
+        ROOT.parent / "backend" / "src" / "main" / "resources" / "origins.json"
+    )
+    payload = json.loads(origins_path.read_text(encoding="utf-8"))
+    configured_codes = tuple(item["code"] for item in payload["origins"])
+
+    assert payload["version"] == "1.0"
+    assert EVALUATION_ORIGINS == configured_codes
+
+
+def test_fallback_snapshots_match_across_services_and_separate_demo_fixture():
+    from app.schemas import PredictBatchRequest
+
+    ml_fallback = ROOT / "data" / "fallback_forecasts.json"
+    backend_fallback = (
+        ROOT.parent
+        / "backend"
+        / "src"
+        / "main"
+        / "resources"
+        / "fallback_forecasts.json"
+    )
+    assert ml_fallback.read_bytes() == backend_fallback.read_bytes()
+
+    predictor = Predictor(
+        Settings(model_path=ROOT / "models" / "does_not_exist.joblib")
+    )
+    request = PredictBatchRequest(
+        crop_code="TOMATO",
+        horizon_hours=48,
+        reference_date=date(2026, 10, 27),
+        markets=["DAMBULLA", "PETTAH_COLOMBO"],
+    )
+    live_fallback = predictor.predict(request)
+    demo_fixture = predictor.predict_demo_fixture(request)
+
+    assert live_fallback.forecast_source.value == "FALLBACK"
+    assert demo_fixture.forecast_source.value == "DEMO_FIXTURE"
+    assert (
+        live_fallback.predictions[0].predicted_price_lkr
+        != demo_fixture.predictions[0].predicted_price_lkr
+    )
+    assert demo_fixture.predictions[0].predicted_price_lkr == 154.0
+

@@ -2,6 +2,7 @@ package com.modelx.atie.service;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -65,13 +66,28 @@ public class DataStatusService {
                         resultSet.getString("source")
                 )
         );
-        return build(sourceRows, coverageRows, LocalDate.now(ZoneOffset.UTC));
+        Instant now = Instant.now();
+        return build(
+                sourceRows,
+                coverageRows,
+                LocalDate.ofInstant(now, ZoneOffset.UTC),
+                now
+        );
     }
 
     static DataStatusResponse build(
             List<SourceRow> sourceRows,
             List<CoverageRow> coverageRows,
             LocalDate today
+    ) {
+        return build(sourceRows, coverageRows, today, Instant.now());
+    }
+
+    static DataStatusResponse build(
+            List<SourceRow> sourceRows,
+            List<CoverageRow> coverageRows,
+            LocalDate today,
+            Instant now
     ) {
         Map<String, SourceRow> bySource = new LinkedHashMap<>();
         sourceRows.forEach(row -> bySource.put(row.sourceCode(), row));
@@ -97,7 +113,13 @@ public class DataStatusService {
                     row.sourceCode(),
                     label(row.sourceCode()),
                     row.dataState(),
-                    freshness(row.sourceCode(), row.latestObservationDate(), today),
+                    freshness(
+                            row.sourceCode(),
+                            row.latestObservationDate(),
+                            row.lastSuccessAt(),
+                            today,
+                            now
+                    ),
                     row.lastAttemptAt(),
                     row.lastSuccessAt(),
                     row.latestObservationDate(),
@@ -119,7 +141,7 @@ public class DataStatusService {
                 .toList();
         return new DataStatusResponse(
                 overallStatus(sources),
-                Instant.now(),
+                now,
                 sources,
                 coverage
         );
@@ -164,13 +186,19 @@ public class DataStatusService {
     private static String freshness(
             String sourceCode,
             LocalDate latestObservationDate,
-            LocalDate today
+            Instant lastSuccessAt,
+            LocalDate today,
+            Instant now
     ) {
         if (latestObservationDate == null) {
             return "UNKNOWN";
         }
         long age = ChronoUnit.DAYS.between(latestObservationDate, today);
         if ("OPEN_METEO".equals(sourceCode)) {
+            if (lastSuccessAt != null
+                    && Duration.between(lastSuccessAt, now).toHours() > 24) {
+                return "STALE";
+            }
             return age <= 1 ? "CURRENT" : "STALE";
         }
         return age <= MONTHLY_STALE_DAYS ? "CURRENT" : "STALE";
@@ -184,14 +212,15 @@ public class DataStatusService {
         if (latestObservationDate == null) {
             return "UNAVAILABLE";
         }
-        if (source != null && source.endsWith("_SEED")) {
+        if (source != null
+                && ("SEED".equals(source) || source.endsWith("_SEED"))) {
             return "SEED";
         }
         if (source != null && source.endsWith("_CACHED")) {
             return "CACHED";
         }
         if (source != null && source.endsWith("_LIVE")) {
-            return freshness("HDX", latestObservationDate, today);
+            return freshness("HDX", latestObservationDate, null, today, Instant.EPOCH);
         }
         return "UNKNOWN";
     }

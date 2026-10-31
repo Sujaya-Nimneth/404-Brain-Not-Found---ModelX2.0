@@ -3,6 +3,7 @@ package com.modelx.atie.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -93,6 +94,13 @@ class DirectiveControllerContractTest {
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.message")
                         .value("Default market is not reachable"));
+    }
+
+    @Test
+    void returns405ForUnsupportedHttpMethodInsteadOf500() throws Exception {
+        mvc.perform(get("/api/v1/directives/analyze"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"));
     }
 
     private AnalyzeRequest request() {
