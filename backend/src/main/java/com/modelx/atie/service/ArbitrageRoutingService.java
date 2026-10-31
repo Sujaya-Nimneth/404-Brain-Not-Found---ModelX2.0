@@ -198,8 +198,17 @@ public class ArbitrageRoutingService {
                         market.direction()
                 ))
                 .toList();
+        LocalDate targetWeatherDate = forecast.referenceDate()
+                .plusDays(request.horizonHours() / 24L);
+        Map<String, WeatherObservation> weatherByMarket = loadWeatherByMarket(
+                marketCodes,
+                targetWeatherDate
+        );
         List<WeatherAlert> alerts = comparisons.stream()
-                .map(comparison -> weatherAlert(comparison.marketCode()))
+                .map(comparison -> weatherAlert(
+                        comparison.marketCode(),
+                        weatherByMarket.get(comparison.marketCode())
+                ))
                 .flatMap(Optional::stream)
                 .toList();
         return new AnalyzeResponse(
@@ -258,10 +267,36 @@ public class ArbitrageRoutingService {
         return value == null ? null : calculator.displayPercentage(value);
     }
 
-    private Optional<WeatherAlert> weatherAlert(String marketCode) {
-        return weather.findTopByMarketCodeOrderByObservationDateDesc(marketCode)
-                .map(observation -> {
-                    BigDecimal rain = observation.getPrecipitationMm();
+    private Map<String, WeatherObservation> loadWeatherByMarket(
+            List<String> marketCodes,
+            LocalDate targetWeatherDate
+    ) {
+        List<WeatherObservation> rows = weather
+                .findByMarketCodeInAndObservationDateLessThanEqualOrderByObservationDateDesc(
+                        marketCodes,
+                        targetWeatherDate
+                );
+        if (rows == null || rows.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, WeatherObservation> byMarket = new java.util.LinkedHashMap<>();
+        for (WeatherObservation observation : rows) {
+            if (observation.getMarket() == null
+                    || observation.getMarket().getCode() == null) {
+                continue;
+            }
+            byMarket.putIfAbsent(observation.getMarket().getCode(), observation);
+        }
+        return byMarket;
+    }
+
+    private Optional<WeatherAlert> weatherAlert(
+            String marketCode,
+            WeatherObservation observation
+    ) {
+        return Optional.ofNullable(observation)
+                .map(item -> {
+                    BigDecimal rain = item.getPrecipitationMm();
                     String risk = rain.compareTo(new BigDecimal("15")) >= 0
                             ? "HIGH"
                             : rain.compareTo(new BigDecimal("8")) >= 0
@@ -277,9 +312,9 @@ public class ArbitrageRoutingService {
                             risk,
                             message,
                             rain,
-                            observation.isExtremeWeatherFlag(),
-                            observation.getSource(),
-                            observation.getObservationDate()
+                            item.isExtremeWeatherFlag(),
+                            item.getSource(),
+                            item.getObservationDate()
                     );
                 });
     }

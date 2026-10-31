@@ -98,8 +98,23 @@ class ArbitrageRoutingServiceTest {
                         route("ANURADHAPURA", keppetipola, "175", "1.25")
                 ));
         when(fuelPrices.findTopByOrderByEffectiveDateDesc()).thenReturn(Optional.of(fuel));
-        when(weather.findTopByMarketCodeOrderByObservationDateDesc(org.mockito.ArgumentMatchers.anyString()))
-                .thenReturn(Optional.empty());
+        when(weather.findByMarketCodeInAndObservationDateLessThanEqualOrderByObservationDateDesc(
+                org.mockito.ArgumentMatchers.anyCollection(),
+                org.mockito.ArgumentMatchers.eq(LocalDate.of(2026, 10, 29))
+        )).thenReturn(List.of(
+                entity(WeatherObservation.class,
+                        "market", dambulla,
+                        "observationDate", LocalDate.of(2026, 10, 29),
+                        "precipitationMm", new BigDecimal("18.40"),
+                        "extremeWeatherFlag", true,
+                        "source", "OPEN_METEO_LIVE"),
+                entity(WeatherObservation.class,
+                        "market", dambulla,
+                        "observationDate", LocalDate.of(2026, 10, 27),
+                        "precipitationMm", new BigDecimal("2.00"),
+                        "extremeWeatherFlag", false,
+                        "source", "OPEN_METEO_LIVE")
+        ));
         AnalyzeResponse response = service.analyze(new AnalyzeRequest(
                 "ANURADHAPURA",
                 "DAMBULLA",
@@ -123,6 +138,10 @@ class ArbitrageRoutingServiceTest {
                 .findFirst()
                 .orElseThrow();
         assertThat(recommended.marketCode()).isEqualTo("PETTAH_COLOMBO");
+        assertThat(response.weatherAlerts()).hasSize(1);
+        assertThat(response.weatherAlerts().get(0).observationDate())
+                .isEqualTo(LocalDate.of(2026, 10, 29));
+        assertThat(response.weatherAlerts().get(0).riskLevel()).isEqualTo("HIGH");
     }
 
     @Test
