@@ -275,7 +275,7 @@ export default function App() {
               fallback={<ChartLoading label="Loading forecast trace…" />}
             >
               <ForecastTrajectoryChart
-                key={`${activeRequest.defaultMarketCode}-${activeRequest.cropCode}`}
+                key={`${activeRequest.defaultMarketCode}-${activeRequest.cropCode}-${response.forecastSource}`}
                 marketCode={activeRequest.defaultMarketCode}
                 marketName={
                   response.marketComparisons.find(

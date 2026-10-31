@@ -16,6 +16,11 @@ import type {
   ForecastSource,
   MarketHistoryResponse,
 } from "../types/atie";
+import {
+  buildTrajectoryChartData,
+  formatTrajectoryDate,
+  type TrajectoryChartPoint,
+} from "./trajectoryData";
 
 interface Props {
   marketCode: string;
@@ -23,14 +28,6 @@ interface Props {
   cropCode: string;
   forecastSource: ForecastSource;
 }
-
-type ChartPoint = {
-  label: string;
-  actual: number | null;
-  model: number | null;
-  naive: number | null;
-  ma7: number | null;
-};
 
 export function ForecastTrajectoryChart({
   marketCode,
@@ -41,17 +38,19 @@ export function ForecastTrajectoryChart({
   const [history, setHistory] = useState<MarketHistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const demoMode = forecastSource === "DEMO_FIXTURE" && cropCode === "TOMATO";
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchMarketHistory(marketCode, cropCode)
+    fetchMarketHistory(marketCode, cropCode, 14, demoMode, controller.signal)
       .then((result) => {
         if (active) setHistory(result);
       })
       .catch((reason: unknown) => {
-        if (!active) return;
+        if (!active || controller.signal.aborted) return;
         setHistory(null);
         setError(
           reason instanceof Error
@@ -64,37 +63,14 @@ export function ForecastTrajectoryChart({
       });
     return () => {
       active = false;
+      controller.abort();
     };
-  }, [marketCode, cropCode]);
+  }, [marketCode, cropCode, demoMode]);
 
-  const chartData = useMemo<ChartPoint[]>(() => {
-    if (!history) return [];
-    const points: ChartPoint[] = history.history.map((point) => ({
-      label: formatDate(point.date),
-      actual: point.priceLkrPerKg,
-      model: null,
-      naive: null,
-      ma7: null,
-    }));
-    const last = points.at(-1);
-    if (!last) return [];
-    history.forecastTrajectory.forEach((forecast) => {
-      points.push({
-        label: `+${forecast.horizonHours}h`,
-        actual: null,
-        model: forecast.predictedPriceLkr,
-        naive: forecast.baselineNaiveLkr,
-        ma7: forecast.baselineMa7Lkr,
-      });
-    });
-    const bridge = history.forecastTrajectory[0];
-    if (bridge) {
-      last.model = last.actual;
-      last.naive = last.actual;
-      last.ma7 = last.actual;
-    }
-    return points;
-  }, [history]);
+  const chartData = useMemo<TrajectoryChartPoint[]>(
+    () => buildTrajectoryChartData(history),
+    [history],
+  );
 
   const source = history?.forecastSource ?? forecastSource;
   const finalPoint = history?.forecastTrajectory.at(-1);
@@ -212,7 +188,7 @@ export function ForecastTrajectoryChart({
               />
               {history?.referenceDate && (
                 <ReferenceLine
-                  x={formatDate(history.referenceDate)}
+                  x={formatTrajectoryDate(history.referenceDate)}
                   stroke="#315c45"
                   strokeOpacity={0.32}
                   strokeDasharray="4 4"
@@ -266,14 +242,6 @@ export function ForecastTrajectoryChart({
       </div>
     </section>
   );
-}
-
-function formatDate(value: string) {
-  const date = new Date(`${value}T00:00:00`);
-  return new Intl.DateTimeFormat("en-LK", {
-    month: "short",
-    day: "numeric",
-  }).format(date);
 }
 
 function lineLabel(key: string) {

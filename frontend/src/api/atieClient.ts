@@ -122,14 +122,19 @@ export async function fetchMarketHistory(
   marketCode: string,
   cropCode: string,
   days = 14,
+  demoMode = false,
+  signal?: AbortSignal,
 ): Promise<MarketHistoryResponse> {
   const query = new URLSearchParams({
     cropCode,
     days: String(days),
   });
+  if (demoMode) {
+    query.set("demoMode", "true");
+  }
   const response = await fetch(
     `${API_BASE_URL}/markets/${encodeURIComponent(marketCode)}/history?${query}`,
-    { headers: authHeaders() },
+    { headers: authHeaders(), signal },
   );
   return mapMarketHistoryResponse(
     await responseJson(response, "The market history request"),
