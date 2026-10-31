@@ -4,6 +4,7 @@ import { demoResponse } from "../data/demoResponse";
 import type { AnalyzeResponse } from "../types/atie";
 import { EvaluationBaselinesPanel } from "./EvaluationBaselinesPanel";
 import { PrimaryDirectiveCard } from "./PrimaryDirectiveCard";
+import { formatUpliftLabel, shortMarketName } from "./profitFormat";
 import { RoutingLogisticsPanel } from "./RoutingLogisticsPanel";
 
 describe("safety-critical dashboard presentation", () => {
@@ -53,5 +54,22 @@ describe("safety-critical dashboard presentation", () => {
     expect(screen.getByText("7-day moving average")).toBeVisible();
     expect(screen.getByText("67.89%")).toBeVisible();
     expect(screen.getByText("LKR 6.05")).toBeVisible();
+  });
+
+  it("formats positive, negative, baseline, and undefined profit uplifts cleanly", () => {
+    const sample = demoResponse.marketComparisons[0];
+    expect(
+      formatUpliftLabel({ ...sample, profitDeltaLkr: 23238.58, profitUpliftPct: 15.84 }),
+    ).toBe("+15.8%");
+    expect(
+      formatUpliftLabel({ ...sample, profitDeltaLkr: -5400, profitUpliftPct: -8.42 }),
+    ).toBe("-8.4%");
+    expect(
+      formatUpliftLabel({ ...sample, profitDeltaLkr: 0, profitUpliftPct: 0 }),
+    ).toBe("baseline");
+    expect(
+      formatUpliftLabel({ ...sample, profitDeltaLkr: 4200, profitUpliftPct: null }),
+    ).toBe("n/a");
+    expect(shortMarketName("Nuwara Eliya Dedicated Economic Centre")).toBe("N. Eliya");
   });
 });

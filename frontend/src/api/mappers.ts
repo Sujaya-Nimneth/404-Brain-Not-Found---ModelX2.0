@@ -137,7 +137,10 @@ export function mapMarketHistoryResponse(payload: unknown): MarketHistoryRespons
 
 export function mapMetadataConfig(payload: unknown): MetadataConfig {
   const root = objectAt(payload, "$");
-  const fuelPrices = objectAt(root.fuel_prices, "$.fuel_prices");
+  const fuelPrices =
+    root.fuel_prices === null
+      ? null
+      : objectAt(root.fuel_prices, "$.fuel_prices");
   const thresholds = objectAt(root.thresholds, "$.thresholds");
   return {
     origins: arrayAt(root.origins, "$.origins").map((item, index) => {
@@ -237,20 +240,27 @@ export function mapMetadataConfig(payload: unknown): MetadataConfig {
       }
       return horizon;
     }),
-    fuelPrices: {
-      effectiveDate: nullableStringAt(
-        fuelPrices.effective_date,
-        "$.fuel_prices.effective_date",
-      ),
-      dieselLkrPerLiter: nullableNumberAt(
-        fuelPrices.diesel_lkr_per_liter,
-        "$.fuel_prices.diesel_lkr_per_liter",
-      ),
-      petrolLkrPerLiter: nullableNumberAt(
-        fuelPrices.petrol_lkr_per_liter,
-        "$.fuel_prices.petrol_lkr_per_liter",
-      ),
-    },
+    fuelPrices:
+      fuelPrices === null
+        ? {
+            effectiveDate: null,
+            dieselLkrPerLiter: null,
+            petrolLkrPerLiter: null,
+          }
+        : {
+            effectiveDate: nullableStringAt(
+              fuelPrices.effective_date,
+              "$.fuel_prices.effective_date",
+            ),
+            dieselLkrPerLiter: nullableNumberAt(
+              fuelPrices.diesel_lkr_per_liter,
+              "$.fuel_prices.diesel_lkr_per_liter",
+            ),
+            petrolLkrPerLiter: nullableNumberAt(
+              fuelPrices.petrol_lkr_per_liter,
+              "$.fuel_prices.petrol_lkr_per_liter",
+            ),
+          },
     thresholds: {
       safeMarginPct: numberAt(
         thresholds.safe_margin_pct,
