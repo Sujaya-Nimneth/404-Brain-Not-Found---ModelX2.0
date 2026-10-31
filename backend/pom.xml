@@ -82,11 +82,6 @@
                             <systemPropertyVariables>
                                 <atie.postgres.integration>true</atie.postgres.integration>
                             </systemPropertyVariables>
-                            <environmentVariables>
-                                <ATIE_TEST_DATABASE_URL>${ATIE_TEST_DATABASE_URL}</ATIE_TEST_DATABASE_URL>
-                                <ATIE_TEST_DATABASE_USERNAME>${ATIE_TEST_DATABASE_USERNAME}</ATIE_TEST_DATABASE_USERNAME>
-                                <ATIE_TEST_DATABASE_PASSWORD>${ATIE_TEST_DATABASE_PASSWORD}</ATIE_TEST_DATABASE_PASSWORD>
-                            </environmentVariables>
                         </configuration>
                     </plugin>
                 </plugins>

@@ -41,6 +41,7 @@ jobs:
         run: |
           psql -h localhost -U atie -d atie -v ON_ERROR_STOP=1 -f db/init.sql
           psql -h localhost -U atie -d atie -v ON_ERROR_STOP=1 -f db/seed.sql
+          psql -h localhost -U atie -d atie -v ON_ERROR_STOP=1 -f db/migrations/001_ingestion_schema.sql
       - run: pytest --cov=app --cov=etl --cov=training --cov-report=term-missing
         working-directory: ml-service
         env:
@@ -48,6 +49,20 @@ jobs:
 
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: atie
+          POSTGRES_USER: atie
+          POSTGRES_PASSWORD: atie_dev_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U atie -d atie"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -55,8 +70,22 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
+      - name: Initialize integration-test database
+        env:
+          PGPASSWORD: atie_dev_password
+        run: |
+          psql -h localhost -U atie -d atie -v ON_ERROR_STOP=1 -f db/init.sql
+          psql -h localhost -U atie -d atie -v ON_ERROR_STOP=1 -f db/seed.sql
+          psql -h localhost -U atie -d atie -v ON_ERROR_STOP=1 -f db/migrations/001_ingestion_schema.sql
       - run: mvn -B -Dnet.bytebuddy.experimental=true test
         working-directory: backend
+      - name: Run PostgreSQL schema integration test
+        working-directory: backend
+        env:
+          ATIE_TEST_DATABASE_URL: jdbc:postgresql://localhost:5432/atie
+          ATIE_TEST_DATABASE_USERNAME: atie
+          ATIE_TEST_DATABASE_PASSWORD: atie_dev_password
+        run: mvn -B -Dnet.bytebuddy.experimental=true -Ppostgres-it -Dtest=PostgresSchemaIntegrationTest test
 
   frontend:
     runs-on: ubuntu-latest
