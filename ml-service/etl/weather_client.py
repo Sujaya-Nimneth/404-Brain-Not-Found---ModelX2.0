@@ -8,7 +8,7 @@ from pathlib import Path
 
 import httpx
 
-from etl.live_data import WeatherObservation
+from etl.live_data import WeatherObservation, atomic_write_text
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +89,6 @@ def write_weather_cache(
         for (market_code, observation_date), row in merged.items()
         if (latest_by_market[market_code] - observation_date).days <= 14
     ]
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "generated_at": max(row.observation_date for row in retained).isoformat(),
         "observations": [
@@ -107,7 +106,11 @@ def write_weather_cache(
             )
         ],
     }
-    cache_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    atomic_write_text(
+        cache_path,
+        json.dumps(payload, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
 def read_weather_cache(cache_path: Path) -> list[WeatherObservation]:
