@@ -15,6 +15,13 @@ COPY training ./training
 COPY models ./models
 COPY data ./data
 
+RUN groupadd --system --gid 10001 atie \
+    && useradd --system --uid 10001 --gid atie --create-home atie \
+    && mkdir -p /app/data/cache \
+    && chown -R atie:atie /app
+
+USER atie
+
 EXPOSE 8000
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
