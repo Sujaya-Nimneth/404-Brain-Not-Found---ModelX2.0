@@ -1,11 +1,23 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { demoResponse } from "../data/demoResponse";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
+import { describe, expect, it, vi } from "vitest";
+import { demoRequest, demoResponse } from "../data/demoResponse";
 import type { AnalyzeResponse } from "../types/atie";
 import { EvaluationBaselinesPanel } from "./EvaluationBaselinesPanel";
+import { OnboardingConfigModal } from "./OnboardingConfigModal";
 import { PrimaryDirectiveCard } from "./PrimaryDirectiveCard";
 import { formatUpliftLabel, shortMarketName } from "./profitFormat";
 import { RoutingLogisticsPanel } from "./RoutingLogisticsPanel";
+
+vi.mock("../api/atieClient", async () => {
+  const actual = await vi.importActual<typeof import("../api/atieClient")>(
+    "../api/atieClient",
+  );
+  return {
+    ...actual,
+    fetchMetadataConfig: vi.fn().mockRejectedValue(new Error("offline")),
+  };
+});
 
 describe("safety-critical dashboard presentation", () => {
   it("uses the selected default market name in the crash warning", () => {
@@ -71,5 +83,34 @@ describe("safety-critical dashboard presentation", () => {
       formatUpliftLabel({ ...sample, profitDeltaLkr: 4200, profitUpliftPct: null }),
     ).toBe("n/a");
     expect(shortMarketName("Nuwara Eliya Dedicated Economic Centre")).toBe("N. Eliya");
+  });
+
+  it("allows clearing the harvest quantity field without forcing a leading zero", () => {
+    function Harness() {
+      const [req, setReq] = useState(demoRequest);
+      return (
+        <OnboardingConfigModal
+          value={req}
+          onChange={setReq}
+          onAnalyze={() => {}}
+          onDemo={() => {}}
+          loading={false}
+        />
+      );
+    }
+
+    render(<Harness />);
+    const input = screen.getByLabelText(/Harvest \(kg\)/i) as HTMLInputElement;
+    expect(input.value).toBe("1000");
+
+    fireEvent.change(input, { target: { value: "" } });
+    expect(input.value).toBe("");
+
+    fireEvent.change(input, { target: { value: "500" } });
+    expect(input.value).toBe("500");
+
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.blur(input);
+    expect(input.value).toBe("500");
   });
 });
