@@ -119,3 +119,20 @@ def test_safe_margin_uses_decimal_floor_and_percentage():
         Decimal("5"),
         Decimal("1"),
     )
+
+
+def test_ingestion_schema_ddl_is_consolidated_and_reentrant():
+    repo_root = ROOT.parent
+    init_sql = (repo_root / "db" / "init.sql").read_text(encoding="utf-8")
+    ingestion_sql = (repo_root / "db" / "ingestion_schema.sql").read_text(
+        encoding="utf-8"
+    )
+    migration_sql = (
+        repo_root / "db" / "migrations" / "001_ingestion_schema.sql"
+    ).read_text(encoding="utf-8")
+
+    assert ingestion_sql == migration_sql
+    assert "DROP TABLE IF EXISTS data_ingestion_runs;" in init_sql
+    assert "DROP TABLE IF EXISTS data_source_status;" in init_sql
+    assert "CREATE OR REPLACE FUNCTION atie_source_priority" in init_sql
+    assert "DEFAULT 'HDX_SEED'" in init_sql

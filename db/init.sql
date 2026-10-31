@@ -1,5 +1,7 @@
 BEGIN;
 
+DROP TABLE IF EXISTS data_ingestion_runs;
+DROP TABLE IF EXISTS data_source_status;
 DROP TABLE IF EXISTS weather_observations;
 DROP TABLE IF EXISTS historical_prices;
 DROP TABLE IF EXISTS market_routes;
@@ -52,13 +54,24 @@ CREATE TABLE historical_prices (
     recorded_date DATE NOT NULL,
     wholesale_price_lkr_per_kg DECIMAL(10, 2) NOT NULL,
     arrival_volume_tonnes DECIMAL(10, 2),
-    source VARCHAR(32) NOT NULL DEFAULT 'HDX',
+    source VARCHAR(32) NOT NULL DEFAULT 'HDX_SEED',
     CONSTRAINT historical_prices_unique_market_crop_date
         UNIQUE (market_id, crop_id, recorded_date),
     CONSTRAINT historical_prices_price_positive
         CHECK (wholesale_price_lkr_per_kg > 0),
     CONSTRAINT historical_prices_arrivals_non_negative
-        CHECK (arrival_volume_tonnes IS NULL OR arrival_volume_tonnes >= 0)
+        CHECK (arrival_volume_tonnes IS NULL OR arrival_volume_tonnes >= 0),
+    CONSTRAINT historical_prices_source_check
+        CHECK (
+            source IN (
+                'HDX_LIVE',
+                'HDX_CACHED',
+                'HDX_SEED',
+                'CROPIX_LIVE',
+                'CROPIX_CACHED',
+                'SEED'
+            )
+        )
 );
 
 CREATE TABLE weather_observations (
@@ -76,7 +89,9 @@ CREATE TABLE weather_observations (
         temp_max_c IS NULL
         OR temp_min_c IS NULL
         OR temp_max_c >= temp_min_c
-    )
+    ),
+    CONSTRAINT weather_observations_source_check
+        CHECK (source IN ('OPEN_METEO_LIVE', 'OPEN_METEO_CACHED', 'SEED'))
 );
 
 CREATE TABLE fuel_prices (
@@ -135,5 +150,19 @@ CREATE TABLE data_source_status (
 
 CREATE INDEX idx_data_ingestion_runs_source_time
     ON data_ingestion_runs(source_code, started_at DESC);
+
+CREATE OR REPLACE FUNCTION atie_source_priority(source_value TEXT)
+RETURNS INT
+LANGUAGE SQL
+IMMUTABLE
+AS $$
+    SELECT CASE
+        WHEN source_value LIKE '%!_LIVE' ESCAPE '!' THEN 3
+        WHEN source_value LIKE '%!_CACHED' ESCAPE '!' THEN 2
+        WHEN source_value = 'SEED'
+          OR source_value LIKE '%!_SEED' ESCAPE '!' THEN 1
+        ELSE 0
+    END;
+$$;
 
 COMMIT;
