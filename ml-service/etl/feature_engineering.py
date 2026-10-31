@@ -6,6 +6,7 @@ import pandas as pd
 
 
 FEATURE_COLUMNS = [
+    "wholesale_price_lkr_per_kg",
     "price_lag_1d",
     "price_lag_3d",
     "price_lag_7d",
@@ -60,35 +61,26 @@ def build_features(frame: pd.DataFrame) -> pd.DataFrame:
     result["price_lag_7d"] = grouped["wholesale_price_lkr_per_kg"].shift(7)
     result["price_lag_14d"] = grouped["wholesale_price_lkr_per_kg"].shift(14)
 
-    prior_prices = grouped["wholesale_price_lkr_per_kg"].shift(1)
-    prior_dates = grouped["recorded_date"].shift(1)
-    result["rolling_mean_7d"] = (
-        prior_prices.groupby([result["market_code"], result["crop_code"]])
-        .transform(lambda values: values.rolling(7, min_periods=3).mean())
+    result["rolling_mean_7d"] = grouped["wholesale_price_lkr_per_kg"].transform(
+        lambda values: values.rolling(7, min_periods=3).mean()
     )
-    result["rolling_std_7d"] = (
-        prior_prices.groupby([result["market_code"], result["crop_code"]])
-        .transform(lambda values: values.rolling(7, min_periods=3).std(ddof=0))
+    result["rolling_std_7d"] = grouped["wholesale_price_lkr_per_kg"].transform(
+        lambda values: values.rolling(7, min_periods=3).std(ddof=0)
     )
     result["price_momentum_3d_pct"] = (
-        result["price_lag_1d"] - result["price_lag_3d"]
+        result["wholesale_price_lkr_per_kg"] - result["price_lag_3d"]
     ) / result["price_lag_3d"] * 100
 
     result["arrival_lag_1d"] = grouped["arrival_volume_tonnes"].shift(1)
-    result["rolling_mean_7d_arrivals"] = (
-        result["arrival_lag_1d"]
-        .groupby([result["market_code"], result["crop_code"]])
-        .transform(lambda values: values.rolling(7, min_periods=3).mean())
-    )
-    result["precipitation_7d_mm"] = (
-        result["precipitation_mm"]
-        .groupby([result["market_code"], result["crop_code"]])
-        .transform(lambda values: values.rolling(7, min_periods=1).sum())
+    result["rolling_mean_7d_arrivals"] = grouped[
+        "arrival_volume_tonnes"
+    ].transform(lambda values: values.rolling(7, min_periods=3).mean())
+    result["precipitation_7d_mm"] = grouped["precipitation_mm"].transform(
+        lambda values: values.rolling(7, min_periods=1).sum()
     )
     result["day_of_week"] = result["recorded_date"].dt.dayofweek
     result["month"] = result["recorded_date"].dt.month
 
-    assert prior_dates.notna().sum() <= len(result)
     return result
 
 

@@ -149,3 +149,33 @@ def test_routing_matrix_covers_origins_vehicles_and_quantities():
     assert {
         scenario["origin"] for scenario in result["scenarios"]
     } == {"ANURADHAPURA", "JAFFNA", "DAMBULLA", "NUWARA_ELIYA", "THAMBUTTEGAMA"}
+
+
+def test_train_enforces_three_day_embargo_between_train_and_holdout(tmp_path):
+    from training.train_model import EMBARGO_DAYS, train
+
+    dates = pd.date_range("2026-01-01", periods=50, freq="D")
+    rows = []
+    for recorded_date in dates:
+        for market_code in ("DAMBULLA", "PETTAH_COLOMBO", "THAMBUTTEGAMA"):
+            rows.append(
+                {
+                    "market_code": market_code,
+                    "crop_code": "TOMATO",
+                    "recorded_date": recorded_date,
+                    "wholesale_price_lkr_per_kg": 180.0 + (recorded_date.day % 11),
+                    "arrival_volume_tonnes": 60.0 + (recorded_date.day % 7),
+                    "diesel_price_lkr": 283.0,
+                    "precipitation_mm": 4.0,
+                }
+            )
+    report = train(
+        tmp_path / "model.joblib",
+        tmp_path / "report.json",
+        history=pd.DataFrame(rows),
+    )
+
+    trained_through = pd.Timestamp(report["trained_through"])
+    holdout_start = pd.Timestamp(report["holdout_start"])
+    assert (holdout_start - trained_through) >= pd.Timedelta(days=EMBARGO_DAYS)
+

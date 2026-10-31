@@ -160,7 +160,12 @@ def evaluate_predictions(
     target_column: str,
     prediction_column: str,
 ) -> dict[str, float]:
-    current = frame["price_lag_1d"]
+    current_column = (
+        "wholesale_price_lkr_per_kg"
+        if "wholesale_price_lkr_per_kg" in frame.columns
+        else "price_lag_1d"
+    )
+    current = frame[current_column]
     actual = frame[target_column]
     predicted = frame[prediction_column]
     return {
@@ -222,11 +227,15 @@ def evaluate_routing_decisions(
         "recorded_date",
         "market_code",
         "crop_code",
-        "price_lag_1d",
         target_column,
         prediction_column,
     }
     missing = required.difference(frame.columns)
+    if (
+        "wholesale_price_lkr_per_kg" not in frame.columns
+        and "price_lag_1d" not in frame.columns
+    ):
+        missing.add("wholesale_price_lkr_per_kg")
     if missing:
         raise ValueError(f"routing backtest missing columns: {sorted(missing)}")
 

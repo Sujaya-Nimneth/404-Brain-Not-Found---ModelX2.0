@@ -34,6 +34,7 @@ def test_build_features_uses_only_prior_observations():
     assert featured.loc[1, "price_lag_1d"] == 200
     assert featured.loc[2, "price_lag_3d"] != featured.loc[2, "price_lag_3d"]
     assert featured.loc[3, "price_lag_3d"] == 200
+    assert featured.loc[6, "rolling_mean_7d"] == pytest.approx(203.0)
     assert set(FEATURE_COLUMNS).issubset(featured.columns)
 
 
