@@ -29,6 +29,13 @@ frontend/vite.config.d.ts
 frontend/playwright-report/
 frontend/test-results/
 
+# Expo / Android Mobile Client (nested under frontend/mobile)
+frontend/mobile/node_modules/
+frontend/mobile/.expo/
+frontend/mobile/dist/
+frontend/mobile/android/
+frontend/mobile/ios/
+
 # Raw browser recordings; final MP4 evidence is checked in
 docs/evidence/*.webm
 

@@ -55,8 +55,6 @@ docker compose exec ml-service python -c \
 The default ports avoid collisions with an existing local stack. Override
 `POSTGRES_PORT`, `BACKEND_PORT`, or `FRONTEND_PORT` in `.env` when needed.
 
-*NOTE* For the Mobile Frontend to be Run, the User is required to have Expo Go on the mobile device, connected to the same network.
-
 ## Live Data And Provenance
 
 The `ingestion-worker` refreshes supported data every six hours by default. It
@@ -248,6 +246,27 @@ npm run build
 
 The Vite dev server proxies `/api` to `http://localhost:8080`.
 
+### Android Mobile App (`frontend/mobile/`)
+
+The Android field client lives inside `frontend/mobile/` (Expo SDK 58 / React
+Native) and shares the web dashboard's TypeScript contract layer (`frontend/src/`)
+directly without altering the Compose stack or backend APIs. It adds a 4-tab
+field layout, trilingual `EN` / `සිං` / `தமிழ்` UI toggle, and one-tap
+WhatsApp / SMS / Android Share driver dispatch slips.
+
+```bash
+cd frontend/mobile
+npm ci
+npm run typecheck
+npm test
+npm run android
+```
+
+On a physical Android phone running **Expo Go** on the same Wi-Fi LAN, the client
+auto-detects the host LAN IP (`http://<lan-ip>:15173/api/v1` with automatic
+`:8080/api/v1` fallback); on the Android Emulator it uses `10.0.2.2`. You can
+also override the API endpoint from the in-app **Server Endpoint** header icon.
+
 ## Verification
 
 ```bash
@@ -257,6 +276,7 @@ cd ../backend && ATIE_TEST_DATABASE_URL=jdbc:postgresql://localhost:55432/atie \
   ATIE_TEST_DATABASE_PASSWORD=atie_dev_password \
   mvn -q -Ppostgres-it -Dnet.bytebuddy.experimental=true test
 cd ../frontend && npm test && npm run lint && npm run build
+cd mobile && npm run typecheck && npm test && cd ..
 CI=true ATIE_E2E_URL=http://localhost:15173 npm run test:e2e
 cd .. && docker compose --env-file .env.example config
 docker compose --env-file .env.example ps
