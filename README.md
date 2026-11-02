@@ -55,6 +55,8 @@ docker compose exec ml-service python -c \
 The default ports avoid collisions with an existing local stack. Override
 `POSTGRES_PORT`, `BACKEND_PORT`, or `FRONTEND_PORT` in `.env` when needed.
 
+*NOTE* For the Mobile Frontend to be Run, the User is required to have Expo Go on the mobile device, connected to the same network.
+
 ## Live Data And Provenance
 
 The `ingestion-worker` refreshes supported data every six hours by default. It
