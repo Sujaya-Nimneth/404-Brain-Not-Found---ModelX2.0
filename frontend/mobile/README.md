@@ -13,22 +13,18 @@ The official **Android** field client for **ATIE (Agricultural Trade & Intellige
   2. `EXPO_PUBLIC_API_BASE_URL` environment variable (if set).
   3. Expo Go physical Android device on Wi-Fi LAN: auto-detects host LAN IP from Expo's `hostUri` and targets `http://<lan-ip>:15173/api/v1` (the frontend Nginx reverse proxy, preserving server-side `ATIE_API_KEY` injection), automatically falling back to `http://<lan-ip>:8080/api/v1` (direct Spring Boot API).
   4. Android Emulator (`AVD`): `http://10.0.2.2:15173/api/v1` with automatic `http://10.0.2.2:8080/api/v1` fallback.
-- **Zero Fake Client Math (`CONTRACTS.md` §§2–7):** All net profit, spoilage, transport, `profit_delta_lkr`, `profit_uplift_pct`, and `CRITICAL_REROUTE` / `STAY_DEFAULT` / `HOLD_HARVEST` thresholds come strictly from the Spring Boot backend (or the explicitly badged `DEMO_FIXTURE` when `demo_mode: true`). Offline live failures retain a cached snapshot **only** when `sameRequest(cached.request, currentRequest)` matches and `forecastSource !== "DEMO_FIXTURE"`.
+- **Zero Fake Client Math (`CONTRACTS.md` §§2–7):** All net profit, spoilage, transport, `profit_delta_lkr`, `profit_uplift_pct`, and `CRITICAL_REROUTE` / `PROCEED_DEFAULT` / `HOLD_HARVEST` thresholds come strictly from the Spring Boot backend (or the explicitly badged `DEMO_FIXTURE` when `demo_mode: true`). Offline live failures retain a cached snapshot **only** when `sameRequest(cached.request, currentRequest)` matches, `forecastSource !== "DEMO_FIXTURE"`, and the snapshot is within the 72-hour TTL window.
+- **Android Manifest & API Key Support:** Includes `plugins/withAndroidFieldManifest.js` (`android:usesCleartextTraffic="true"` for LAN gateways + `<queries>` for `whatsapp://`, `sms:`, and `smsto:`), plus optional `X-ATIE-API-Key` header support in the **Server Endpoint** modal for authenticated direct `:8080` deployments.
 
 ---
 
 ## Android Field UX Capabilities
 
 1. **4-Tab Field Layout:**
-   - **Directive:** Primary Directive decision card (`CRITICAL_REROUTE`, `STAY_DEFAULT`, `HOLD_HARVEST`), one-tap **WhatsApp / SMS / Android Share** dispatch slip, Net Profit comparison chart, and top weather alert callout.
-   - **Setup:** Dynamic consignment onboarding hydrated from `GET /api/v1/metadata/config` (with offline seeded fallback):
-     - **5 Origins:** Anuradhapura, Jaffna, Dambulla, Nuwara Eliya, Thambuttegama
-     - **7 Destination Markets** (filtered dynamically by reachable routes): Dambulla DEC, Colombo Pettah, Meegoda DEC, Keppetipola DEC, Nuwara Eliya, Thambuttegama, Jaffna
-     - **4 Seeded Crops:** Tomato, Carrot, Green Chili, Red Onion
-     - **3 Vehicles:** Mini-Truck (Batta, 1,500 kg), Three-Wheeler (300 kg), 3.5t Lorry (3,500 kg)
-     - **Horizons & Presets:** `48h` / `72h` horizons and `[300, 1000, 1500, 3500]` kg presets + custom quantity input
-   - **Routes:** Ranked 7-market Route & Net Profit Ledger (`CRASH` / `STABLE` / `SURGE`, round-trip km, fuel litres, trips, gross revenue, transport, spoilage, handling fee) + native SVG **14-Day History & 48h/72h Forecast Trajectory** (`GET /api/v1/markets/{code}/history`).
-   - **Intel:** Expandable Weather & Spoilage Risk panel, Live Data Provenance (`GET /api/v1/metadata/data-status`), and Holdout Model Evaluation (`DS %`, `MAE`, nullable `SM-FPR` vs Naive & 7-Day MA baselines).
+   - **Directive:** Collapsible dynamic consignment setup (`5` origins, `7` route-filtered destination markets, `4` seeded crops, `3` vehicles, `48h`/`72h` horizons, `[300, 1000, 1500, 3500]` kg presets), Primary Directive decision card (`CRITICAL_REROUTE`, `PROCEED_DEFAULT`, `HOLD_HARVEST`), and one-tap **WhatsApp / SMS / Android Share** dispatch slip (with explicit `DO NOT DISPATCH` safety lock on `HOLD_HARVEST`).
+   - **Markets:** Net Profit vs Route Deductions stacked chart and ranked 7-market Route & Net Profit Ledger (`CRASH` / `STABLE` / `SURGE`, round-trip km, fuel litres, trips, gross revenue, transport, spoilage, handling fee).
+   - **Forecast:** Native SVG **14-Day History & 48h/72h Forecast Trajectory** (`GET /api/v1/markets/{code}/history`) across all candidate markets.
+   - **Trust & Live:** Corridor Weather & Spoilage Risk radar, Live Data Provenance (`GET /api/v1/metadata/data-status`), and Holdout Model Evaluation (`DS %`, `MAE`, nullable `SM-FPR` vs Naive & 7-Day MA baselines).
 2. **Trilingual Field Toggle (`EN` / `සිං` / `தமிழ்`):** Client-side English, Sinhala, and Tamil UI labels, market/origin/crop names, and localized WhatsApp/SMS driver dispatch slips persisted in `AsyncStorage`.
 
 ---
@@ -40,7 +36,7 @@ The official **Android** field client for **ATIE (Agricultural Trade & Intellige
 | **`canvas`** | `#f4f0e6` | Warm paper field background |
 | **`cream`** | `#fffdf7` | Elevated card & control surface |
 | **`ink`** | `#17251f` | High-contrast primary ink & dark header cards |
-| **`moss`** | `#315c45` | Primary agricultural brand accent & `STAY_DEFAULT` state |
+| **`moss`** | `#315c45` | Primary agricultural brand accent & `PROCEED_DEFAULT` state |
 | **`leaf`** | `#5b8f63` | Supporting positive indicator accent |
 | **`lime`** | `#d4e8a3` | High-contrast badge highlight on dark `ink` cards |
 | **`clay`** | `#c7643b` | `CRITICAL_REROUTE` directive & `CRASH` alert accent |

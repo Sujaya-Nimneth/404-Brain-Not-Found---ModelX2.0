@@ -140,8 +140,8 @@ public class MarketHistoryService {
                 chronological.stream().map(record ->
                         new MarketHistoryResponse.HistoryPoint(
                                 record.getRecordedDate(),
-                                record.getWholesalePriceLkrPerKg(),
-                                record.getArrivalVolumeTonnes()
+                                scale2(record.getWholesalePriceLkrPerKg()),
+                                scale2(record.getArrivalVolumeTonnes())
                         )
                 ).toList(),
                 List.of(
@@ -182,11 +182,17 @@ public class MarketHistoryService {
         var prediction = forecast.predictions().get(0);
         return new MarketHistoryResponse.ForecastPoint(
                 horizonHours,
-                prediction.predictedPriceLkr(),
-                prediction.baselineNaiveLkr(),
-                prediction.baselineMa7Lkr(),
+                scale2(prediction.predictedPriceLkr()),
+                scale2(prediction.baselineNaiveLkr()),
+                scale2(prediction.baselineMa7Lkr()),
                 prediction.direction()
         );
+    }
+
+    private java.math.BigDecimal scale2(java.math.BigDecimal value) {
+        return value == null
+                ? null
+                : value.setScale(2, java.math.RoundingMode.HALF_UP);
     }
 
     private String normalize(String value) {

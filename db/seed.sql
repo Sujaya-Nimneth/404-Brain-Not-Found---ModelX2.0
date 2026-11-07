@@ -107,6 +107,7 @@ INSERT INTO fuel_prices (
     diesel_lkr_per_liter,
     petrol_lkr_per_liter
 ) VALUES
+    ('2025-05-01', 292.00, 320.00),
     ('2025-11-01', 294.00, 322.00),
     ('2025-12-01', 290.00, 318.00),
     ('2026-01-01', 288.00, 316.00),
@@ -126,50 +127,124 @@ ON CONFLICT (effective_date) DO UPDATE SET
 WITH days AS (
     SELECT
         day_offset,
-        DATE '2026-10-27' - day_offset AS recorded_date
+        DATE '2026-10-27' - day_offset AS recorded_date,
+        (540 - day_offset)::DOUBLE PRECISION AS tau,
+        EXTRACT(DOY FROM (DATE '2026-10-27' - day_offset))::DOUBLE PRECISION AS day_of_year
     FROM generate_series(0, 179) AS day_offset
 ),
-market_crop_base AS (
+market_params AS (
     SELECT *
     FROM (
         VALUES
-            ('DAMBULLA', 'TOMATO', 220.00, 42.00),
-            ('PETTAH_COLOMBO', 'TOMATO', 170.00, 88.00),
-            ('NUWARA_ELIYA', 'TOMATO', 185.00, 26.00),
-            ('KEPPETIPOLA', 'TOMATO', 175.00, 24.00),
-            ('MEEGODA', 'TOMATO', 180.00, 60.00),
-            ('THAMBUTTEGAMA', 'TOMATO', 190.00, 35.00),
-            ('JAFFNA', 'TOMATO', 160.00, 30.00),
-
-            ('DAMBULLA', 'CARROT', 280.00, 48.00),
-            ('PETTAH_COLOMBO', 'CARROT', 320.00, 72.00),
-            ('NUWARA_ELIYA', 'CARROT', 260.00, 40.00),
-            ('KEPPETIPOLA', 'CARROT', 250.00, 32.00),
-            ('MEEGODA', 'CARROT', 300.00, 55.00),
-            ('THAMBUTTEGAMA', 'CARROT', 275.00, 30.00),
-            ('JAFFNA', 'CARROT', 310.00, 26.00),
-
-            ('DAMBULLA', 'GREEN_CHILI', 650.00, 34.00),
-            ('PETTAH_COLOMBO', 'GREEN_CHILI', 720.00, 66.00),
-            ('NUWARA_ELIYA', 'GREEN_CHILI', 600.00, 22.00),
-            ('KEPPETIPOLA', 'GREEN_CHILI', 620.00, 20.00),
-            ('MEEGODA', 'GREEN_CHILI', 690.00, 44.00),
-            ('THAMBUTTEGAMA', 'GREEN_CHILI', 670.00, 28.00),
-            ('JAFFNA', 'GREEN_CHILI', 700.00, 24.00),
-
-            ('DAMBULLA', 'RED_ONION', 380.00, 90.00),
-            ('PETTAH_COLOMBO', 'RED_ONION', 410.00, 145.00),
-            ('NUWARA_ELIYA', 'RED_ONION', 390.00, 46.00),
-            ('KEPPETIPOLA', 'RED_ONION', 385.00, 42.00),
-            ('MEEGODA', 'RED_ONION', 400.00, 105.00),
-            ('THAMBUTTEGAMA', 'RED_ONION', 375.00, 62.00),
-            ('JAFFNA', 'RED_ONION', 420.00, 70.00)
-    ) AS values_table (
+            ('DAMBULLA', 1, 1.07::DOUBLE PRECISION, 48.0::DOUBLE PRECISION, 3.5::DOUBLE PRECISION, 0),
+            ('PETTAH_COLOMBO', 2, 0.95::DOUBLE PRECISION, 88.0::DOUBLE PRECISION, 0.5::DOUBLE PRECISION, 18),
+            ('NUWARA_ELIYA', 3, 0.91::DOUBLE PRECISION, 30.0::DOUBLE PRECISION, 5.0::DOUBLE PRECISION, 12),
+            ('KEPPETIPOLA', 4, 0.89::DOUBLE PRECISION, 28.0::DOUBLE PRECISION, 4.5::DOUBLE PRECISION, 24),
+            ('MEEGODA', 5, 0.93::DOUBLE PRECISION, 64.0::DOUBLE PRECISION, 0.5::DOUBLE PRECISION, 30),
+            ('THAMBUTTEGAMA', 6, 0.90::DOUBLE PRECISION, 40.0::DOUBLE PRECISION, -0.5::DOUBLE PRECISION, 0),
+            ('JAFFNA', 7, 0.94::DOUBLE PRECISION, 32.0::DOUBLE PRECISION, -2.0::DOUBLE PRECISION, 35)
+    ) AS m (
         market_code,
-        crop_code,
-        base_price,
-        base_arrivals
+        market_ord,
+        price_factor,
+        base_arrivals,
+        rain_offset,
+        glut_offset
     )
+),
+crop_params AS (
+    SELECT *
+    FROM (
+        VALUES
+            ('TOMATO', 1, 196.0::DOUBLE PRECISION, 1.00::DOUBLE PRECISION, 1.00::DOUBLE PRECISION),
+            ('CARROT', 2, 285.0::DOUBLE PRECISION, 0.85::DOUBLE PRECISION, 0.78::DOUBLE PRECISION),
+            ('GREEN_CHILI', 3, 650.0::DOUBLE PRECISION, 0.70::DOUBLE PRECISION, 0.90::DOUBLE PRECISION),
+            ('RED_ONION', 4, 390.0::DOUBLE PRECISION, 1.35::DOUBLE PRECISION, 0.68::DOUBLE PRECISION)
+    ) AS c (
+        crop_code,
+        crop_ord,
+        base_price,
+        arrival_factor,
+        sensitivity
+    )
+),
+computed_series AS (
+    SELECT
+        markets.id AS market_id,
+        crops.id AS crop_id,
+        days.recorded_date,
+        GREATEST(
+            0.0::DOUBLE PRECISION,
+            7.5
+            + 5.5 * SIN((2.0 * PI() * days.day_of_year / 365.25) + mp.market_ord * 0.45)
+            + mp.rain_offset
+            + 14.0 * CASE
+                WHEN COS((days.tau - (540 - (mp.market_ord - 1) * 7)) * 2.0 * PI() / 48.0) <= 1e-6
+                THEN 0.0::DOUBLE PRECISION
+                ELSE POWER(
+                    COS((days.tau - (540 - (mp.market_ord - 1) * 7)) * 2.0 * PI() / 48.0),
+                    20.0
+                )
+              END
+        ) AS precip_raw,
+        CASE
+            WHEN COS((days.tau - (540 - mp.glut_offset - (cp.crop_ord - 1) * 9)) * 2.0 * PI() / 42.0) <= 1e-6
+            THEN 0.0::DOUBLE PRECISION
+            ELSE POWER(
+                COS((days.tau - (540 - mp.glut_offset - (cp.crop_ord - 1) * 9)) * 2.0 * PI() / 42.0),
+                20.0
+            )
+        END AS glut_lead,
+        CASE
+            WHEN COS((days.tau - 2.5 - (540 - mp.glut_offset - (cp.crop_ord - 1) * 9)) * 2.0 * PI() / 42.0) <= 1e-6
+            THEN 0.0::DOUBLE PRECISION
+            ELSE POWER(
+                COS((days.tau - 2.5 - (540 - mp.glut_offset - (cp.crop_ord - 1) * 9)) * 2.0 * PI() / 42.0),
+                22.0
+            )
+        END AS glut_crash,
+        CASE
+            WHEN COS((days.tau - (540 - (mp.market_ord - 2) * 8 - (cp.crop_ord - 1) * 11)) * 2.0 * PI() / 48.0) <= 1e-6
+            THEN 0.0::DOUBLE PRECISION
+            ELSE POWER(
+                COS((days.tau - (540 - (mp.market_ord - 2) * 8 - (cp.crop_ord - 1) * 11)) * 2.0 * PI() / 48.0),
+                20.0
+            )
+        END AS short_lead,
+        CASE
+            WHEN COS((days.tau - 2.5 - (540 - (mp.market_ord - 2) * 8 - (cp.crop_ord - 1) * 11)) * 2.0 * PI() / 48.0) <= 1e-6
+            THEN 0.0::DOUBLE PRECISION
+            ELSE POWER(
+                COS((days.tau - 2.5 - (540 - (mp.market_ord - 2) * 8 - (cp.crop_ord - 1) * 11)) * 2.0 * PI() / 48.0),
+                22.0
+            )
+        END AS short_surge,
+        (
+            0.040 * SIN(2.0 * PI() * days.day_of_year / 365.25 + cp.crop_ord * 0.70)
+            + 0.024 * COS(4.0 * PI() * days.day_of_year / 365.25 + mp.market_ord * 0.35)
+            + 0.022 * SIN((days.tau + mp.market_ord * 3.0 + cp.crop_ord * 5.0) * 2.0 * PI() / 24.0)
+        ) AS maha_yala,
+        0.08 * ((COALESCE(fuel.diesel_lkr_per_liter::DOUBLE PRECISION, 283.0) - 283.0) / 283.0) AS fuel_adj,
+        mp.market_ord,
+        mp.price_factor,
+        mp.base_arrivals,
+        cp.crop_ord,
+        cp.base_price,
+        cp.arrival_factor,
+        cp.sensitivity,
+        days.tau
+    FROM days
+    CROSS JOIN market_params mp
+    CROSS JOIN crop_params cp
+    JOIN markets ON markets.code = mp.market_code
+    JOIN crops ON crops.code = cp.crop_code
+    LEFT JOIN LATERAL (
+        SELECT diesel_lkr_per_liter
+        FROM fuel_prices
+        WHERE effective_date <= days.recorded_date
+        ORDER BY effective_date DESC
+        LIMIT 1
+    ) fuel ON TRUE
 )
 INSERT INTO historical_prices (
     market_id,
@@ -180,51 +255,38 @@ INSERT INTO historical_prices (
     source
 )
 SELECT
-    markets.id,
-    crops.id,
-    days.recorded_date,
+    cs.market_id,
+    cs.crop_id,
+    cs.recorded_date,
     ROUND(
-        CASE
-            WHEN days.day_offset = 0 THEN market_crop_base.base_price
-            WHEN market_crop_base.crop_code = 'TOMATO'
-                 AND market_crop_base.market_code = 'DAMBULLA'
-                 AND days.day_offset <= 7
-                THEN market_crop_base.base_price
-                     * (1 + days.day_offset * 0.032)
-            ELSE market_crop_base.base_price
-                 * (
-                     1
-                     + 0.055 * SIN(
-                         (180 - days.day_offset + markets.id * 11.0) * PI() / 31.0
-                     )
-                     + 0.022 * COS(
-                         (180 - days.day_offset + crops.id * 17.0) * PI() / 23.0
-                     )
-                 )
-        END::NUMERIC,
+        (
+            cs.base_price * cs.price_factor * (
+                1.0
+                + cs.maha_yala
+                + cs.fuel_adj
+                + 0.08 * cs.sensitivity * cs.glut_lead
+                - 0.30 * cs.sensitivity * cs.glut_crash
+                - 0.05 * cs.sensitivity * cs.short_lead
+                + 0.13 * cs.sensitivity * cs.short_surge
+                + 0.003 * GREATEST(0.0::DOUBLE PRECISION, cs.precip_raw - 15.0)
+            )
+        )::NUMERIC(18, 8),
         2
     ),
     ROUND(
-        CASE
-            WHEN market_crop_base.crop_code = 'TOMATO'
-                 AND market_crop_base.market_code = 'DAMBULLA'
-                 AND days.day_offset <= 7
-                THEN 125.00 + (7 - days.day_offset) * 5.00
-            ELSE market_crop_base.base_arrivals
-                 * (
-                     1
-                     + 0.18 * SIN(
-                         (180 - days.day_offset + markets.id * 7.0) * PI() / 29.0
-                     )
-                 )
-        END::NUMERIC,
+        GREATEST(
+            2.0::DOUBLE PRECISION,
+            cs.base_arrivals * cs.arrival_factor * (
+                1.0
+                + 0.12 * SIN((cs.tau + cs.market_ord * 5.0 + cs.crop_ord * 3.0) * 2.0 * PI() / 24.0)
+                + 1.65 * cs.sensitivity * cs.glut_lead
+                - 0.48 * cs.sensitivity * cs.short_lead
+            )
+        )::NUMERIC(18, 8),
         2
     ),
     'HDX_SEED'
-FROM days
-CROSS JOIN market_crop_base
-JOIN markets ON markets.code = market_crop_base.market_code
-JOIN crops ON crops.code = market_crop_base.crop_code
+FROM computed_series cs
 ON CONFLICT (market_id, crop_id, recorded_date) DO UPDATE SET
     wholesale_price_lkr_per_kg = EXCLUDED.wholesale_price_lkr_per_kg,
     arrival_volume_tonnes = EXCLUDED.arrival_volume_tonnes,
@@ -233,8 +295,50 @@ ON CONFLICT (market_id, crop_id, recorded_date) DO UPDATE SET
 WITH days AS (
     SELECT
         day_offset,
-        DATE '2026-10-27' - day_offset AS observation_date
+        DATE '2026-10-27' - day_offset AS observation_date,
+        (540 - day_offset)::DOUBLE PRECISION AS tau,
+        EXTRACT(DOY FROM (DATE '2026-10-27' - day_offset))::DOUBLE PRECISION AS day_of_year
     FROM generate_series(0, 179) AS day_offset
+),
+market_weather_params AS (
+    SELECT *
+    FROM (
+        VALUES
+            ('DAMBULLA', 1, 3.5::DOUBLE PRECISION),
+            ('PETTAH_COLOMBO', 2, 0.5::DOUBLE PRECISION),
+            ('NUWARA_ELIYA', 3, 5.0::DOUBLE PRECISION),
+            ('KEPPETIPOLA', 4, 4.5::DOUBLE PRECISION),
+            ('MEEGODA', 5, 0.5::DOUBLE PRECISION),
+            ('THAMBUTTEGAMA', 6, -0.5::DOUBLE PRECISION),
+            ('JAFFNA', 7, -2.0::DOUBLE PRECISION)
+    ) AS m (market_code, market_ord, rain_offset)
+),
+weather_raw AS (
+    SELECT
+        markets.id AS market_id,
+        markets.province,
+        days.observation_date,
+        days.tau,
+        ROUND(
+            GREATEST(
+                0.0::DOUBLE PRECISION,
+                7.5
+                + 5.5 * SIN((2.0 * PI() * days.day_of_year / 365.25) + mwp.market_ord * 0.45)
+                + mwp.rain_offset
+                + 14.0 * CASE
+                    WHEN COS((days.tau - (540 - (mwp.market_ord - 1) * 7)) * 2.0 * PI() / 48.0) <= 1e-6
+                    THEN 0.0::DOUBLE PRECISION
+                    ELSE POWER(
+                        COS((days.tau - (540 - (mwp.market_ord - 1) * 7)) * 2.0 * PI() / 48.0),
+                        20.0
+                    )
+                  END
+            )::NUMERIC(18, 8),
+            2
+        ) AS precip_mm
+    FROM days
+    CROSS JOIN market_weather_params mwp
+    JOIN markets ON markets.code = mwp.market_code
 )
 INSERT INTO weather_observations (
     market_id,
@@ -242,71 +346,43 @@ INSERT INTO weather_observations (
     precipitation_mm,
     temp_max_c,
     temp_min_c,
-    extreme_weather_flag
+    extreme_weather_flag,
+    source
 )
 SELECT
-    markets.id,
-    days.observation_date,
-    ROUND(
-        GREATEST(
-            0,
-            8.0
-            + 7.0 * SIN(
-                (180 - days.day_offset + markets.id * 13.0) * PI() / 27.0
-            )
-            + CASE
-                WHEN markets.province IN ('Central', 'Uva') THEN 4.0
-                WHEN markets.province = 'Northern' THEN -2.0
-                ELSE 0.0
-              END
-        )::NUMERIC,
-        2
-    ),
+    wr.market_id,
+    wr.observation_date,
+    wr.precip_mm,
     ROUND(
         (
             30.5
             - CASE
-                WHEN markets.province IN ('Central', 'Uva') THEN 4.5
+                WHEN wr.province IN ('Central', 'Uva') THEN 4.5
                 ELSE 0.0
               END
-            + 1.2 * COS((180 - days.day_offset) * PI() / 45.0)
-        )::NUMERIC,
+            + 1.2 * COS(wr.tau * PI() / 45.0)
+        )::NUMERIC(18, 8),
         2
     ),
     ROUND(
         (
             23.0
             - CASE
-                WHEN markets.province IN ('Central', 'Uva') THEN 4.0
+                WHEN wr.province IN ('Central', 'Uva') THEN 4.0
                 ELSE 0.0
               END
-            + 0.8 * COS((180 - days.day_offset) * PI() / 45.0)
-        )::NUMERIC,
+            + 0.8 * COS(wr.tau * PI() / 45.0)
+        )::NUMERIC(18, 8),
         2
     ),
-    (
-        ROUND(
-            GREATEST(
-                0,
-                8.0
-                + 7.0 * SIN(
-                    (180 - days.day_offset + markets.id * 13.0) * PI() / 27.0
-                )
-                + CASE
-                    WHEN markets.province IN ('Central', 'Uva') THEN 4.0
-                    WHEN markets.province = 'Northern' THEN -2.0
-                    ELSE 0.0
-                  END
-            )::NUMERIC,
-            2
-        ) >= 18.0
-    )
-FROM days
-CROSS JOIN markets
+    (wr.precip_mm >= 15.0),
+    'SEED'
+FROM weather_raw wr
 ON CONFLICT (market_id, observation_date) DO UPDATE SET
     precipitation_mm = EXCLUDED.precipitation_mm,
     temp_max_c = EXCLUDED.temp_max_c,
     temp_min_c = EXCLUDED.temp_min_c,
-    extreme_weather_flag = EXCLUDED.extreme_weather_flag;
+    extreme_weather_flag = EXCLUDED.extreme_weather_flag,
+    source = EXCLUDED.source;
 
 COMMIT;

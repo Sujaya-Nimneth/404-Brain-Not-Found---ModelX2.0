@@ -16,7 +16,9 @@ from etl.live_data import (
     PriceObservation,
     WeatherObservation,
     atomic_write_text,
+    bound_message,
     dedupe_by_key,
+    dedupe_weather_by_key,
     fetch_text,
     parse_cropix_prices,
     parse_hdx_prices,
@@ -51,6 +53,7 @@ class IngestionConfig:
     open_meteo_url: str = OPEN_METEO_URL
     weather_cache_path: Path = Path("/app/data/cache/weather_forecasts.json")
     interval_seconds: int = 21_600
+    fetch_timeout_seconds: float = 20.0
 
     @classmethod
     def from_environment(cls) -> "IngestionConfig":
@@ -78,7 +81,12 @@ class IngestionConfig:
                     "/app/data/cache/weather_forecasts.json",
                 )
             ),
-            interval_seconds=max(300, int(os.getenv("INGESTION_INTERVAL_SECONDS", "21600"))),
+            interval_seconds=max(
+                300, int(os.getenv("INGESTION_INTERVAL_SECONDS", "21600"))
+            ),
+            fetch_timeout_seconds=max(
+                2.0, float(os.getenv("INGESTION_FETCH_TIMEOUT_SECONDS", "20"))
+            ),
         )
 
 
@@ -91,7 +99,10 @@ def apply_schema(config: IngestionConfig) -> None:
 def ingest_hdx(config: IngestionConfig) -> dict[str, object]:
     started = utc_now()
     try:
-        payload = fetch_text(config.hdx_url)
+        payload = fetch_text(
+            config.hdx_url,
+            timeout_seconds=config.fetch_timeout_seconds,
+        )
         observations = parse_hdx_prices(payload)
         if not observations:
             raise ValueError("HDX returned no supported wholesale price rows")
@@ -122,7 +133,10 @@ def ingest_cropix(config: IngestionConfig) -> dict[str, object]:
     started = utc_now()
     if config.cropix_url:
         try:
-            payload = fetch_text(config.cropix_url)
+            payload = fetch_text(
+                config.cropix_url,
+                timeout_seconds=config.fetch_timeout_seconds,
+            )
             observations = parse_cropix_prices(payload)
             if not observations:
                 raise ValueError("CROPIX returned no supported wholesale price rows")
@@ -164,7 +178,10 @@ def ingest_weather(config: IngestionConfig) -> dict[str, object]:
     observations: list[WeatherObservation] = []
     errors: list[str] = []
     prior_cached = read_weather_cache(config.weather_cache_path)
-    with httpx.Client(timeout=20.0, follow_redirects=True) as client:
+    with httpx.Client(
+        timeout=config.fetch_timeout_seconds,
+        follow_redirects=True,
+    ) as client:
         for market_code, (latitude, longitude) in MARKET_COORDINATES.items():
             try:
                 payload = fetch_text(
@@ -177,6 +194,7 @@ def ingest_weather(config: IngestionConfig) -> dict[str, object]:
                         "timezone": "Asia/Colombo",
                     },
                     client=client,
+                    timeout_seconds=config.fetch_timeout_seconds,
                 )
                 rows = parse_open_meteo_weather(payload, market_code)
                 records_received += len(rows)
@@ -185,7 +203,13 @@ def ingest_weather(config: IngestionConfig) -> dict[str, object]:
                 errors.append(f"{market_code}: {error}")
     if observations:
         try:
-            write_weather_cache(config.weather_cache_path, observations)
+            merged_cache = list(observations)
+            if prior_cached:
+                live_markets = {row.market_code for row in observations}
+                merged_cache.extend(
+                    row for row in prior_cached if row.market_code not in live_markets
+                )
+            write_weather_cache(config.weather_cache_path, merged_cache)
         except OSError as error:
             errors.append(f"weather cache write failed: {error}")
     if not observations:
@@ -200,7 +224,7 @@ def ingest_weather(config: IngestionConfig) -> dict[str, object]:
                     status="FALLBACK",
                     data_state="CACHED",
                     source_url=str(config.weather_cache_path),
-                    message=(
+                    message=bound_message(
                         "Open-Meteo unavailable; using verified cached weather. "
                         + "; ".join(errors)
                     ),
@@ -212,7 +236,9 @@ def ingest_weather(config: IngestionConfig) -> dict[str, object]:
             source_code="OPEN_METEO",
             started=started,
             source_url=config.open_meteo_url,
-            message="Open-Meteo returned no usable forecasts. " + "; ".join(errors),
+            message=bound_message(
+                "Open-Meteo returned no usable forecasts. " + "; ".join(errors)
+            ),
         )
 
     to_write = list(observations)
@@ -229,13 +255,14 @@ def ingest_weather(config: IngestionConfig) -> dict[str, object]:
             to_write,
             started,
             records_received=records_received,
-            status="SUCCESS" if not errors else "PARTIAL",
+            status="SUCCESS" if not errors else "FALLBACK",
             data_state="LIVE" if not errors else "CACHED",
             source_url=config.open_meteo_url,
-            message=(
+            message=bound_message(
                 "Open-Meteo forecasts fetched for every supported market."
                 if not errors
-                else "Partial Open-Meteo refresh: " + "; ".join(errors)
+                else "Partial Open-Meteo refresh (cached fallback used where needed): "
+                + "; ".join(errors)
             ),
         )
     except (OSError, psycopg.Error) as db_error:
@@ -244,7 +271,7 @@ def ingest_weather(config: IngestionConfig) -> dict[str, object]:
             source_code="OPEN_METEO",
             started=started,
             source_url=config.open_meteo_url,
-            message=f"Open-Meteo persistence failed: {db_error}",
+            message=bound_message(f"Open-Meteo persistence failed: {db_error}"),
         )
 
 
@@ -271,7 +298,9 @@ def _ingest_cached_or_fallback(
                     status="FALLBACK",
                     data_state="CACHED",
                     source_url=str(cache_path),
-                    message=f"Live fetch failed; using cached snapshot. {error}",
+                    message=bound_message(
+                        f"Live fetch failed; using cached snapshot. {error}"
+                    ),
                 )
         except (OSError, ValueError, psycopg.Error) as cache_error:
             error = ValueError(f"{error}; cache fallback failed: {cache_error}")
@@ -280,7 +309,7 @@ def _ingest_cached_or_fallback(
         source_code=source_code,
         started=started,
         source_url=source_url,
-        message=str(error),
+        message=bound_message(str(error)),
     )
 
 
@@ -298,6 +327,7 @@ def _ingest_prices(
     rows = dedupe_by_key(observations)
     if not rows:
         raise ValueError("price ingestion requires at least one observation")
+    bounded = bound_message(message)
     with psycopg.connect(config.dsn, connect_timeout=5) as connection:
         with connection.cursor() as cursor:
             cursor.execute(
@@ -348,6 +378,8 @@ def _ingest_prices(
                             atie_source_priority(EXCLUDED.source)
                                 = atie_source_priority(historical_prices.source)
                         AND EXCLUDED.source = historical_prices.source
+                        AND historical_prices.wholesale_price_lkr_per_kg
+                                IS DISTINCT FROM EXCLUDED.wholesale_price_lkr_per_kg
                        )
                     RETURNING 1
                 )
@@ -363,7 +395,7 @@ def _ingest_prices(
                 latest_date=max(row.recorded_date for row in rows),
                 source_url=source_url,
                 records_written=written,
-                message=message,
+                message=bounded,
             )
         _record_run(
             connection,
@@ -374,7 +406,7 @@ def _ingest_prices(
             records_received=len(rows),
             records_written=written,
             source_url=source_url,
-            message=message,
+            message=bounded,
         )
     return {
         "source": source_code,
@@ -382,7 +414,7 @@ def _ingest_prices(
         "data_state": data_state,
         "records_received": len(rows),
         "records_written": written,
-        "message": message,
+        "message": bounded,
     }
 
 
@@ -397,7 +429,10 @@ def _ingest_weather_rows(
     source_url: str,
     message: str,
 ) -> dict[str, object]:
-    rows = list(observations)
+    rows = dedupe_weather_by_key(observations)
+    if not rows:
+        raise ValueError("weather ingestion requires at least one observation")
+    bounded = bound_message(message)
     with psycopg.connect(config.dsn, connect_timeout=5) as connection:
         with connection.cursor() as cursor:
             cursor.execute(
@@ -451,6 +486,16 @@ def _ingest_weather_rows(
                             atie_source_priority(EXCLUDED.source)
                                 = atie_source_priority(weather_observations.source)
                         AND EXCLUDED.source = weather_observations.source
+                        AND (
+                            weather_observations.precipitation_mm
+                                IS DISTINCT FROM EXCLUDED.precipitation_mm
+                            OR weather_observations.temp_max_c
+                                IS DISTINCT FROM EXCLUDED.temp_max_c
+                            OR weather_observations.temp_min_c
+                                IS DISTINCT FROM EXCLUDED.temp_min_c
+                            OR weather_observations.extreme_weather_flag
+                                IS DISTINCT FROM EXCLUDED.extreme_weather_flag
+                        )
                        )
                     RETURNING 1
                 )
@@ -466,7 +511,7 @@ def _ingest_weather_rows(
                 latest_date=max(row.observation_date for row in rows),
                 source_url=source_url,
                 records_written=written,
-                message=message,
+                message=bounded,
             )
         _record_run(
             connection,
@@ -477,7 +522,7 @@ def _ingest_weather_rows(
             records_received=records_received,
             records_written=written,
             source_url=source_url,
-            message=message,
+            message=bounded,
         )
     return {
         "source": "OPEN_METEO",
@@ -485,7 +530,7 @@ def _ingest_weather_rows(
         "data_state": data_state,
         "records_received": records_received,
         "records_written": written,
-        "message": message,
+        "message": bounded,
     }
 
 
@@ -497,6 +542,7 @@ def _record_failure(
     source_url: str | None,
     message: str,
 ) -> dict[str, object]:
+    bounded = bound_message(message)
     try:
         with psycopg.connect(config.dsn, connect_timeout=5) as connection:
             _record_run(
@@ -508,7 +554,7 @@ def _record_failure(
                 records_received=0,
                 records_written=0,
                 source_url=source_url,
-                message=message,
+                message=bounded,
             )
             with connection.cursor() as cursor:
                 _upsert_status(
@@ -519,7 +565,7 @@ def _record_failure(
                     latest_date=None,
                     source_url=source_url,
                     records_written=0,
-                    message=message,
+                    message=bounded,
                 )
     except (OSError, psycopg.Error) as db_error:
         logger.warning(
@@ -533,7 +579,7 @@ def _record_failure(
         "data_state": "UNAVAILABLE",
         "records_received": 0,
         "records_written": 0,
-        "message": message,
+        "message": bounded,
     }
 
 
@@ -565,7 +611,7 @@ def _record_run(
             records_received,
             records_written,
             source_url,
-            None if status == "SUCCESS" else message,
+            None if status == "SUCCESS" else bound_message(message),
         ),
     )
 
@@ -590,16 +636,25 @@ def _upsert_status(
             updated_at
         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (source_code) DO UPDATE SET
-            data_state = EXCLUDED.data_state,
+            data_state = CASE
+                WHEN %s = 'FAILED' AND data_source_status.last_success_at IS NOT NULL
+                THEN 'CACHED'
+                ELSE EXCLUDED.data_state
+            END,
             last_attempt_at = EXCLUDED.last_attempt_at,
             last_success_at = CASE WHEN %s = 'SUCCESS'
                 THEN EXCLUDED.last_attempt_at
                 ELSE data_source_status.last_success_at END,
-            latest_observation_date = CASE WHEN %s IN ('SUCCESS', 'PARTIAL')
+            latest_observation_date = CASE
+                WHEN %s IN ('SUCCESS', 'FALLBACK')
+                 AND EXCLUDED.latest_observation_date IS NOT NULL
                 THEN EXCLUDED.latest_observation_date
                 ELSE data_source_status.latest_observation_date END,
-            source_url = EXCLUDED.source_url,
-            records_written = EXCLUDED.records_written,
+            source_url = COALESCE(EXCLUDED.source_url, data_source_status.source_url),
+            records_written = CASE
+                WHEN %s = 'FAILED' AND data_source_status.records_written > 0
+                THEN data_source_status.records_written
+                ELSE EXCLUDED.records_written END,
             message = EXCLUDED.message,
             updated_at = EXCLUDED.updated_at
         """,
@@ -611,8 +666,10 @@ def _upsert_status(
             latest_date,
             source_url,
             records_written,
-            message,
+            bound_message(message),
             now,
+            status,
+            status,
             status,
             status,
         ),
@@ -622,10 +679,13 @@ def _upsert_status(
 def run_once(
     config: IngestionConfig,
     status_path: Path | None = None,
+    *,
+    ensure_schema: bool = True,
 ) -> list[dict[str, object]]:
     if status_path is not None:
         write_heartbeat(status_path)
-    apply_schema(config)
+    if ensure_schema:
+        apply_schema(config)
     results: list[dict[str, object]] = []
     for step in (ingest_hdx, ingest_cropix, ingest_weather):
         if status_path is not None:
@@ -664,11 +724,17 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
     config = IngestionConfig.from_environment()
-    status_path = Path(os.getenv("INGESTION_HEALTH_PATH", "/tmp/atie-ingestion-health"))
+    status_path = Path(
+        os.getenv("INGESTION_HEALTH_PATH", "/tmp/atie-ingestion-health")
+    )
     write_heartbeat(status_path)
+    schema_ready = False
     while True:
         try:
-            run_once(config, status_path=status_path)
+            if not schema_ready:
+                apply_schema(config)
+                schema_ready = True
+            run_once(config, status_path=status_path, ensure_schema=False)
         except Exception:
             logger.exception("Ingestion cycle failed")
         wait_for_next_cycle(config.interval_seconds, status_path)

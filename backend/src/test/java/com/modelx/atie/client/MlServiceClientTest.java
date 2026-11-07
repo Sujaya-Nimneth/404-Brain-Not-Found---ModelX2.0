@@ -213,6 +213,27 @@ class MlServiceClientTest {
                 });
     }
 
+    @Test
+    void backendFallbackSnapshotMatchesMlServiceSnapshotWhenPresent() throws Exception {
+        java.nio.file.Path mlPath = java.nio.file.Path.of(
+                "..",
+                "ml-service",
+                "data",
+                "fallback_forecasts.json"
+        );
+        if (!java.nio.file.Files.exists(mlPath)) {
+            return;
+        }
+        java.nio.file.Path backendPath = java.nio.file.Path.of(
+                "src",
+                "main",
+                "resources",
+                "fallback_forecasts.json"
+        );
+        assertThat(java.nio.file.Files.readAllBytes(backendPath))
+                .isEqualTo(java.nio.file.Files.readAllBytes(mlPath));
+    }
+
     private MlServiceClient client(RestClient.Builder builder) {
         return new MlServiceClient(builder, properties(), new ObjectMapper());
     }

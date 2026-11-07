@@ -15,7 +15,7 @@ Before modifying any code in `frontend/mobile/`, read root [`AGENTS.md`](../../A
    - Never relabel `DEMO_FIXTURE` or cached data as live `MODEL` output, and never substitute a cached response unless `findMatchingCachedResult` confirms exact consignment equality (`sameRequest`) with `forecastSource !== "DEMO_FIXTURE"`.
 4. **Expo SDK 58 Tooling:**
    - Install Expo-compatible native dependencies with `npx expo install <package>`.
-   - Navigation uses state-driven 4-tab layout in `App.tsx` (`Directive`, `Setup`, `Routes`, `Intel`) compatible out-of-the-box with Expo Go on Android.
+   - Navigation uses state-driven 4-tab layout in `App.tsx` (`Directive`, `Markets`, `Forecast`, `Trust & Live`) compatible out-of-the-box with Expo Go on Android.
 5. **Verification Before Completion:**
    - `npm run typecheck` (`tsc --noEmit`)
    - `npm test` (`node --import tsx --test 'src/**/*.test.ts'`)

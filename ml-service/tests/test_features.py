@@ -80,3 +80,31 @@ def test_mean_absolute_error():
 def test_invalid_current_price_is_rejected():
     with pytest.raises(ValueError, match="positive"):
         movement_direction(0, 100)
+
+
+def test_build_features_respects_calendar_gaps_without_monthly_shift_leakage():
+    frame = sample_frame(20)
+    gapped = pd.concat(
+        [
+            frame.iloc[:15],
+            pd.DataFrame(
+                [
+                    {
+                        "market_code": "DAMBULLA",
+                        "crop_code": "TOMATO",
+                        "recorded_date": pd.Timestamp("2026-03-01"),
+                        "wholesale_price_lkr_per_kg": 260.0,
+                        "arrival_volume_tonnes": 65.0,
+                        "diesel_price_lkr": 283.0,
+                        "precipitation_mm": 4.0,
+                    }
+                ]
+            ),
+        ],
+        ignore_index=True,
+    )
+    featured = build_features(gapped)
+    last_row = featured.iloc[-1]
+    assert pd.isna(last_row["price_lag_1d"])
+    assert pd.isna(last_row["price_lag_7d"])
+

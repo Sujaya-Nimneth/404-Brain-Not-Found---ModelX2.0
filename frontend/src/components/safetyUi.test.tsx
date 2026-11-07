@@ -43,16 +43,46 @@ describe("safety-critical dashboard presentation", () => {
     expect(screen.getByText(/Test Junction prices are forecast/)).toBeVisible();
     expect(screen.queryByText(/Dambulla prices are forecast/)).toBeNull();
     expect(screen.getByText("Inputs SEED")).toBeVisible();
+    expect(screen.getByText("Default")).toBeVisible();
+    expect(screen.getByText("No reroute")).toBeVisible();
   });
 
-  it("shows the route ledger's fuel, trip, capacity, and delta fields", () => {
+  it("displays Hold safety badges when directive severity is HOLD_HARVEST", () => {
+    const holdResponse: AnalyzeResponse = {
+      ...demoResponse,
+      primaryDirective: {
+        ...demoResponse.primaryDirective,
+        severity: "HOLD_HARVEST",
+        headline: "Hold harvest — net return is negative across reachable markets",
+        explanation: "Every reachable market produces a weak net outcome.",
+        recommendedMarketCode: null,
+        profitDeltaLkr: null,
+        profitUpliftPct: null,
+      },
+      marketComparisons: demoResponse.marketComparisons.map((market) => ({
+        ...market,
+        recommended: false,
+      })),
+    };
+
+    render(<PrimaryDirectiveCard response={holdResponse} />);
+
+    expect(screen.getAllByText("Hold")).toHaveLength(2);
+    expect(screen.getByText("do not dispatch")).toBeVisible();
+    expect(screen.getByText(/Hold dispatch until wholesale demand recovers/)).toBeVisible();
+  });
+
+  it("shows the route ledger's spot/forecast, gross revenue, fuel, trip, capacity, and 2-dp delta fields", () => {
     render(<RoutingLogisticsPanel markets={demoResponse.marketComparisons} />);
 
     expect(screen.getByText("410 km")).toBeVisible();
     expect(screen.getByText("32.8 L")).toBeVisible();
     expect(screen.getAllByText("1 trip")).toHaveLength(4);
     expect(screen.getAllByText("1,500 kg capacity")).toHaveLength(4);
-    expect(screen.getByText("+23,239")).toBeVisible();
+    expect(screen.getByText("+23,238.58")).toBeVisible();
+    expect(screen.getByText("181,734.38")).toBeVisible();
+    expect(screen.getByText("969.25 kg sold")).toBeVisible();
+    expect(screen.getByText("187.50")).toBeVisible();
   });
 
   it("renders both mandatory evaluation baselines", () => {
@@ -65,18 +95,18 @@ describe("safety-critical dashboard presentation", () => {
     expect(screen.getByText("Trained model")).toBeVisible();
     expect(screen.getByText("Naive persistence")).toBeVisible();
     expect(screen.getByText("7-day moving average")).toBeVisible();
-    expect(screen.getByText("67.45%")).toBeVisible();
-    expect(screen.getByText("LKR 5.45")).toBeVisible();
+    expect(screen.getByText("93.81%")).toBeVisible();
+    expect(screen.getByText("LKR 1.81")).toBeVisible();
   });
 
   it("formats positive, negative, baseline, and undefined profit uplifts cleanly", () => {
     const sample = demoResponse.marketComparisons[0];
     expect(
       formatUpliftLabel({ ...sample, profitDeltaLkr: 23238.58, profitUpliftPct: 15.84 }),
-    ).toBe("+15.8%");
+    ).toBe("+15.84%");
     expect(
       formatUpliftLabel({ ...sample, profitDeltaLkr: -5400, profitUpliftPct: -8.42 }),
-    ).toBe("-8.4%");
+    ).toBe("-8.42%");
     expect(
       formatUpliftLabel({ ...sample, profitDeltaLkr: 0, profitUpliftPct: 0 }),
     ).toBe("baseline");

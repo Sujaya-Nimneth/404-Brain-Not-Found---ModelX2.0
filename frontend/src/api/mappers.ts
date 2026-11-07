@@ -178,7 +178,7 @@ export function mapMetadataConfig(payload: unknown): MetadataConfig {
         code: stringAt(crop.code, `$.crops[${index}].code`),
         name: stringAt(crop.name, `$.crops[${index}].name`),
         spoilageRatePer100KmPct: numberAt(
-          crop.spoilage_rate_per_100km_pct,
+          crop.spoilage_rate_per_100km_pct ?? crop.spoilage_rate_per100_km_pct,
           `$.crops[${index}].spoilage_rate_per_100km_pct`,
         ),
       };
@@ -413,6 +413,14 @@ function mapMarketComparison(
       market.predicted_price_lkr,
       `${path}.predicted_price_lkr`,
     ),
+    pctChange: optionalNullableNumberAt(
+      market.pct_change,
+      `${path}.pct_change`,
+    ),
+    effectiveVolumeKg: optionalNullableNumberAt(
+      market.effective_volume_kg,
+      `${path}.effective_volume_kg`,
+    ),
     grossRevenueLkr: numberAt(
       market.gross_revenue_lkr,
       `${path}.gross_revenue_lkr`,
@@ -447,6 +455,22 @@ function mapMarketComparison(
     ),
     recommended: booleanAt(market.is_recommended, `${path}.is_recommended`),
     direction: enumAt(market.direction, directions, `${path}.direction`),
+    glutRiskLevel:
+      market.glut_risk_level === undefined || market.glut_risk_level === null
+        ? null
+        : enumAt(
+            market.glut_risk_level,
+            riskLevels,
+            `${path}.glut_risk_level`,
+          ),
+    confidenceScore: optionalNullableNumberAt(
+      market.confidence_score,
+      `${path}.confidence_score`,
+    ),
+    primaryDriver:
+      market.primary_driver === undefined
+        ? null
+        : nullableStringAt(market.primary_driver, `${path}.primary_driver`),
   };
 }
 
@@ -562,6 +586,10 @@ function numberAt(value: unknown, path: string): number {
 
 function nullableNumberAt(value: unknown, path: string): number | null {
   return value === null ? null : numberAt(value, path);
+}
+
+function optionalNullableNumberAt(value: unknown, path: string): number | null {
+  return value === undefined || value === null ? null : numberAt(value, path);
 }
 
 function booleanAt(value: unknown, path: string): boolean {

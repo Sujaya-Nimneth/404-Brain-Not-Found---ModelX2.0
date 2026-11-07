@@ -12,6 +12,35 @@ public record MarketEvaluation(
         ProfitBreakdown profit,
         BigDecimal distanceKm,
         BigDecimal profitUpliftPct,
-        String direction
+        BigDecimal pctChange,
+        String direction,
+        String glutRiskLevel,
+        BigDecimal confidenceScore,
+        String primaryDriver
 ) {
+    public MarketEvaluation(
+            String marketCode,
+            String marketName,
+            BigDecimal currentPriceLkr,
+            BigDecimal predictedPriceLkr,
+            ProfitBreakdown profit,
+            BigDecimal distanceKm,
+            BigDecimal profitUpliftPct,
+            String direction
+    ) {
+        this(
+                marketCode,
+                marketName,
+                currentPriceLkr,
+                predictedPriceLkr,
+                profit,
+                distanceKm,
+                profitUpliftPct,
+                null,
+                direction,
+                null,
+                null,
+                null
+        );
+    }
 }

@@ -7,12 +7,16 @@ import logging
 import os
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from typing import Iterable
 
 import httpx
 
 logger = logging.getLogger(__name__)
+
+MAX_RESPONSE_BYTES = 25 * 1024 * 1024
+MAX_ERROR_MESSAGE_CHARS = 500
 
 HDX_DEFAULT_URL = (
     "https://data.humdata.org/dataset/"
@@ -23,19 +27,36 @@ HDX_DEFAULT_URL = (
 
 MARKET_MAPPING = {
     "Economic Centre-Dambulla": "DAMBULLA",
+    "Dambulla": "DAMBULLA",
+    "Dambulla (DEC)": "DAMBULLA",
     "Economic Centre-Pettah": "PETTAH_COLOMBO",
+    "Pettah": "PETTAH_COLOMBO",
+    "Colombo Pettah": "PETTAH_COLOMBO",
     "Nuwara Eliya": "NUWARA_ELIYA",
+    "Nuwara Eliya (DEC)": "NUWARA_ELIYA",
     "Keppetipola (DEC}": "KEPPETIPOLA",
+    "Keppetipola (DEC)": "KEPPETIPOLA",
+    "Keppetipola": "KEPPETIPOLA",
     "Meegoda(DEC)": "MEEGODA",
+    "Meegoda (DEC)": "MEEGODA",
+    "Meegoda": "MEEGODA",
     "Thambuttegama": "THAMBUTTEGAMA",
+    "Thambuttegama (DEC)": "THAMBUTTEGAMA",
     "Jaffna": "JAFFNA",
 }
 
 COMMODITY_MAPPING = {
     "Tomatoes": "TOMATO",
+    "Tomato": "TOMATO",
     "Carrots": "CARROT",
+    "Carrot": "CARROT",
     "Onions (red, local)": "RED_ONION",
     "Onions (red)": "RED_ONION",
+    "Red Onion": "RED_ONION",
+    "Chilies (green)": "GREEN_CHILI",
+    "Chillies (green)": "GREEN_CHILI",
+    "Green Chili": "GREEN_CHILI",
+    "Green Chillies": "GREEN_CHILI",
 }
 
 
@@ -60,6 +81,22 @@ class WeatherObservation:
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def round_half_up_2dp(value: float | Decimal | str) -> float:
+    return float(
+        Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    )
+
+
+def bound_message(
+    message: str,
+    max_length: int = MAX_ERROR_MESSAGE_CHARS,
+) -> str:
+    cleaned = " ".join(message.split())
+    if len(cleaned) <= max_length:
+        return cleaned
+    return cleaned[: max_length - 3].rstrip() + "..."
 
 
 def parse_hdx_prices(
@@ -94,7 +131,7 @@ def parse_hdx_prices(
             market_code=market_code,
             crop_code=crop_code,
             recorded_date=recorded_date,
-            wholesale_price_lkr_per_kg=round(price, 2),
+            wholesale_price_lkr_per_kg=round_half_up_2dp(price),
             source=source_label,
         )
     return sorted(
@@ -123,8 +160,8 @@ def parse_open_meteo_weather(
     ):
         if precipitation is None:
             continue
-        parsed_max = None if maximum is None else round(float(maximum), 2)
-        parsed_min = None if minimum is None else round(float(minimum), 2)
+        parsed_max = None if maximum is None else round_half_up_2dp(maximum)
+        parsed_min = None if minimum is None else round_half_up_2dp(minimum)
         if (
             parsed_max is not None
             and parsed_min is not None
@@ -135,7 +172,7 @@ def parse_open_meteo_weather(
             WeatherObservation(
                 market_code=market_code,
                 observation_date=date.fromisoformat(day),
-                precipitation_mm=max(0.0, round(float(precipitation), 2)),
+                precipitation_mm=max(0.0, round_half_up_2dp(precipitation)),
                 temp_max_c=parsed_max,
                 temp_min_c=parsed_min,
                 source=source_label,
@@ -150,13 +187,27 @@ def fetch_text(
     params: dict[str, object] | None = None,
     client: httpx.Client | None = None,
     timeout_seconds: float = 30.0,
+    max_bytes: int = MAX_RESPONSE_BYTES,
 ) -> str:
     owns_client = client is None
-    active_client = client or httpx.Client(timeout=timeout_seconds, follow_redirects=True)
+    active_client = client or httpx.Client(
+        timeout=timeout_seconds,
+        follow_redirects=True,
+    )
     try:
-        response = active_client.get(url, params=params)
-        response.raise_for_status()
-        return response.text
+        with active_client.stream("GET", url, params=params) as response:
+            response.raise_for_status()
+            chunks: list[bytes] = []
+            total = 0
+            for chunk in response.iter_bytes():
+                total += len(chunk)
+                if total > max_bytes:
+                    raise ValueError(
+                        f"Upstream payload exceeded {max_bytes} byte limit"
+                    )
+                chunks.append(chunk)
+            encoding = response.encoding or "utf-8"
+            return b"".join(chunks).decode(encoding, errors="replace")
     finally:
         if owns_client:
             active_client.close()
@@ -200,6 +251,16 @@ def dedupe_by_key(
 ) -> list[PriceObservation]:
     by_key = {
         (item.market_code, item.crop_code, item.recorded_date): item
+        for item in observations
+    }
+    return list(by_key.values())
+
+
+def dedupe_weather_by_key(
+    observations: Iterable[WeatherObservation],
+) -> list[WeatherObservation]:
+    by_key = {
+        (item.market_code, item.observation_date): item
         for item in observations
     }
     return list(by_key.values())

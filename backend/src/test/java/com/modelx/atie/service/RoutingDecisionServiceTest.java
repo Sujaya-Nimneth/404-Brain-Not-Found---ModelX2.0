@@ -55,6 +55,7 @@ class RoutingDecisionServiceTest {
 
         assertThat(result.primaryDirective().severity()).isEqualTo("PROCEED_DEFAULT");
         assertThat(result.recommendedMarketCode()).isNull();
+        assertThat(result.primaryDirective().recommendedMarketCode()).isNull();
     }
 
     @Test

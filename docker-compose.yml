@@ -11,7 +11,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
       - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
-      - ./db/ingestion_schema.sql:/docker-entrypoint-initdb.d/03-ingestion.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-atie} -d ${POSTGRES_DB:-atie}"]
       interval: 5s
@@ -25,12 +24,13 @@ services:
     environment:
       POSTGRES_DSN: postgresql://${POSTGRES_USER:-atie}:${POSTGRES_PASSWORD:-atie_dev_password}@postgres:5432/${POSTGRES_DB:-atie}
       INGESTION_INTERVAL_SECONDS: ${INGESTION_INTERVAL_SECONDS:-21600}
+      INGESTION_FETCH_TIMEOUT_SECONDS: ${INGESTION_FETCH_TIMEOUT_SECONDS:-20}
       HDX_PRICE_URL: ${HDX_PRICE_URL:-https://data.humdata.org/dataset/0298c598-d312-4771-b564-f4ac4d831f05/resource/3638f0d6-9969-48cf-a919-1d879d037ec6/download/wfp_food_prices_lka.csv}
-      HDX_CACHE_PATH: /app/data/cache/hdx_wfp_prices.csv
+      HDX_CACHE_PATH: ${HDX_CACHE_PATH:-/app/data/cache/hdx_wfp_prices.csv}
       CROPIX_URL: ${CROPIX_URL:-}
-      CROPIX_CACHE_PATH: /app/data/cache/cropix_prices.csv
-      OPEN_METEO_URL: https://api.open-meteo.com/v1/forecast
-      OPEN_METEO_CACHE_PATH: /app/data/cache/weather_forecasts.json
+      CROPIX_CACHE_PATH: ${CROPIX_CACHE_PATH:-/app/data/cache/cropix_prices.csv}
+      OPEN_METEO_URL: ${OPEN_METEO_URL:-https://api.open-meteo.com/v1/forecast}
+      OPEN_METEO_CACHE_PATH: ${OPEN_METEO_CACHE_PATH:-/app/data/cache/weather_forecasts.json}
       INGESTION_SCHEMA_PATH: /app/ingestion_schema.sql
     volumes:
       - ./db/ingestion_schema.sql:/app/ingestion_schema.sql:ro
@@ -89,7 +89,7 @@ services:
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-atie_dev_password}
       ML_SERVICE_URL: http://ml-service:8000
       ML_CONNECT_TIMEOUT_SECONDS: ${ML_CONNECT_TIMEOUT_SECONDS:-3}
-      ML_READ_TIMEOUT_SECONDS: ${ML_READ_TIMEOUT_SECONDS:-15}
+      ML_READ_TIMEOUT_SECONDS: ${ML_READ_TIMEOUT_SECONDS:-5}
       SAFE_MARGIN_PCT: ${SAFE_MARGIN_PCT:-5.0}
       SAFE_ABSOLUTE_FLOOR_LKR: ${SAFE_ABSOLUTE_FLOOR_LKR:-1000.00}
       MOVEMENT_THRESHOLD_PCT: ${MOVEMENT_THRESHOLD_PCT:-10.0}

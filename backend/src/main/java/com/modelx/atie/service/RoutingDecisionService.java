@@ -92,7 +92,7 @@ public class RoutingDecisionService {
                         "Proceed to " + defaultMarket.marketName(),
                         "No alternative beats the default market by the required safe margin.",
                         defaultMarketCode,
-                        defaultMarketCode,
+                        null,
                         BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP),
                         BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
                 ),

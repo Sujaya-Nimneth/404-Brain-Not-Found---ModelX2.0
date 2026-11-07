@@ -56,23 +56,73 @@ MUTED = colors.HexColor("#66736b")
 LINE = colors.HexColor("#d9ddd2")
 CODE_BG = colors.HexColor("#edf0e8")
 
-FONT_DIR = Path("/System/Library/Fonts/Supplemental")
+FONT_FAMILIES_CANDIDATES: list[tuple[Path, str, str, str, str]] = [
+    (
+        Path("/System/Library/Fonts/Supplemental"),
+        "Georgia.ttf",
+        "Georgia Bold.ttf",
+        "Georgia Italic.ttf",
+        "Georgia Bold Italic.ttf",
+    ),
+    (
+        Path("/Library/Fonts"),
+        "Georgia.ttf",
+        "Georgia Bold.ttf",
+        "Georgia Italic.ttf",
+        "Georgia Bold Italic.ttf",
+    ),
+    (
+        Path("/usr/share/fonts/truetype/liberation"),
+        "LiberationSerif-Regular.ttf",
+        "LiberationSerif-Bold.ttf",
+        "LiberationSerif-Italic.ttf",
+        "LiberationSerif-BoldItalic.ttf",
+    ),
+    (
+        Path("/usr/share/fonts/truetype/dejavu"),
+        "DejaVuSerif.ttf",
+        "DejaVuSerif-Bold.ttf",
+        "DejaVuSerif-Italic.ttf",
+        "DejaVuSerif-BoldItalic.ttf",
+    ),
+]
+
+SERIF_REGULAR = "Georgia"
+SERIF_BOLD = "Georgia-Bold"
+SERIF_ITALIC = "Georgia-Italic"
+SERIF_BOLD_ITALIC = "Georgia-BoldItalic"
 
 
 def register_fonts() -> None:
-    pdfmetrics.registerFont(TTFont("Georgia", FONT_DIR / "Georgia.ttf"))
-    pdfmetrics.registerFont(TTFont("Georgia-Bold", FONT_DIR / "Georgia Bold.ttf"))
-    pdfmetrics.registerFont(TTFont("Georgia-Italic", FONT_DIR / "Georgia Italic.ttf"))
-    pdfmetrics.registerFont(
-        TTFont("Georgia-BoldItalic", FONT_DIR / "Georgia Bold Italic.ttf")
-    )
-    pdfmetrics.registerFontFamily(
-        "Georgia",
-        normal="Georgia",
-        bold="Georgia-Bold",
-        italic="Georgia-Italic",
-        boldItalic="Georgia-BoldItalic",
-    )
+    global SERIF_REGULAR, SERIF_BOLD, SERIF_ITALIC, SERIF_BOLD_ITALIC
+    for directory, reg, bold, ital, bold_ital in FONT_FAMILIES_CANDIDATES:
+        paths = [directory / reg, directory / bold, directory / ital, directory / bold_ital]
+        if all(path.exists() for path in paths):
+            pdfmetrics.registerFont(TTFont("Georgia", paths[0]))
+            pdfmetrics.registerFont(TTFont("Georgia-Bold", paths[1]))
+            pdfmetrics.registerFont(TTFont("Georgia-Italic", paths[2]))
+            pdfmetrics.registerFont(TTFont("Georgia-BoldItalic", paths[3]))
+            pdfmetrics.registerFontFamily(
+                "Georgia",
+                normal="Georgia",
+                bold="Georgia-Bold",
+                italic="Georgia-Italic",
+                boldItalic="Georgia-BoldItalic",
+            )
+            return
+
+    # Fallback to ReportLab's built-in Times family on minimal headless hosts
+    SERIF_REGULAR = "Times-Roman"
+    SERIF_BOLD = "Times-Bold"
+    SERIF_ITALIC = "Times-Italic"
+    SERIF_BOLD_ITALIC = "Times-BoldItalic"
+    for style in STYLES.values():
+        if style.fontName == "Georgia":
+            style.fontName = SERIF_REGULAR
+        elif style.fontName == "Georgia-Bold":
+            style.fontName = SERIF_BOLD
+        elif style.fontName == "Georgia-Italic":
+            style.fontName = SERIF_ITALIC
 
 
 def styles() -> dict[str, ParagraphStyle]:
@@ -379,6 +429,23 @@ def quote_block(text: str) -> Table:
     return block
 
 
+def is_list_continuation(line: str) -> bool:
+    stripped = line.strip()
+    if not stripped:
+        return False
+    if (
+        stripped.startswith("#")
+        or stripped.startswith("|")
+        or stripped.startswith("```")
+        or stripped.startswith(">")
+        or stripped == "<!-- pagebreak -->"
+        or re.match(r"^[-*]\s+", stripped)
+        or re.match(r"^\d+\.\s+", stripped)
+    ):
+        return False
+    return line.startswith(" ") or line.startswith("\t")
+
+
 def markdown_flowables(markdown: str) -> list:
     lines = markdown.splitlines()
     flowables: list = []
@@ -446,14 +513,17 @@ def markdown_flowables(markdown: str) -> list:
         if re.match(r"^[-*]\s+", stripped):
             items = []
             while index < len(lines) and re.match(r"^[-*]\s+", lines[index].strip()):
-                item_text = re.sub(r"^[-*]\s+", "", lines[index].strip())
+                item_parts = [re.sub(r"^[-*]\s+", "", lines[index].strip())]
+                index += 1
+                while index < len(lines) and is_list_continuation(lines[index]):
+                    item_parts.append(lines[index].strip())
+                    index += 1
                 items.append(
                     ListItem(
-                        Paragraph(inline_markup(item_text), STYLES["bullet"]),
+                        Paragraph(inline_markup(" ".join(item_parts)), STYLES["bullet"]),
                         leftIndent=8,
                     )
                 )
-                index += 1
             flowables.extend(
                 [
                     ListFlowable(
@@ -461,7 +531,7 @@ def markdown_flowables(markdown: str) -> list:
                         bulletType="bullet",
                         start="circle",
                         leftIndent=12,
-                        bulletFontName="Georgia",
+                        bulletFontName=SERIF_REGULAR,
                         bulletFontSize=6,
                         bulletColor=CLAY,
                     ),
@@ -472,21 +542,24 @@ def markdown_flowables(markdown: str) -> list:
         if re.match(r"^\d+\.\s+", stripped):
             items = []
             while index < len(lines) and re.match(r"^\d+\.\s+", lines[index].strip()):
-                item_text = re.sub(r"^\d+\.\s+", "", lines[index].strip())
+                item_parts = [re.sub(r"^\d+\.\s+", "", lines[index].strip())]
+                index += 1
+                while index < len(lines) and is_list_continuation(lines[index]):
+                    item_parts.append(lines[index].strip())
+                    index += 1
                 items.append(
                     ListItem(
-                        Paragraph(inline_markup(item_text), STYLES["bullet"]),
+                        Paragraph(inline_markup(" ".join(item_parts)), STYLES["bullet"]),
                         leftIndent=8,
                     )
                 )
-                index += 1
             flowables.extend(
                 [
                     ListFlowable(
                         items,
                         bulletType="1",
                         leftIndent=16,
-                        bulletFontName="Georgia-Bold",
+                        bulletFontName=SERIF_BOLD,
                         bulletFontSize=7,
                         bulletColor=MOSS,
                     ),
@@ -530,23 +603,23 @@ def draw_cover(canv: canvas.Canvas, doc: BaseDocTemplate) -> None:
     canv.line(54, PAGE_HEIGHT - 60, PAGE_WIDTH - 54, PAGE_HEIGHT - 60)
 
     canv.setFillColor(MOSS_DARK)
-    canv.setFont("Georgia-Bold", 8)
+    canv.setFont(SERIF_BOLD, 8)
     canv.drawString(54, PAGE_HEIGHT - 46, "TECHNICAL REPORT  /  MODELX 2.0")
-    canv.setFont("Georgia", 8)
-    canv.drawRightString(PAGE_WIDTH - 54, PAGE_HEIGHT - 46, "VERSION 1.0")
+    canv.setFont(SERIF_REGULAR, 8)
+    canv.drawRightString(PAGE_WIDTH - 54, PAGE_HEIGHT - 46, "VERSION 2.0")
 
     canv.setFillColor(INK)
-    canv.setFont("Georgia-Bold", 58)
+    canv.setFont(SERIF_BOLD, 58)
     canv.drawString(54, PAGE_HEIGHT - 165, "ATIE")
     canv.setFillColor(MOSS_DARK)
-    canv.setFont("Georgia-Bold", 20)
+    canv.setFont(SERIF_BOLD, 20)
     canv.drawString(54, PAGE_HEIGHT - 202, "Agricultural Trade & Intelligence Engine")
     canv.setFillColor(CLAY)
-    canv.setFont("Georgia-Bold", 13)
+    canv.setFont(SERIF_BOLD, 13)
     canv.drawString(54, PAGE_HEIGHT - 232, "Predict the price. Price the route. Protect the margin.")
 
     canv.setFillColor(INK)
-    canv.setFont("Georgia", 9.5)
+    canv.setFont(SERIF_REGULAR, 9.5)
     intro = canv.beginText(54, PAGE_HEIGHT - 268)
     intro.setLeading(14)
     for line in [
@@ -559,8 +632,8 @@ def draw_cover(canv: canvas.Canvas, doc: BaseDocTemplate) -> None:
     cards = [
         ("48-72h", "forecast horizon"),
         ("5% + LKR 1k", "safe-margin rule"),
-        ("67.45% / 68.03%", "48h / 72h DS"),
-        ("2.59% / 2.93%", "48h / 72h SM-FPR"),
+        ("93.81% / 92.86%", "48h / 72h DS"),
+        ("0.14% / 0.19%", "48h / 72h SM-FPR"),
     ]
     card_width = (CONTENT_WIDTH - 18) / 2
     card_height = 70
@@ -573,23 +646,23 @@ def draw_cover(canv: canvas.Canvas, doc: BaseDocTemplate) -> None:
         canv.setStrokeColor(colors.HexColor("#d5d9cf"))
         canv.roundRect(x, y, card_width, card_height, 12, fill=1, stroke=1)
         canv.setFillColor(MOSS_DARK)
-        canv.setFont("Georgia-Bold", 17)
+        canv.setFont(SERIF_BOLD, 17)
         canv.drawString(x + 16, y + 39, value)
         canv.setFillColor(MUTED)
-        canv.setFont("Georgia", 8)
+        canv.setFont(SERIF_REGULAR, 8)
         canv.drawString(x + 16, y + 20, label)
 
     canv.setFillColor(INK)
-    canv.setFont("Georgia-Bold", 10)
+    canv.setFont(SERIF_BOLD, 10)
     canv.drawString(54, 146, "Team 404 Brain not found")
-    canv.setFont("Georgia", 9)
+    canv.setFont(SERIF_REGULAR, 9)
     canv.setFillColor(MUTED)
     canv.drawString(54, 128, "Informatics Institute of Technology")
     canv.drawString(54, 112, "IEEE Computational Intelligence Society Student Chapter")
-    canv.setFont("Georgia-Italic", 8)
-    canv.drawString(54, 82, "Canonical fixture verified against the running Compose stack.")
+    canv.setFont(SERIF_ITALIC, 8)
+    canv.drawString(54, 82, "Canonical fixture & live XGBoost stack verified against Docker Compose.")
     canv.setFillColor(MOSS_DARK)
-    canv.setFont("Georgia-Bold", 8)
+    canv.setFont(SERIF_BOLD, 8)
     canv.drawRightString(PAGE_WIDTH - 54, 82, "OCTOBER 27, 2026")
     canv.restoreState()
 
@@ -603,10 +676,10 @@ def draw_content_page(canv: canvas.Canvas, doc: BaseDocTemplate) -> None:
     canv.line(CONTENT_LEFT, PAGE_HEIGHT - 38, PAGE_WIDTH - CONTENT_RIGHT, PAGE_HEIGHT - 38)
     canv.line(CONTENT_LEFT, 34, PAGE_WIDTH - CONTENT_RIGHT, 34)
     canv.setFillColor(MOSS_DARK)
-    canv.setFont("Georgia-Bold", 7)
+    canv.setFont(SERIF_BOLD, 7)
     canv.drawString(CONTENT_LEFT, PAGE_HEIGHT - 30, "ATIE  /  TECHNICAL REPORT")
     canv.setFillColor(MUTED)
-    canv.setFont("Georgia", 7)
+    canv.setFont(SERIF_REGULAR, 7)
     canv.drawRightString(PAGE_WIDTH - CONTENT_RIGHT, PAGE_HEIGHT - 30, "MODELX 2.0")
     canv.drawString(CONTENT_LEFT, 23, "404 Brain not found")
     canv.drawRightString(PAGE_WIDTH - CONTENT_RIGHT, 23, f"PAGE {doc.page}")
@@ -623,10 +696,10 @@ def draw_summary_page(canv: canvas.Canvas, doc: BaseDocTemplate) -> None:
     canv.setLineWidth(0.5)
     canv.line(CONTENT_LEFT, 34, PAGE_WIDTH - CONTENT_RIGHT, 34)
     canv.setFillColor(MOSS_DARK)
-    canv.setFont("Georgia-Bold", 7)
+    canv.setFont(SERIF_BOLD, 7)
     canv.drawString(CONTENT_LEFT, 23, "ATIE  /  TWO-PAGE SUMMARY")
     canv.setFillColor(MUTED)
-    canv.setFont("Georgia", 7)
+    canv.setFont(SERIF_REGULAR, 7)
     canv.drawRightString(PAGE_WIDTH - CONTENT_RIGHT, 23, f"MODELX 2.0  |  PAGE {doc.page}")
     canv.restoreState()
 
@@ -699,7 +772,7 @@ def summary_bullets(items: list[str]) -> ListFlowable:
         bulletType="bullet",
         start="circle",
         leftIndent=10,
-        bulletFontName="Georgia",
+        bulletFontName=SERIF_REGULAR,
         bulletFontSize=5,
         bulletColor=CLAY,
         spaceAfter=3,
@@ -759,7 +832,7 @@ def build_summary() -> None:
                 ParagraphStyle(
                     "SummaryTitle",
                     parent=STYLES["h2"],
-                    fontName="Georgia-Bold",
+                    fontName=SERIF_BOLD,
                     fontSize=18,
                     leading=20,
                     textColor=CLAY,
@@ -782,8 +855,8 @@ def build_summary() -> None:
             summary_table(
                 ["Horizon", "Model DS", "MAE", "SM-FPR", "Reroutes"],
                 [
-                    ["48h", "67.45%", "5.45", "2.59%", "6,369"],
-                    ["72h", "68.03%", "5.95", "2.93%", "6,624"],
+                    ["48h", "93.81%", "1.81", "0.14%", "2,106"],
+                    ["72h", "92.86%", "2.87", "0.19%", "2,071"],
                 ],
                 CONTENT_WIDTH,
             ),
@@ -824,8 +897,8 @@ def build_summary() -> None:
             result_card(),
             Spacer(1, 5),
             summary_paragraph(
-                "The same request with `demo_mode: false` runs normal model "
-                "inference and returns `PROCEED_DEFAULT` in the current data state."
+                "The same request with `demo_mode: false` runs live `xgb-v2.0` "
+                "inference and independently recommends `PETTAH_COLOMBO` (`+22.51%`)."
             ),
             FrameBreak(),
         ]
@@ -835,11 +908,11 @@ def build_summary() -> None:
         [
             summary_heading("How it works"),
             code_block(
-                "React dashboard\n"
+                "Web dashboard / Android app\n"
                 "      |\n"
                 "Spring Boot API ----> PostgreSQL\n"
                 "      |\n"
-                "Python ML service ----> Random Forest\n"
+                "Python ML service ----> XGBoost\n"
                 "      ^\n"
                 "Ingestion worker ----> HDX / weather / CROPIX",
                 compact=True,
@@ -870,7 +943,7 @@ def build_summary() -> None:
                 [
                     "A deployable Compose stack with five health-checked services.",
                     "A documented API, Swagger UI, fallback path, and provenance endpoint.",
-                    "A browser-tested dashboard with explicit source and freshness labels.",
+                    "Web dashboard + Android field app sharing TypeScript contracts.",
                 ]
             ),
             NextPageTemplate("summary2"),
@@ -887,15 +960,15 @@ def build_summary() -> None:
                     "Failed live calls are visibly labeled and never presented as live answers.",
                     "API responses carry `X-Request-ID`; health and metrics are exposed.",
                     "Optional API-key protection is disabled by default for judging.",
-                    "CI covers ML tests, backend tests, frontend lint/build, and a Compose-backed Playwright test.",
+                    "CI covers ML, backend, web, Android mobile, and Compose Playwright gates.",
                 ]
             ),
             summary_heading("Failure behavior"),
             summary_paragraph(
-                "If the ML service is unavailable, the backend can use a "
-                "deterministic fallback with a visible `FALLBACK` label. If the "
-                "live analysis call fails, the dashboard preserves the verified "
-                "fixture only with an explicit offline warning."
+                "If the ML service is unavailable, the backend uses a "
+                "deterministic fallback with a visible `FALLBACK` label. If a "
+                "live analysis call fails, the UI retains a previous result only "
+                "for the identical consignment and never substitutes `DEMO_FIXTURE`."
             ),
             summary_heading("Decision contract"),
             summary_table(
@@ -917,9 +990,9 @@ def build_summary() -> None:
             summary_table(
                 ["Baseline 48h", "DS", "MAE", "SM-FPR"],
                 [
-                    ["Model", "67.45%", "5.45", "2.59%"],
-                    ["Naive", "0.00%", "6.23", "3.75%"],
-                    ["MA7", "52.21%", "8.19", "5.15%"],
+                    ["Model", "93.81%", "1.81", "0.14%"],
+                    ["Naive", "0.00%", "12.25", "24.65%"],
+                    ["MA7", "40.99%", "16.35", "23.59%"],
                 ],
                 236,
             ),
@@ -1022,7 +1095,7 @@ def build_summary() -> None:
                             ParagraphStyle(
                                 "SummaryEnd",
                                 parent=STYLES["summary_small"],
-                                fontName="Georgia-Bold",
+                                fontName=SERIF_BOLD,
                                 fontSize=11,
                                 leading=15,
                                 textColor=MOSS_DARK,

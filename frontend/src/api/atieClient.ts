@@ -1,3 +1,4 @@
+import { demoRequest, demoResponse } from "../data/demoResponse";
 import type {
   AnalyzeRequest,
   AnalyzeResponse,
@@ -103,19 +104,44 @@ async function apiError(
   );
 }
 
+function isCanonicalDemoRequest(request: AnalyzeRequest): boolean {
+  return (
+    request.demoMode &&
+    request.originCode === demoRequest.originCode &&
+    request.defaultMarketCode === demoRequest.defaultMarketCode &&
+    request.cropCode === demoRequest.cropCode &&
+    request.quantityKg === demoRequest.quantityKg &&
+    request.vehicleType === demoRequest.vehicleType &&
+    request.horizonHours === demoRequest.horizonHours
+  );
+}
+
 export async function analyzeConsignment(
   request: AnalyzeRequest,
   signal?: AbortSignal,
 ): Promise<AnalyzeResponse> {
-  const response = await fetch(`${API_BASE_URL}/directives/analyze`, {
-    method: "POST",
-    headers: authHeaders(true),
-    body: JSON.stringify(toApiRequest(request)),
-    signal,
-  });
-  return mapAnalyzeResponse(
-    await responseJson(response, "The directive analysis"),
-  );
+  try {
+    const response = await fetch(`${API_BASE_URL}/directives/analyze`, {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify(toApiRequest(request)),
+      signal,
+    });
+    return mapAnalyzeResponse(
+      await responseJson(response, "The directive analysis"),
+    );
+  } catch (error) {
+    if (
+      error instanceof AtieApiError ||
+      (error instanceof Error && error.name === "AbortError")
+    ) {
+      throw error;
+    }
+    if (isCanonicalDemoRequest(request)) {
+      return demoResponse;
+    }
+    throw error;
+  }
 }
 
 export async function fetchMarketHistory(

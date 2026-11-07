@@ -17,7 +17,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE + 1)
+@Order(Ordered.HIGHEST_PRECEDENCE + 2)
 public class ApiKeyFilter extends OncePerRequestFilter {
     private static final String HEADER = "X-ATIE-API-Key";
 
@@ -32,10 +32,10 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         if (!properties.apiKeyRequired()) {
             return true;
         }
-        String path = request.getRequestURI();
+        String path = normalizePath(request);
         return !path.startsWith("/api/")
                 || "OPTIONS".equalsIgnoreCase(request.getMethod())
-                || path.startsWith("/api/v1/metadata/data-status");
+                || "/api/v1/metadata/data-status".equals(path);
     }
 
     @Override
@@ -60,6 +60,43 @@ public class ApiKeyFilter extends OncePerRequestFilter {
             return;
         }
         filterChain.doFilter(request, response);
+    }
+
+    static String normalizePath(HttpServletRequest request) {
+        String raw = request.getRequestURI();
+        if (raw == null || raw.isEmpty()) {
+            return "/";
+        }
+        String contextPath = request.getContextPath();
+        if (contextPath != null && !contextPath.isEmpty() && raw.startsWith(contextPath)) {
+            raw = raw.substring(contextPath.length());
+        }
+        StringBuilder cleaned = new StringBuilder(raw.length());
+        boolean inMatrixParam = false;
+        boolean prevSlash = false;
+        for (int i = 0; i < raw.length(); i++) {
+            char ch = raw.charAt(i);
+            if (ch == ';') {
+                inMatrixParam = true;
+                continue;
+            }
+            if (ch == '/') {
+                inMatrixParam = false;
+                if (!prevSlash) {
+                    cleaned.append('/');
+                    prevSlash = true;
+                }
+                continue;
+            }
+            if (!inMatrixParam) {
+                cleaned.append(ch);
+                prevSlash = false;
+            }
+        }
+        if (cleaned.length() > 1 && cleaned.charAt(cleaned.length() - 1) == '/') {
+            cleaned.setLength(cleaned.length() - 1);
+        }
+        return cleaned.isEmpty() ? "/" : cleaned.toString();
     }
 
     private boolean constantTimeEquals(String expected, String supplied) {

@@ -67,6 +67,22 @@ class ApiKeyFilterTest {
         verify(chain).doFilter(request, response);
     }
 
+    @Test
+    void duplicateSlashesOrMatrixParamsDoNotBypassApiKeyCheck() throws Exception {
+        var filter = new ApiKeyFilter(properties("secret"));
+        var request = new MockHttpServletRequest(
+                "POST",
+                "//api//v1/directives/analyze;v=1"
+        );
+        var response = new MockHttpServletResponse();
+        var chain = mock(jakarta.servlet.FilterChain.class);
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        verifyNoInteractions(chain);
+    }
+
     private AtieProperties properties(String key) {
         return new AtieProperties(
                 "http://localhost:18000",

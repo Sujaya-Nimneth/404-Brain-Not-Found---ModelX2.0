@@ -4,7 +4,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { UI_STRINGS } from "../i18n/translations";
 import { colors } from "../theme/colors";
 import type { DataStatus, LanguageCode } from "../types/atie";
-import { formatLkr } from "../utils/format";
+import { formatInteger } from "../utils/format";
 
 interface Props {
   status: DataStatus | null;
@@ -117,7 +117,7 @@ export function DataProvenanceCard({ status, unavailable, language }: Props) {
 
                   <Text style={styles.sourceDetail}>
                     {src.latestObservationDate
-                      ? `Latest observation ${src.latestObservationDate} · ${formatLkr(src.recordsWritten)} rows`
+                      ? `Latest observation ${src.latestObservationDate} · ${formatInteger(src.recordsWritten)} rows`
                       : (src.message ?? "No observation ingested.")}
                   </Text>
                 </View>

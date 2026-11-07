@@ -1,9 +1,20 @@
 import { Fuel, MapPinned, Route, WalletCards } from "lucide-react";
 import type { MarketComparison } from "../types/atie";
-import { formatLkr } from "../utils/format";
+import { formatFixed2, formatLkr } from "../utils/format";
 
 interface Props {
   markets: MarketComparison[];
+}
+
+function resolvePriceChangePct(market: MarketComparison): number {
+  if (market.pctChange !== undefined && market.pctChange !== null) {
+    return market.pctChange;
+  }
+  return (
+    ((market.predictedPriceLkr - market.currentPriceLkr) /
+      market.currentPriceLkr) *
+    100
+  );
 }
 
 export function RoutingLogisticsPanel({ markets }: Props) {
@@ -24,12 +35,14 @@ export function RoutingLogisticsPanel({ markets }: Props) {
       </div>
 
       <div className="mt-5 -mx-1 overflow-x-auto px-1">
-        <table className="w-full min-w-[76rem] border-collapse text-left">
+        <table className="w-full min-w-[66rem] border-collapse text-left">
           <thead>
             <tr className="border-b border-ink/15 font-mono text-[0.58rem] uppercase tracking-[0.13em] text-ink/45">
               <th className="px-2 py-3 font-medium">Market</th>
+              <th className="px-2 py-3 font-medium">Spot → Forecast</th>
               <th className="px-2 py-3 font-medium">Round trip</th>
               <th className="px-2 py-3 font-medium">Vehicle load</th>
+              <th className="px-2 py-3 font-medium">Gross revenue</th>
               <th className="px-2 py-3 font-medium">Fuel</th>
               <th className="px-2 py-3 font-medium">Spoilage</th>
               <th className="px-2 py-3 font-medium">Handling</th>
@@ -38,89 +51,119 @@ export function RoutingLogisticsPanel({ markets }: Props) {
             </tr>
           </thead>
           <tbody>
-            {markets.map((market) => (
-              <tr
-                key={market.marketCode}
-                className={`border-b border-ink/8 text-sm transition ${
-                  market.recommended
-                    ? "bg-lime/30"
-                    : "hover:bg-ink/[0.025]"
-                }`}
-              >
-                <td className="px-2 py-4">
-                  <div className="flex items-center gap-2.5">
-                    <span
-                      className={`grid h-8 w-8 place-items-center rounded-full ${
-                        market.recommended
-                          ? "bg-moss text-lime"
-                          : "bg-ink/5 text-ink/50"
-                      }`}
-                    >
-                      <MapPinned className="h-3.5 w-3.5" />
-                    </span>
-                    <div>
-                      <p className="font-bold text-ink">{market.marketName}</p>
-                      <p className="text-[0.65rem] text-ink/45">
-                        {market.recommended
-                          ? "Recommended"
-                          : market.direction.toLowerCase()}
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-2 py-4 font-mono text-xs text-ink/65">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Route className="h-3.5 w-3.5 text-ink/35" />
-                    {(market.distanceKm * 2).toFixed(0)} km
-                  </span>
-                  <p className="mt-1 pl-5 text-[0.62rem] text-ink/40">
-                    {market.distanceKm.toFixed(0)} km one way
-                  </p>
-                </td>
-                <td className="px-2 py-4 font-mono text-xs text-ink/65">
-                  <p>
-                    {market.trips} {market.trips === 1 ? "trip" : "trips"}
-                  </p>
-                  <p className="mt-1 text-[0.62rem] text-ink/40">
-                    {formatKg(market.vehicleCapacityKg)} capacity
-                  </p>
-                </td>
-                <td className="px-2 py-4 font-mono text-xs text-ink/65">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Fuel className="h-3.5 w-3.5 text-ink/35" />
-                    {formatLkr(market.transportCostLkr)}
-                  </span>
-                  <p className="mt-1 pl-5 text-[0.62rem] text-ink/40">
-                    {market.fuelLitres.toFixed(1)} L
-                  </p>
-                </td>
-                <td className="px-2 py-4 font-mono text-xs text-ink/65">
-                  {formatLkr(market.spoilageLossLkr)}
-                </td>
-                <td className="px-2 py-4 font-mono text-xs text-ink/65">
-                  {formatLkr(market.handlingCostLkr)}
-                </td>
-                <td
-                  className={`px-2 py-4 font-mono text-xs font-semibold ${
-                    market.profitDeltaLkr > 0 ? "text-moss" : "text-ink/45"
+            {markets.map((market) => {
+              const pctChange = resolvePriceChangePct(market);
+              const pctSign = pctChange > 0 ? "+" : "";
+              return (
+                <tr
+                  key={market.marketCode}
+                  className={`border-b border-ink/8 text-sm transition ${
+                    market.recommended ? "bg-lime/30" : "hover:bg-ink/[0.025]"
                   }`}
                 >
-                  {market.profitDeltaLkr === 0
-                    ? "baseline"
-                    : formatSignedLkr(market.profitDeltaLkr)}
-                </td>
-                <td className="px-2 py-4">
-                  <p
-                    className={`inline-flex items-center gap-1.5 font-display text-lg font-semibold ${
-                      market.recommended ? "text-moss" : "text-ink"
+                  <td className="px-2 py-4">
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${
+                          market.recommended
+                            ? "bg-moss text-lime"
+                            : "bg-ink/5 text-ink/50"
+                        }`}
+                      >
+                        <MapPinned className="h-3.5 w-3.5" />
+                      </span>
+                      <div>
+                        <p className="font-bold text-ink">{market.marketName}</p>
+                        <p className="text-[0.65rem] text-ink/45">
+                          {market.recommended
+                            ? "Recommended"
+                            : market.direction.toLowerCase()}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-2 py-4 font-mono text-xs text-ink/70">
+                    <p>
+                      {formatFixed2(market.currentPriceLkr)} →{" "}
+                      <strong className="text-ink">
+                        {formatFixed2(market.predictedPriceLkr)}
+                      </strong>
+                    </p>
+                    <p
+                      className={`mt-1 text-[0.62rem] font-semibold ${
+                        pctChange <= -10
+                          ? "text-[#8b3e2b]"
+                          : pctChange >= 10
+                            ? "text-moss"
+                            : "text-ink/45"
+                      }`}
+                    >
+                      {pctSign}
+                      {formatFixed2(pctChange)}% LKR/kg
+                    </p>
+                  </td>
+                  <td className="px-2 py-4 font-mono text-xs text-ink/65">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Route className="h-3.5 w-3.5 text-ink/35" />
+                      {(market.distanceKm * 2).toFixed(0)} km
+                    </span>
+                    <p className="mt-1 pl-5 text-[0.62rem] text-ink/40">
+                      {market.distanceKm.toFixed(0)} km one way
+                    </p>
+                  </td>
+                  <td className="px-2 py-4 font-mono text-xs text-ink/65">
+                    <p>
+                      {market.trips} {market.trips === 1 ? "trip" : "trips"}
+                    </p>
+                    <p className="mt-1 text-[0.62rem] text-ink/40">
+                      {formatKg(market.vehicleCapacityKg)} capacity
+                    </p>
+                  </td>
+                  <td className="px-2 py-4 font-mono text-xs text-ink/70">
+                    <p>{formatLkr(market.grossRevenueLkr)}</p>
+                    {market.effectiveVolumeKg != null && (
+                      <p className="mt-1 text-[0.62rem] text-ink/40">
+                        {formatFixed2(market.effectiveVolumeKg)} kg sold
+                      </p>
+                    )}
+                  </td>
+                  <td className="px-2 py-4 font-mono text-xs text-ink/65">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Fuel className="h-3.5 w-3.5 text-ink/35" />
+                      {formatLkr(market.transportCostLkr)}
+                    </span>
+                    <p className="mt-1 pl-5 text-[0.62rem] text-ink/40">
+                      {market.fuelLitres.toFixed(1)} L
+                    </p>
+                  </td>
+                  <td className="px-2 py-4 font-mono text-xs text-ink/65">
+                    {formatLkr(market.spoilageLossLkr)}
+                  </td>
+                  <td className="px-2 py-4 font-mono text-xs text-ink/65">
+                    {formatLkr(market.handlingCostLkr)}
+                  </td>
+                  <td
+                    className={`px-2 py-4 font-mono text-xs font-semibold ${
+                      market.profitDeltaLkr > 0 ? "text-moss" : "text-ink/45"
                     }`}
                   >
-                    <WalletCards className="h-4 w-4 opacity-40" />
-                    {formatLkr(market.netProfitLkr)}
-                  </p>
-                </td>
-              </tr>
-            ))}
+                    {market.profitDeltaLkr === 0
+                      ? "baseline"
+                      : formatSignedLkr(market.profitDeltaLkr)}
+                  </td>
+                  <td className="px-2 py-4">
+                    <p
+                      className={`inline-flex items-center gap-1.5 font-display text-lg font-semibold ${
+                        market.recommended ? "text-moss" : "text-ink"
+                      }`}
+                    >
+                      <WalletCards className="h-4 w-4 opacity-40" />
+                      {formatLkr(market.netProfitLkr)}
+                    </p>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

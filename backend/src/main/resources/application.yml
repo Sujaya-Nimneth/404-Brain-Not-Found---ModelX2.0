@@ -37,7 +37,7 @@ logging:
 atie:
   ml-service-url: ${ML_SERVICE_URL:http://localhost:8000}
   ml-connect-timeout-seconds: ${ML_CONNECT_TIMEOUT_SECONDS:3}
-  ml-read-timeout-seconds: ${ML_READ_TIMEOUT_SECONDS:15}
+  ml-read-timeout-seconds: ${ML_READ_TIMEOUT_SECONDS:5}
   safe-margin-pct: ${SAFE_MARGIN_PCT:5.0}
   safe-absolute-floor-lkr: ${SAFE_ABSOLUTE_FLOOR_LKR:1000.00}
   movement-threshold-pct: ${MOVEMENT_THRESHOLD_PCT:10.0}

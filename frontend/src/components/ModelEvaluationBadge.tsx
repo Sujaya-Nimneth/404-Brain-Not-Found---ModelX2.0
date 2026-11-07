@@ -1,5 +1,6 @@
 import { Activity, BadgeCheck } from "lucide-react";
 import type { ModelEvaluationSummary } from "../types/atie";
+import { formatFixed2 } from "../utils/format";
 
 export function ModelEvaluationBadge({
   summary,
@@ -32,7 +33,7 @@ export function ModelEvaluationBadge({
         <strong className="text-ink">
           {summary.modelDirectionalSymmetryPct == null
             ? "n/a"
-            : `${summary.modelDirectionalSymmetryPct.toFixed(1)}%`}
+            : `${formatFixed2(summary.modelDirectionalSymmetryPct)}%`}
         </strong>
       </span>
       <span>
@@ -40,7 +41,7 @@ export function ModelEvaluationBadge({
         <strong className="text-ink">
           {summary.modelMaeLkr == null
             ? "n/a"
-            : `${summary.modelMaeLkr.toFixed(2)} LKR`}
+            : `${formatFixed2(summary.modelMaeLkr)} LKR`}
         </strong>
       </span>
       <span>
@@ -48,7 +49,7 @@ export function ModelEvaluationBadge({
         <strong className="text-ink">
           {summary.modelSafeMarginFpr?.safeMarginFprPct == null
             ? "n/a"
-            : `${summary.modelSafeMarginFpr.safeMarginFprPct.toFixed(2)}%`}
+            : `${formatFixed2(summary.modelSafeMarginFpr.safeMarginFprPct)}%`}
         </strong>
       </span>
       <span className="inline-flex items-center gap-1 text-moss">

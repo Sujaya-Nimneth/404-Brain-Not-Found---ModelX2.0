@@ -120,9 +120,15 @@ class GoldenRoutingContractTest {
             JsonNode expectedRecommended = expected.get("recommended_market_code");
             if (expectedRecommended.isNull()) {
                 assertThat(decision.recommendedMarketCode()).as(name).isNull();
+                assertThat(decision.primaryDirective().recommendedMarketCode())
+                        .as(name + " primaryDirective.recommendedMarketCode")
+                        .isNull();
             } else {
                 assertThat(decision.recommendedMarketCode())
                         .as(name)
+                        .isEqualTo(expectedRecommended.asText());
+                assertThat(decision.primaryDirective().recommendedMarketCode())
+                        .as(name + " primaryDirective.recommendedMarketCode")
                         .isEqualTo(expectedRecommended.asText());
             }
             JsonNode expectedDelta = expected.get("profit_delta_lkr");

@@ -4,515 +4,515 @@
   "input_data_state": "SEED",
   "movement_threshold_pct": 10.0,
   "markets": {
-    "TOMATO": {
-      "DAMBULLA": {
-        "48": {
-          "current_price_lkr": 203.05,
-          "predicted_price_lkr": 211.81,
-          "baseline_ma7_lkr": 228.08,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
-        },
-        "72": {
-          "current_price_lkr": 203.05,
-          "predicted_price_lkr": 215.56,
-          "baseline_ma7_lkr": 228.08,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
-        }
-      },
-      "JAFFNA": {
-        "48": {
-          "current_price_lkr": 193.42,
-          "predicted_price_lkr": 194.3,
-          "baseline_ma7_lkr": 195.94,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
-        },
-        "72": {
-          "current_price_lkr": 193.42,
-          "predicted_price_lkr": 194.68,
-          "baseline_ma7_lkr": 195.94,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
-        }
-      },
-      "KEPPETIPOLA": {
-        "48": {
-          "current_price_lkr": 194.47,
-          "predicted_price_lkr": 193.75,
-          "baseline_ma7_lkr": 192.41,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
-        },
-        "72": {
-          "current_price_lkr": 194.47,
-          "predicted_price_lkr": 193.44,
-          "baseline_ma7_lkr": 192.41,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
-        }
-      },
-      "MEEGODA": {
-        "48": {
-          "current_price_lkr": 195.65,
-          "predicted_price_lkr": 195.41,
-          "baseline_ma7_lkr": 194.95,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
-        },
-        "72": {
-          "current_price_lkr": 195.65,
-          "predicted_price_lkr": 195.3,
-          "baseline_ma7_lkr": 194.95,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
-        }
-      },
-      "NUWARA_ELIYA": {
-        "48": {
-          "current_price_lkr": 206.34,
-          "predicted_price_lkr": 204.11,
-          "baseline_ma7_lkr": 199.97,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
-        },
-        "72": {
-          "current_price_lkr": 206.34,
-          "predicted_price_lkr": 203.16,
-          "baseline_ma7_lkr": 199.97,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
-        }
-      },
-      "PETTAH_COLOMBO": {
-        "48": {
-          "current_price_lkr": 207.78,
-          "predicted_price_lkr": 207.09,
-          "baseline_ma7_lkr": 205.8,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
-        },
-        "72": {
-          "current_price_lkr": 207.78,
-          "predicted_price_lkr": 206.79,
-          "baseline_ma7_lkr": 205.8,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
-        }
-      },
-      "THAMBUTTEGAMA": {
-        "48": {
-          "current_price_lkr": 181.59,
-          "predicted_price_lkr": 182.1,
-          "baseline_ma7_lkr": 183.05,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
-        },
-        "72": {
-          "current_price_lkr": 181.59,
-          "predicted_price_lkr": 182.32,
-          "baseline_ma7_lkr": 183.05,
-          "glut_risk_level": "MEDIUM",
-          "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
-        }
-      }
-    },
     "CARROT": {
       "DAMBULLA": {
         "48": {
-          "current_price_lkr": 264.94,
-          "predicted_price_lkr": 263.9,
-          "baseline_ma7_lkr": 261.96,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 340.77,
+          "predicted_price_lkr": 342.82,
+          "baseline_ma7_lkr": 291.74,
+          "glut_risk_level": "LOW",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 264.94,
-          "predicted_price_lkr": 263.45,
-          "baseline_ma7_lkr": 261.96,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 340.77,
+          "predicted_price_lkr": 336.54,
+          "baseline_ma7_lkr": 291.74,
+          "glut_risk_level": "LOW",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "JAFFNA": {
         "48": {
-          "current_price_lkr": 284.65,
-          "predicted_price_lkr": 282.38,
-          "baseline_ma7_lkr": 278.15,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 243.0,
+          "predicted_price_lkr": 252.57,
+          "baseline_ma7_lkr": 270.33,
+          "glut_risk_level": "HIGH",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 284.65,
-          "predicted_price_lkr": 281.4,
-          "baseline_ma7_lkr": 278.15,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 243.0,
+          "predicted_price_lkr": 256.67,
+          "baseline_ma7_lkr": 270.33,
+          "glut_risk_level": "HIGH",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "KEPPETIPOLA": {
         "48": {
-          "current_price_lkr": 267.57,
-          "predicted_price_lkr": 270.4,
-          "baseline_ma7_lkr": 275.65,
+          "current_price_lkr": 263.6,
+          "predicted_price_lkr": 263.85,
+          "baseline_ma7_lkr": 264.31,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 267.57,
-          "predicted_price_lkr": 271.61,
-          "baseline_ma7_lkr": 275.65,
+          "current_price_lkr": 263.6,
+          "predicted_price_lkr": 263.96,
+          "baseline_ma7_lkr": 264.31,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "MEEGODA": {
         "48": {
-          "current_price_lkr": 270.66,
-          "predicted_price_lkr": 271.77,
-          "baseline_ma7_lkr": 273.82,
+          "current_price_lkr": 274.09,
+          "predicted_price_lkr": 274.6,
+          "baseline_ma7_lkr": 275.55,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 270.66,
-          "predicted_price_lkr": 272.24,
-          "baseline_ma7_lkr": 273.82,
+          "current_price_lkr": 274.09,
+          "predicted_price_lkr": 274.82,
+          "baseline_ma7_lkr": 275.55,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "NUWARA_ELIYA": {
         "48": {
-          "current_price_lkr": 283.77,
-          "predicted_price_lkr": 284.04,
-          "baseline_ma7_lkr": 284.55,
+          "current_price_lkr": 269.99,
+          "predicted_price_lkr": 269.17,
+          "baseline_ma7_lkr": 267.64,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 283.77,
-          "predicted_price_lkr": 284.16,
-          "baseline_ma7_lkr": 284.55,
+          "current_price_lkr": 269.99,
+          "predicted_price_lkr": 268.82,
+          "baseline_ma7_lkr": 267.64,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "PETTAH_COLOMBO": {
         "48": {
-          "current_price_lkr": 308.13,
-          "predicted_price_lkr": 304.7,
-          "baseline_ma7_lkr": 298.34,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 279.04,
+          "predicted_price_lkr": 277.96,
+          "baseline_ma7_lkr": 275.96,
+          "glut_risk_level": "HIGH",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 308.13,
-          "predicted_price_lkr": 303.24,
-          "baseline_ma7_lkr": 298.34,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 279.04,
+          "predicted_price_lkr": 277.5,
+          "baseline_ma7_lkr": 275.96,
+          "glut_risk_level": "HIGH",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "THAMBUTTEGAMA": {
         "48": {
-          "current_price_lkr": 257.97,
-          "predicted_price_lkr": 258.19,
-          "baseline_ma7_lkr": 258.6,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 260.42,
+          "predicted_price_lkr": 256.3,
+          "baseline_ma7_lkr": 248.66,
+          "glut_risk_level": "LOW",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 257.97,
-          "predicted_price_lkr": 258.29,
-          "baseline_ma7_lkr": 258.6,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 260.42,
+          "predicted_price_lkr": 254.54,
+          "baseline_ma7_lkr": 248.66,
+          "glut_risk_level": "LOW",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       }
     },
     "GREEN_CHILI": {
       "DAMBULLA": {
         "48": {
-          "current_price_lkr": 627.98,
-          "predicted_price_lkr": 624.06,
-          "baseline_ma7_lkr": 616.78,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 742.27,
+          "predicted_price_lkr": 735.69,
+          "baseline_ma7_lkr": 723.48,
+          "glut_risk_level": "HIGH",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 627.98,
-          "predicted_price_lkr": 622.38,
-          "baseline_ma7_lkr": 616.78,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 742.27,
+          "predicted_price_lkr": 732.88,
+          "baseline_ma7_lkr": 723.48,
+          "glut_risk_level": "HIGH",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "JAFFNA": {
         "48": {
-          "current_price_lkr": 670.47,
-          "predicted_price_lkr": 665.12,
-          "baseline_ma7_lkr": 655.17,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 645.62,
+          "predicted_price_lkr": 640.46,
+          "baseline_ma7_lkr": 630.87,
+          "glut_risk_level": "LOW",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 670.47,
-          "predicted_price_lkr": 662.82,
-          "baseline_ma7_lkr": 655.17,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 645.62,
+          "predicted_price_lkr": 638.25,
+          "baseline_ma7_lkr": 630.87,
+          "glut_risk_level": "LOW",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "KEPPETIPOLA": {
         "48": {
-          "current_price_lkr": 646.36,
-          "predicted_price_lkr": 648.4,
-          "baseline_ma7_lkr": 652.19,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 608.03,
+          "predicted_price_lkr": 515.6,
+          "baseline_ma7_lkr": 613.77,
+          "glut_risk_level": "HIGH",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 646.36,
-          "predicted_price_lkr": 649.28,
-          "baseline_ma7_lkr": 652.19,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 608.03,
+          "predicted_price_lkr": 508.76,
+          "baseline_ma7_lkr": 613.77,
+          "glut_risk_level": "HIGH",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "MEEGODA": {
         "48": {
-          "current_price_lkr": 659.53,
-          "predicted_price_lkr": 660.73,
-          "baseline_ma7_lkr": 662.97,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 604.75,
+          "predicted_price_lkr": 654.79,
+          "baseline_ma7_lkr": 558.26,
+          "glut_risk_level": "LOW",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 659.53,
-          "predicted_price_lkr": 661.25,
-          "baseline_ma7_lkr": 662.97,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 604.75,
+          "predicted_price_lkr": 652.27,
+          "baseline_ma7_lkr": 558.26,
+          "glut_risk_level": "LOW",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "NUWARA_ELIYA": {
         "48": {
-          "current_price_lkr": 680.73,
-          "predicted_price_lkr": 677.18,
-          "baseline_ma7_lkr": 670.58,
+          "current_price_lkr": 616.33,
+          "predicted_price_lkr": 618.38,
+          "baseline_ma7_lkr": 622.2,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 680.73,
-          "predicted_price_lkr": 675.65,
-          "baseline_ma7_lkr": 670.58,
+          "current_price_lkr": 616.33,
+          "predicted_price_lkr": 619.27,
+          "baseline_ma7_lkr": 622.2,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "PETTAH_COLOMBO": {
         "48": {
-          "current_price_lkr": 730.18,
-          "predicted_price_lkr": 723.76,
-          "baseline_ma7_lkr": 711.84,
+          "current_price_lkr": 647.97,
+          "predicted_price_lkr": 648.22,
+          "baseline_ma7_lkr": 648.68,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 730.18,
-          "predicted_price_lkr": 721.01,
-          "baseline_ma7_lkr": 711.84,
+          "current_price_lkr": 647.97,
+          "predicted_price_lkr": 648.33,
+          "baseline_ma7_lkr": 648.68,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "THAMBUTTEGAMA": {
         "48": {
-          "current_price_lkr": 614.79,
-          "predicted_price_lkr": 613.79,
-          "baseline_ma7_lkr": 611.92,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 615.41,
+          "predicted_price_lkr": 622.08,
+          "baseline_ma7_lkr": 634.46,
+          "glut_risk_level": "HIGH",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 614.79,
-          "predicted_price_lkr": 613.36,
-          "baseline_ma7_lkr": 611.92,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 615.41,
+          "predicted_price_lkr": 624.94,
+          "baseline_ma7_lkr": 634.46,
+          "glut_risk_level": "HIGH",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       }
     },
     "RED_ONION": {
       "DAMBULLA": {
         "48": {
-          "current_price_lkr": 383.34,
-          "predicted_price_lkr": 381.82,
-          "baseline_ma7_lkr": 379.0,
+          "current_price_lkr": 441.31,
+          "predicted_price_lkr": 440.38,
+          "baseline_ma7_lkr": 438.66,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 383.34,
-          "predicted_price_lkr": 381.17,
-          "baseline_ma7_lkr": 379.0,
+          "current_price_lkr": 441.31,
+          "predicted_price_lkr": 439.99,
+          "baseline_ma7_lkr": 438.66,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "JAFFNA": {
         "48": {
-          "current_price_lkr": 404.59,
-          "predicted_price_lkr": 402.18,
-          "baseline_ma7_lkr": 397.7,
+          "current_price_lkr": 397.58,
+          "predicted_price_lkr": 396.14,
+          "baseline_ma7_lkr": 393.47,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 404.59,
-          "predicted_price_lkr": 401.14,
-          "baseline_ma7_lkr": 397.7,
+          "current_price_lkr": 397.58,
+          "predicted_price_lkr": 395.53,
+          "baseline_ma7_lkr": 393.47,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "KEPPETIPOLA": {
         "48": {
-          "current_price_lkr": 381.41,
-          "predicted_price_lkr": 385.65,
-          "baseline_ma7_lkr": 393.52,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 370.37,
+          "predicted_price_lkr": 403.18,
+          "baseline_ma7_lkr": 341.0,
+          "glut_risk_level": "LOW",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 381.41,
-          "predicted_price_lkr": 387.47,
-          "baseline_ma7_lkr": 393.52,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 370.37,
+          "predicted_price_lkr": 401.65,
+          "baseline_ma7_lkr": 341.0,
+          "glut_risk_level": "LOW",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "MEEGODA": {
         "48": {
-          "current_price_lkr": 382.46,
-          "predicted_price_lkr": 386.15,
-          "baseline_ma7_lkr": 392.99,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 382.72,
+          "predicted_price_lkr": 384.26,
+          "baseline_ma7_lkr": 387.12,
+          "glut_risk_level": "HIGH",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 382.46,
-          "predicted_price_lkr": 387.73,
-          "baseline_ma7_lkr": 392.99,
-          "glut_risk_level": "MEDIUM",
+          "current_price_lkr": 382.72,
+          "predicted_price_lkr": 384.92,
+          "baseline_ma7_lkr": 387.12,
+          "glut_risk_level": "HIGH",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "NUWARA_ELIYA": {
         "48": {
-          "current_price_lkr": 397.36,
-          "predicted_price_lkr": 400.46,
-          "baseline_ma7_lkr": 406.21,
+          "current_price_lkr": 366.98,
+          "predicted_price_lkr": 367.47,
+          "baseline_ma7_lkr": 368.37,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 397.36,
-          "predicted_price_lkr": 401.78,
-          "baseline_ma7_lkr": 406.21,
+          "current_price_lkr": 366.98,
+          "predicted_price_lkr": 367.68,
+          "baseline_ma7_lkr": 368.37,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "PETTAH_COLOMBO": {
         "48": {
-          "current_price_lkr": 429.22,
-          "predicted_price_lkr": 428.6,
-          "baseline_ma7_lkr": 427.45,
+          "current_price_lkr": 312.83,
+          "predicted_price_lkr": 332.21,
+          "baseline_ma7_lkr": 368.21,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 429.22,
-          "predicted_price_lkr": 428.34,
-          "baseline_ma7_lkr": 427.45,
+          "current_price_lkr": 312.83,
+          "predicted_price_lkr": 340.52,
+          "baseline_ma7_lkr": 368.21,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       },
       "THAMBUTTEGAMA": {
         "48": {
-          "current_price_lkr": 373.96,
-          "predicted_price_lkr": 373.81,
-          "baseline_ma7_lkr": 373.53,
+          "current_price_lkr": 377.16,
+          "predicted_price_lkr": 375.15,
+          "baseline_ma7_lkr": 371.42,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.68,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         },
         "72": {
-          "current_price_lkr": 373.96,
-          "predicted_price_lkr": 373.75,
-          "baseline_ma7_lkr": 373.53,
+          "current_price_lkr": 377.16,
+          "predicted_price_lkr": 374.29,
+          "baseline_ma7_lkr": 371.42,
           "glut_risk_level": "MEDIUM",
           "confidence_score": 0.65,
-          "primary_driver": "Deterministic mean-reversion fallback from 7-day seeded market history."
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
+        }
+      }
+    },
+    "TOMATO": {
+      "DAMBULLA": {
+        "48": {
+          "current_price_lkr": 208.58,
+          "predicted_price_lkr": 168.59,
+          "baseline_ma7_lkr": 204.27,
+          "glut_risk_level": "HIGH",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 208.58,
+          "predicted_price_lkr": 164.99,
+          "baseline_ma7_lkr": 204.27,
+          "glut_risk_level": "HIGH",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "JAFFNA": {
+        "48": {
+          "current_price_lkr": 183.52,
+          "predicted_price_lkr": 184.45,
+          "baseline_ma7_lkr": 186.18,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 183.52,
+          "predicted_price_lkr": 184.85,
+          "baseline_ma7_lkr": 186.18,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "KEPPETIPOLA": {
+        "48": {
+          "current_price_lkr": 178.3,
+          "predicted_price_lkr": 177.31,
+          "baseline_ma7_lkr": 175.47,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 178.3,
+          "predicted_price_lkr": 176.89,
+          "baseline_ma7_lkr": 175.47,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "MEEGODA": {
+        "48": {
+          "current_price_lkr": 186.61,
+          "predicted_price_lkr": 186.37,
+          "baseline_ma7_lkr": 185.92,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 186.61,
+          "predicted_price_lkr": 186.27,
+          "baseline_ma7_lkr": 185.92,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "NUWARA_ELIYA": {
+        "48": {
+          "current_price_lkr": 179.01,
+          "predicted_price_lkr": 180.71,
+          "baseline_ma7_lkr": 183.88,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 179.01,
+          "predicted_price_lkr": 181.45,
+          "baseline_ma7_lkr": 183.88,
+          "glut_risk_level": "MEDIUM",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "PETTAH_COLOMBO": {
+        "48": {
+          "current_price_lkr": 180.18,
+          "predicted_price_lkr": 194.95,
+          "baseline_ma7_lkr": 177.57,
+          "glut_risk_level": "LOW",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 180.18,
+          "predicted_price_lkr": 195.78,
+          "baseline_ma7_lkr": 177.57,
+          "glut_risk_level": "LOW",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
+        }
+      },
+      "THAMBUTTEGAMA": {
+        "48": {
+          "current_price_lkr": 181.87,
+          "predicted_price_lkr": 147.11,
+          "baseline_ma7_lkr": 183.01,
+          "glut_risk_level": "HIGH",
+          "confidence_score": 0.68,
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
+        },
+        "72": {
+          "current_price_lkr": 181.87,
+          "predicted_price_lkr": 144.44,
+          "baseline_ma7_lkr": 183.01,
+          "glut_risk_level": "HIGH",
+          "confidence_score": 0.65,
+          "primary_driver": "Deterministic supply-adjusted mean-reversion fallback from 7-day seeded market history."
         }
       }
     }

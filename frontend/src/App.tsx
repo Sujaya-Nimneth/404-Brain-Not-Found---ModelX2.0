@@ -261,12 +261,15 @@ export default function App() {
             <WeatherDisruptionCard alerts={response.weatherAlerts} />
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="mt-5">
             <Suspense
               fallback={<ChartLoading label="Loading market economics…" />}
             >
               <ProfitMarginChart markets={response.marketComparisons} />
             </Suspense>
+          </div>
+
+          <div className="mt-5">
             <RoutingLogisticsPanel markets={response.marketComparisons} />
           </div>
 
@@ -285,6 +288,11 @@ export default function App() {
                 }
                 cropCode={activeRequest.cropCode}
                 forecastSource={response.forecastSource}
+                horizonHours={activeRequest.horizonHours}
+                recommendedMarketCode={
+                  response.primaryDirective.recommendedMarketCode
+                }
+                markets={response.marketComparisons}
               />
             </Suspense>
           </div>

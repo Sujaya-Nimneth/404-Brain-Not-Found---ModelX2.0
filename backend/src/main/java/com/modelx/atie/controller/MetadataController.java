@@ -76,7 +76,7 @@ public class MetadataController {
                                 crop.getSpoilageRatePer100KmPct()
                         ))
                         .toList(),
-                routes.findAll().stream()
+                routes.findAll(org.springframework.data.domain.Sort.by("originCode", "distanceKm")).stream()
                         .map(route -> new MetadataConfigResponse.RouteInfo(
                                 route.getOriginCode(),
                                 route.getDestinationMarket().getCode(),

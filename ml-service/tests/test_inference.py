@@ -271,3 +271,50 @@ def test_request_id_middleware_echoes_valid_header_and_sanitizes_invalid():
     assert invalid.headers["X-Request-ID"] != "bad header with spaces!"
     assert len(invalid.headers["X-Request-ID"]) == 36
 
+
+def test_incomplete_fallback_http_endpoint_returns_503(tmp_path):
+    snapshot = tmp_path / "fallback.json"
+    snapshot.write_text('{"markets": {"TOMATO": {}}}', encoding="utf-8")
+    app.state.predictor = Predictor(
+        Settings(
+            model_path=tmp_path / "missing.joblib",
+            fallback_data_path=snapshot,
+        )
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/predict-batch",
+            json=CANONICAL_REQUEST.model_dump(mode="json"),
+        )
+    assert response.status_code == 503
+
+
+def test_partial_live_market_updates_are_not_clamped_by_lagging_market():
+    import pandas as pd
+    from etl.seed_loader import generate_demo_history
+
+    base = generate_demo_history()
+    extra_row = base[
+        (base["market_code"] == "PETTAH_COLOMBO")
+        & (base["crop_code"] == "TOMATO")
+        & (base["recorded_date"] == pd.Timestamp("2026-10-27"))
+    ].copy()
+    extra_row["recorded_date"] = pd.Timestamp("2026-10-28")
+    extra_row["wholesale_price_lkr_per_kg"] = 205.0
+    extra_row["source"] = "CROPIX_LIVE"
+    base["source"] = "HDX_SEED"
+    combined = pd.concat([base, extra_row], ignore_index=True)
+
+    predictor = Predictor(Settings())
+    predictor._replace_history(combined, predictor.input_data_state)
+    response = predictor.predict(
+        CANONICAL_REQUEST.model_copy(
+            update={"reference_date": date(2026, 10, 28)}
+        )
+    )
+    by_market = {item.market_code: item for item in response.predictions}
+    assert response.reference_date == date(2026, 10, 28)
+    assert response.input_data_state.value == "CACHED"
+    assert by_market["PETTAH_COLOMBO"].current_price_lkr == 205.0
+
+

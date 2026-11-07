@@ -202,10 +202,28 @@ def test_ingest_weather_backfills_failed_markets_from_cache(
 
     result = ingestion_worker.ingest_weather(config)
 
-    assert result["status"] == "PARTIAL"
+    assert result["status"] == "FALLBACK"
     assert result["data_state"] == "CACHED"
     by_market = {row.market_code: row for row in written_rows}
     assert set(by_market) == set(ingestion_worker.MARKET_COORDINATES)
     assert by_market["DAMBULLA"].source == "OPEN_METEO_LIVE"
     assert by_market["JAFFNA"].source == "OPEN_METEO_CACHED"
+
+
+def test_green_chili_and_clean_cropix_market_aliases_parse_without_accepting_dry_chili():
+    sample = """date,market,commodity,pricetype,price,unit
+2026-10-27,Keppetipola (DEC),Chilies (green),Wholesale,420.00,KG
+2026-10-27,Colombo Pettah,Green Chili,Wholesale,455.50,KG
+2026-10-27,Dambulla,Chili (red, dry raw),Wholesale,890.00,KG
+"""
+    rows = parse_cropix_prices(sample)
+
+    assert [
+        (row.market_code, row.crop_code, row.wholesale_price_lkr_per_kg, row.source)
+        for row in rows
+    ] == [
+        ("KEPPETIPOLA", "GREEN_CHILI", 420.0, "CROPIX_LIVE"),
+        ("PETTAH_COLOMBO", "GREEN_CHILI", 455.5, "CROPIX_LIVE"),
+    ]
+
 

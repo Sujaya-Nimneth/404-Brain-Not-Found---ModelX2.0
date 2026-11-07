@@ -164,7 +164,11 @@ public class ArbitrageRoutingService {
                                 market.profit().netProfitLkr(),
                                 defaultMarket.profit().netProfitLkr()
                         ),
-                        market.direction()
+                        market.pctChange(),
+                        market.direction(),
+                        market.glutRiskLevel(),
+                        market.confidenceScore(),
+                        market.primaryDriver()
                 ))
                 .toList();
         RoutingDecisionService.Decision decision = decisions.decide(
@@ -179,6 +183,8 @@ public class ArbitrageRoutingService {
                         market.marketName(),
                         calculator.displayMoney(market.currentPriceLkr()),
                         calculator.displayMoney(market.predictedPriceLkr()),
+                        displayPercentage(market.pctChange()),
+                        calculator.displayMoney(market.profit().effectiveVolumeKg()),
                         calculator.displayMoney(market.profit().grossRevenueLkr()),
                         calculator.displayMoney(market.profit().transportCostLkr()),
                         calculator.displayMoney(market.profit().spoilageLossLkr()),
@@ -195,10 +201,17 @@ public class ArbitrageRoutingService {
                         market.profit().trips().intValueExact(),
                         calculator.displayMoney(request.vehicleType().getCapacityKg()),
                         market.marketCode().equals(recommendedMarketCode),
-                        market.direction()
+                        market.direction(),
+                        market.glutRiskLevel(),
+                        displayPercentage(market.confidenceScore()),
+                        market.primaryDriver()
                 ))
                 .toList();
-        LocalDate targetWeatherDate = forecast.referenceDate()
+        LocalDate weatherBaseDate = request.demoRequested()
+                || forecast.referenceDate().isAfter(requestedReferenceDate)
+                ? forecast.referenceDate()
+                : requestedReferenceDate;
+        LocalDate targetWeatherDate = weatherBaseDate
                 .plusDays(request.horizonHours() / 24L);
         Map<String, WeatherObservation> weatherByMarket = loadWeatherByMarket(
                 marketCodes,
@@ -259,7 +272,11 @@ public class ArbitrageRoutingService {
                 profit,
                 route.getDistanceKm(),
                 null,
-                forecast.direction()
+                forecast.pctChange(),
+                forecast.direction(),
+                forecast.glutRiskLevel(),
+                forecast.confidenceScore(),
+                forecast.primaryDriver()
         );
     }
 
@@ -272,10 +289,17 @@ public class ArbitrageRoutingService {
             LocalDate targetWeatherDate
     ) {
         List<WeatherObservation> rows = weather
-                .findByMarketCodeInAndObservationDateLessThanEqualOrderByObservationDateDesc(
+                .findLatestByMarketCodesOnOrBefore(
                         marketCodes,
                         targetWeatherDate
                 );
+        if (rows == null || rows.isEmpty()) {
+            rows = weather
+                    .findByMarketCodeInAndObservationDateLessThanEqualOrderByObservationDateDesc(
+                            marketCodes,
+                            targetWeatherDate
+                    );
+        }
         if (rows == null || rows.isEmpty()) {
             return Map.of();
         }
@@ -311,7 +335,7 @@ public class ArbitrageRoutingService {
                             marketCode,
                             risk,
                             message,
-                            rain,
+                            calculator.displayMoney(rain),
                             item.isExtremeWeatherFlag(),
                             item.getSource(),
                             item.getObservationDate()

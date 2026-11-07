@@ -1,37 +1,142 @@
 from __future__ import annotations
 
+import math
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
+ANCHOR_DATE = pd.Timestamp("2026-10-27")
+ANCHOR_TAU = 540
+TWO_DP = Decimal("0.01")
 
-MARKETS = {
-    "DAMBULLA": {"province": "Central", "rain_offset": 4.0},
-    "PETTAH_COLOMBO": {"province": "Western", "rain_offset": 0.0},
-    "NUWARA_ELIYA": {"province": "Central", "rain_offset": 4.0},
-    "KEPPETIPOLA": {"province": "Uva", "rain_offset": 4.0},
-    "MEEGODA": {"province": "Western", "rain_offset": 0.0},
-    "THAMBUTTEGAMA": {"province": "North Central", "rain_offset": 0.0},
-    "JAFFNA": {"province": "Northern", "rain_offset": -2.0},
+MARKETS: dict[str, dict[str, object]] = {
+    "DAMBULLA": {
+        "id": 1,
+        "province": "Central",
+        "price_factor": 1.07,
+        "base_arrivals": 48.0,
+        "rain_offset": 3.5,
+        "glut_offset": 0,
+    },
+    "PETTAH_COLOMBO": {
+        "id": 2,
+        "province": "Western",
+        "price_factor": 0.95,
+        "base_arrivals": 88.0,
+        "rain_offset": 0.5,
+        "glut_offset": 18,
+    },
+    "NUWARA_ELIYA": {
+        "id": 3,
+        "province": "Central",
+        "price_factor": 0.91,
+        "base_arrivals": 30.0,
+        "rain_offset": 5.0,
+        "glut_offset": 12,
+    },
+    "KEPPETIPOLA": {
+        "id": 4,
+        "province": "Uva",
+        "price_factor": 0.89,
+        "base_arrivals": 28.0,
+        "rain_offset": 4.5,
+        "glut_offset": 24,
+    },
+    "MEEGODA": {
+        "id": 5,
+        "province": "Western",
+        "price_factor": 0.93,
+        "base_arrivals": 64.0,
+        "rain_offset": 0.5,
+        "glut_offset": 30,
+    },
+    "THAMBUTTEGAMA": {
+        "id": 6,
+        "province": "North Central",
+        "price_factor": 0.90,
+        "base_arrivals": 40.0,
+        "rain_offset": -0.5,
+        "glut_offset": 0,
+    },
+    "JAFFNA": {
+        "id": 7,
+        "province": "Northern",
+        "price_factor": 0.94,
+        "base_arrivals": 32.0,
+        "rain_offset": -2.0,
+        "glut_offset": 35,
+    },
 }
 
-CROPS = {
-    "TOMATO": {"base_price": 190.0, "spoilage": 1.5},
-    "CARROT": {"base_price": 280.0, "spoilage": 0.75},
-    "GREEN_CHILI": {"base_price": 650.0, "spoilage": 1.2},
-    "RED_ONION": {"base_price": 390.0, "spoilage": 0.5},
+CROPS: dict[str, dict[str, float | int]] = {
+    "TOMATO": {
+        "id": 1,
+        "base_price": 196.0,
+        "spoilage": 1.50,
+        "arrival_factor": 1.00,
+        "sensitivity": 1.00,
+    },
+    "CARROT": {
+        "id": 2,
+        "base_price": 285.0,
+        "spoilage": 0.75,
+        "arrival_factor": 0.85,
+        "sensitivity": 0.78,
+    },
+    "GREEN_CHILI": {
+        "id": 3,
+        "base_price": 650.0,
+        "spoilage": 1.20,
+        "arrival_factor": 0.70,
+        "sensitivity": 0.90,
+    },
+    "RED_ONION": {
+        "id": 4,
+        "base_price": 390.0,
+        "spoilage": 0.50,
+        "arrival_factor": 1.35,
+        "sensitivity": 0.68,
+    },
 }
 
-MARKET_PRICE_FACTORS = {
-    "DAMBULLA": 1.00,
-    "PETTAH_COLOMBO": 1.08,
-    "NUWARA_ELIYA": 0.98,
-    "KEPPETIPOLA": 0.96,
-    "MEEGODA": 1.02,
-    "THAMBUTTEGAMA": 0.99,
-    "JAFFNA": 1.04,
+MARKET_PRICE_FACTORS: dict[str, float] = {
+    code: float(meta["price_factor"]) for code, meta in MARKETS.items()
 }
+
+FUEL_SCHEDULE: tuple[tuple[str, Decimal, Decimal], ...] = (
+    ("2025-05-01", Decimal("292.00"), Decimal("320.00")),
+    ("2025-11-01", Decimal("294.00"), Decimal("322.00")),
+    ("2025-12-01", Decimal("290.00"), Decimal("318.00")),
+    ("2026-01-01", Decimal("288.00"), Decimal("316.00")),
+    ("2026-02-01", Decimal("285.00"), Decimal("313.00")),
+    ("2026-03-01", Decimal("283.00"), Decimal("311.00")),
+    ("2026-04-01", Decimal("283.00"), Decimal("311.00")),
+    ("2026-05-01", Decimal("283.00"), Decimal("311.00")),
+    ("2026-06-01", Decimal("285.00"), Decimal("313.00")),
+    ("2026-07-01", Decimal("287.00"), Decimal("315.00")),
+    ("2026-08-01", Decimal("285.00"), Decimal("313.00")),
+    ("2026-09-01", Decimal("283.00"), Decimal("311.00")),
+    ("2026-10-01", Decimal("283.00"), Decimal("311.00")),
+)
+
+
+def round_half_up_2(value: float | Decimal) -> float:
+    decimal_value = (
+        value if isinstance(value, Decimal) else Decimal(f"{value:.8f}")
+    )
+    return float(decimal_value.quantize(TWO_DP, rounding=ROUND_HALF_UP))
+
+
+def fuel_prices_for_date(
+    recorded_date: str | pd.Timestamp,
+) -> tuple[Decimal, Decimal]:
+    iso_date = pd.Timestamp(recorded_date).strftime("%Y-%m-%d")
+    selected = (Decimal("283.00"), Decimal("311.00"))
+    for effective_date, diesel, petrol in FUEL_SCHEDULE:
+        if iso_date >= effective_date:
+            selected = (diesel, petrol)
+    return selected
 
 
 def generate_demo_history(
@@ -41,94 +146,150 @@ def generate_demo_history(
 ) -> pd.DataFrame:
     """Generate deterministic daily market history matching db/seed.sql.
 
-    This local snapshot keeps ML training and fallback inference independent of
-    a running PostgreSQL instance or external data source.
+    Uses pure calendar-anchored deterministic dynamics identical to the SQL
+    expressions in db/seed.sql so offline ML training, fallback snapshots, and
+    seeded PostgreSQL databases share zero train-serve skew.
     """
+    _ = seed  # Retained for backwards-compatible signature.
     if days < 30:
         raise ValueError("days must be at least 30")
 
     dates = pd.date_range(end=pd.Timestamp(end_date), periods=days, freq="D")
-    rng = np.random.default_rng(seed)
     rows: list[dict[str, object]] = []
-    market_codes = list(MARKETS)
-    crop_codes = list(CROPS)
 
-    for market_index, market_code in enumerate(market_codes):
-        for crop_index, crop_code in enumerate(crop_codes):
-            base_price = CROPS[crop_code]["base_price"]
-            price_factor = MARKET_PRICE_FACTORS[market_code]
-            noise_scale = 0.018 if crop_code == "TOMATO" else 0.012
-            for date_index, recorded_date in enumerate(dates):
-                day_number = date_index + 1
-                daily_shock = float(rng.normal(0.0, noise_scale))
+    for market_code, market_meta in MARKETS.items():
+        market_id = int(market_meta["id"])
+        price_factor = float(market_meta["price_factor"])
+        base_arrivals = float(market_meta["base_arrivals"])
+        rain_offset = float(market_meta["rain_offset"])
+        glut_offset = int(market_meta["glut_offset"])
+
+        for crop_code, crop_meta in CROPS.items():
+            crop_id = int(crop_meta["id"])
+            base_price = float(crop_meta["base_price"])
+            arrival_factor = float(crop_meta["arrival_factor"])
+            sensitivity = float(crop_meta["sensitivity"])
+
+            glut_peak = ANCHOR_TAU - glut_offset - (crop_id - 1) * 9
+            shortage_peak = ANCHOR_TAU - (market_id - 2) * 8 - (crop_id - 1) * 11
+            storm_peak = ANCHOR_TAU - (market_id - 1) * 7
+
+            for recorded_date in dates:
+                tau = ANCHOR_TAU - int((ANCHOR_DATE - recorded_date).days)
+                day_of_year = int(recorded_date.dayofyear)
+
+                rain_base = (
+                    7.5
+                    + 5.5
+                    * math.sin(
+                        (2.0 * math.pi * day_of_year / 365.25)
+                        + market_id * 0.45
+                    )
+                    + rain_offset
+                )
+                storm_pulse = (
+                    max(
+                        0.0,
+                        math.cos((tau - storm_peak) * 2.0 * math.pi / 48.0),
+                    )
+                    ** 20
+                )
+                precipitation = max(0.0, rain_base + 14.0 * storm_pulse)
+
+                glut_lead = (
+                    max(
+                        0.0,
+                        math.cos((tau - glut_peak) * 2.0 * math.pi / 42.0),
+                    )
+                    ** 20
+                )
+                glut_crash = (
+                    max(
+                        0.0,
+                        math.cos((tau - 2.5 - glut_peak) * 2.0 * math.pi / 42.0),
+                    )
+                    ** 22
+                )
+                short_lead = (
+                    max(
+                        0.0,
+                        math.cos((tau - shortage_peak) * 2.0 * math.pi / 48.0),
+                    )
+                    ** 20
+                )
+                short_surge = (
+                    max(
+                        0.0,
+                        math.cos(
+                            (tau - 2.5 - shortage_peak) * 2.0 * math.pi / 48.0
+                        ),
+                    )
+                    ** 22
+                )
+
+                maha_yala = (
+                    0.040
+                    * math.sin(
+                        2.0 * math.pi * day_of_year / 365.25 + crop_id * 0.70
+                    )
+                    + 0.024
+                    * math.cos(
+                        4.0 * math.pi * day_of_year / 365.25 + market_id * 0.35
+                    )
+                    + 0.022
+                    * math.sin(
+                        (tau + market_id * 3.0 + crop_id * 5.0)
+                        * 2.0
+                        * math.pi
+                        / 24.0
+                    )
+                )
+                diesel_decimal, _ = fuel_prices_for_date(recorded_date)
+                diesel_price = float(diesel_decimal)
+                fuel_adj = 0.08 * ((diesel_price - 283.0) / 283.0)
+
+                arrivals = (
+                    base_arrivals
+                    * arrival_factor
+                    * (
+                        1.0
+                        + 0.12
+                        * math.sin(
+                            (tau + market_id * 5.0 + crop_id * 3.0)
+                            * 2.0
+                            * math.pi
+                            / 24.0
+                        )
+                        + 1.65 * sensitivity * glut_lead
+                        - 0.48 * sensitivity * short_lead
+                    )
+                )
                 price = (
                     base_price
                     * price_factor
                     * (
-                        1
-                        + 0.055
-                        * np.sin(
-                            (day_number + (market_index + 1) * 11.0)
-                            * np.pi
-                            / 31.0
-                        )
-                        + 0.022
-                        * np.cos(
-                            (day_number + (crop_index + 1) * 17.0)
-                            * np.pi
-                            / 23.0
-                        )
-                    )
-                    * (1 + daily_shock)
-                )
-                arrivals = (
-                    30
-                    + crop_index * 8
-                    + market_index * 5
-                    + 12
-                    * np.sin(
-                        (day_number + (market_index + 1) * 7.0)
-                        * np.pi
-                        / 29.0
+                        1.0
+                        + maha_yala
+                        + fuel_adj
+                        + 0.08 * sensitivity * glut_lead
+                        - 0.30 * sensitivity * glut_crash
+                        - 0.05 * sensitivity * short_lead
+                        + 0.13 * sensitivity * short_surge
+                        + 0.003 * max(0.0, precipitation - 15.0)
                     )
                 )
-                if (
-                    market_code == "DAMBULLA"
-                    and crop_code == "TOMATO"
-                    and date_index >= days - 10
-                ):
-                    days_ahead = days - 1 - date_index
-                    glut_curve = max(0.0, (10 - days_ahead) / 10)
-                    price = (
-                        220.0
-                        * (1 + days_ahead * 0.032)
-                        * (1 - glut_curve * 0.08)
-                        * (1 + daily_shock * 0.25)
-                    )
-                    arrivals = 125.0 + days_ahead * 4.5
 
-                precipitation = max(
-                    0.0,
-                    8.0
-                    + 7.0
-                    * np.sin(
-                        (day_number + (market_index + 1) * 13.0)
-                        * np.pi
-                        / 27.0
-                    )
-                    + MARKETS[market_code]["rain_offset"],
-                )
                 rows.append(
                     {
                         "market_code": market_code,
                         "crop_code": crop_code,
                         "recorded_date": recorded_date,
-                        "wholesale_price_lkr_per_kg": round(float(price), 2),
-                        "arrival_volume_tonnes": round(
-                            max(1.0, float(arrivals)), 2
+                        "wholesale_price_lkr_per_kg": round_half_up_2(price),
+                        "arrival_volume_tonnes": round_half_up_2(
+                            max(2.0, arrivals)
                         ),
-                        "diesel_price_lkr": 283.0,
-                        "precipitation_mm": round(float(precipitation), 2),
+                        "diesel_price_lkr": diesel_price,
+                        "precipitation_mm": round_half_up_2(precipitation),
                     }
                 )
     return pd.DataFrame(rows)

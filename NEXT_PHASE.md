@@ -54,8 +54,10 @@ profit_delta_lkr:     23238.58
 profit_uplift_pct:    15.84
 ```
 
-The same request with `demo_mode: false` returns `MODEL`,
-`PROCEED_DEFAULT`, and seven market forecasts in the current verified state.
+The same request with `demo_mode: false` runs live `xgb-v2.0` inference on the
+causal arrival-surge and rainfall series and returns `MODEL`,
+`CRITICAL_REROUTE` (`PETTAH_COLOMBO`, `+22.51%` net uplift), and seven market
+forecasts in the current verified state.
 
 ## Current Data Status
 

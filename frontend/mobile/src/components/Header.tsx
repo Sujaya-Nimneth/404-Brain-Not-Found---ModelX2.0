@@ -4,6 +4,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { UI_STRINGS } from "../i18n/translations";
 import { colors } from "../theme/colors";
 import type { LanguageCode } from "../types/atie";
+import { formatMetricLkr, formatMetricPct } from "../utils/format";
 
 interface Props {
   language: LanguageCode;
@@ -116,9 +117,9 @@ export function Header({
             <View style={styles.evalDot} />
             <Text style={styles.evalText}>
               {modelSummary.symmetryPct !== null
-                ? `DS ${modelSummary.symmetryPct.toFixed(1)}% · `
+                ? `DS ${formatMetricPct(modelSummary.symmetryPct, 2)} · `
                 : ""}
-              MAE {modelSummary.maeLkr.toFixed(2)} LKR
+              MAE {formatMetricLkr(modelSummary.maeLkr, 2)}
             </Text>
           </View>
         )}
