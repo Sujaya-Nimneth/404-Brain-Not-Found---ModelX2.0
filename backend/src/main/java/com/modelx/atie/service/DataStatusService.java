@@ -5,7 +5,7 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -22,6 +22,8 @@ import com.modelx.atie.dto.DataStatusResponse;
 @Service
 public class DataStatusService {
     private static final Set<String> SOURCES = Set.of("HDX", "CROPIX", "OPEN_METEO");
+    private static final ZoneId COLOMBO_ZONE = ZoneId.of("Asia/Colombo");
+    private static final int DAILY_STALE_DAYS = 3;
     private static final int MONTHLY_STALE_DAYS = 45;
 
     private final JdbcTemplate jdbc;
@@ -70,7 +72,7 @@ public class DataStatusService {
         return build(
                 sourceRows,
                 coverageRows,
-                LocalDate.ofInstant(now, ZoneOffset.UTC),
+                LocalDate.ofInstant(now, COLOMBO_ZONE),
                 now
         );
     }
@@ -97,7 +99,7 @@ public class DataStatusService {
             if (row == null) {
                 sources.add(new DataStatusResponse.SourceStatus(
                         sourceCode,
-                        sourceCode.equals("OPEN_METEO") ? "Open-Meteo" : sourceCode,
+                        label(sourceCode),
                         "UNAVAILABLE",
                         "UNKNOWN",
                         null,
@@ -140,7 +142,7 @@ public class DataStatusService {
                 ))
                 .toList();
         return new DataStatusResponse(
-                overallStatus(sources),
+                overallStatus(sources, coverage),
                 now,
                 sources,
                 coverage
@@ -162,22 +164,30 @@ public class DataStatusService {
         );
     }
 
-    private static String overallStatus(List<DataStatusResponse.SourceStatus> sources) {
+    private static String overallStatus(
+            List<DataStatusResponse.SourceStatus> sources,
+            List<DataStatusResponse.PriceCoverage> coverage
+    ) {
         long live = sources.stream()
                 .filter(source -> "LIVE".equals(source.dataState()))
                 .filter(source -> "CURRENT".equals(source.freshness()))
                 .count();
-        long fallback = sources.stream()
+        long fallbackSources = sources.stream()
                 .filter(source -> "CACHED".equals(source.dataState())
-                        || "SEED".equals(source.dataState()))
+                        || "SEED".equals(source.dataState())
+                        || ("LIVE".equals(source.dataState())
+                                && "STALE".equals(source.freshness())))
                 .count();
+        boolean hasUsableCoverage = coverage.stream()
+                .anyMatch(item -> Set.of("CURRENT", "STALE", "CACHED", "SEED")
+                        .contains(item.state()));
         if (live == sources.size()) {
             return "LIVE";
         }
         if (live > 0) {
             return "PARTIAL";
         }
-        if (fallback > 0) {
+        if (fallbackSources > 0 || hasUsableCoverage) {
             return "FALLBACK";
         }
         return "UNAVAILABLE";
@@ -201,6 +211,9 @@ public class DataStatusService {
             }
             return age <= 1 ? "CURRENT" : "STALE";
         }
+        if ("CROPIX".equals(sourceCode)) {
+            return age <= DAILY_STALE_DAYS ? "CURRENT" : "STALE";
+        }
         return age <= MONTHLY_STALE_DAYS ? "CURRENT" : "STALE";
     }
 
@@ -220,7 +233,8 @@ public class DataStatusService {
             return "CACHED";
         }
         if (source != null && source.endsWith("_LIVE")) {
-            return freshness("HDX", latestObservationDate, null, today, Instant.EPOCH);
+            String sourceCode = source.startsWith("CROPIX_") ? "CROPIX" : "HDX";
+            return freshness(sourceCode, latestObservationDate, null, today, Instant.EPOCH);
         }
         return "UNKNOWN";
     }

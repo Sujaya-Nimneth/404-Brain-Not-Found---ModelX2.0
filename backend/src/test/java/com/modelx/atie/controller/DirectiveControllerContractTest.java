@@ -64,6 +64,16 @@ class DirectiveControllerContractTest {
                         .value(23238.58))
                 .andExpect(jsonPath("$.market_comparisons[0].market_code")
                         .value("PETTAH_COLOMBO"))
+                .andExpect(jsonPath("$.market_comparisons[0].pct_change")
+                        .value(10.29))
+                .andExpect(jsonPath("$.market_comparisons[0].effective_volume_kg")
+                        .value(969.25))
+                .andExpect(jsonPath("$.market_comparisons[0].glut_risk_level")
+                        .value("LOW"))
+                .andExpect(jsonPath("$.market_comparisons[0].confidence_score")
+                        .value(0.88))
+                .andExpect(jsonPath("$.market_comparisons[0].primary_driver")
+                        .value("Colombo consumer demand"))
                 .andExpect(jsonPath("$.market_comparisons[0].is_recommended")
                         .value(true))
                 .andExpect(jsonPath("$.market_comparisons[0].profit_uplift_pct")
@@ -135,6 +145,8 @@ class DirectiveControllerContractTest {
                         "Colombo Pettah",
                         new BigDecimal("170.00"),
                         new BigDecimal("187.50"),
+                        new BigDecimal("10.29"),
+                        new BigDecimal("969.25"),
                         new BigDecimal("181734.38"),
                         new BigDecimal("9282.40"),
                         new BigDecimal("5765.63"),
@@ -147,7 +159,10 @@ class DirectiveControllerContractTest {
                         1,
                         new BigDecimal("1500.00"),
                         true,
-                        "SURGE"
+                        "SURGE",
+                        "LOW",
+                        new BigDecimal("0.88"),
+                        "Colombo consumer demand"
                 )),
                 List.of(new WeatherAlert(
                         "DAMBULLA",

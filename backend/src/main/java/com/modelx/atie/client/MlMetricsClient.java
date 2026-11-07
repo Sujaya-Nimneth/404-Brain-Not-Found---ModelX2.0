@@ -2,9 +2,11 @@ package com.modelx.atie.client;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,12 +23,16 @@ import com.modelx.atie.dto.ModelEvaluationSummary;
 public class MlMetricsClient {
     private static final Logger log = LoggerFactory.getLogger(MlMetricsClient.class);
     private static final Duration DEFAULT_CACHE_TTL = Duration.ofMinutes(5);
+    private static final Duration NEGATIVE_CACHE_TTL = Duration.ofSeconds(30);
 
     private final RestClient client;
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final Duration cacheTtl;
+    private final Duration negativeCacheTtl;
+    private final ReentrantLock refreshLock = new ReentrantLock();
     private volatile CachedMetrics cachedMetrics;
+    private volatile Instant retryAfter = Instant.MIN;
 
     @Autowired
     public MlMetricsClient(
@@ -34,7 +40,14 @@ public class MlMetricsClient {
             AtieProperties properties,
             ObjectMapper objectMapper
     ) {
-        this(builder, properties, objectMapper, Clock.systemUTC(), DEFAULT_CACHE_TTL);
+        this(
+                builder,
+                properties,
+                objectMapper,
+                Clock.systemUTC(),
+                DEFAULT_CACHE_TTL,
+                NEGATIVE_CACHE_TTL
+        );
     }
 
     MlMetricsClient(
@@ -44,10 +57,22 @@ public class MlMetricsClient {
             Clock clock,
             Duration cacheTtl
     ) {
+        this(builder, properties, objectMapper, clock, cacheTtl, NEGATIVE_CACHE_TTL);
+    }
+
+    MlMetricsClient(
+            RestClient.Builder builder,
+            AtieProperties properties,
+            ObjectMapper objectMapper,
+            Clock clock,
+            Duration cacheTtl,
+            Duration negativeCacheTtl
+    ) {
         this.client = builder.baseUrl(properties.mlServiceUrl()).build();
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.cacheTtl = cacheTtl;
+        this.negativeCacheTtl = negativeCacheTtl;
     }
 
     public ModelEvaluationSummary fetchSummary(int horizonHours) {
@@ -60,32 +85,62 @@ public class MlMetricsClient {
                     "Evaluation report loaded from the ML service."
             );
         }
-
-        try {
-            JsonNode root = fetchMetricsRoot();
-            cachedMetrics = new CachedMetrics(root, now.plus(cacheTtl));
-            return parseHorizonSummary(
-                    root,
-                    horizonHours,
-                    "Evaluation report loaded from the ML service."
-            );
-        } catch (RuntimeException | IOException error) {
-            log.warn("ML evaluation metrics unavailable: {}", error.getMessage());
-            if (snapshot != null) {
-                try {
-                    return parseHorizonSummary(
-                            snapshot.root(),
-                            horizonHours,
-                            "Evaluation report served from cached ML service snapshot."
-                    );
-                } catch (RuntimeException ignored) {
-                    // Fall through to unavailable summary if horizon is absent.
-                }
-            }
-            return ModelEvaluationSummary.unavailable(
-                    "Evaluation metrics are temporarily unavailable."
-            );
+        if (now.isBefore(retryAfter)) {
+            return fallbackOrUnavailable(snapshot, horizonHours);
         }
+
+        refreshLock.lock();
+        try {
+            snapshot = cachedMetrics;
+            now = clock.instant();
+            if (snapshot != null && now.isBefore(snapshot.expiresAt())) {
+                return parseHorizonSummary(
+                        snapshot.root(),
+                        horizonHours,
+                        "Evaluation report loaded from the ML service."
+                );
+            }
+            if (now.isBefore(retryAfter)) {
+                return fallbackOrUnavailable(snapshot, horizonHours);
+            }
+
+            try {
+                JsonNode root = fetchMetricsRoot();
+                cachedMetrics = new CachedMetrics(root, now.plus(cacheTtl));
+                retryAfter = Instant.MIN;
+                return parseHorizonSummary(
+                        root,
+                        horizonHours,
+                        "Evaluation report loaded from the ML service."
+                );
+            } catch (RuntimeException | IOException error) {
+                log.warn("ML evaluation metrics unavailable: {}", error.getMessage());
+                retryAfter = now.plus(negativeCacheTtl);
+                return fallbackOrUnavailable(snapshot, horizonHours);
+            }
+        } finally {
+            refreshLock.unlock();
+        }
+    }
+
+    private ModelEvaluationSummary fallbackOrUnavailable(
+            CachedMetrics snapshot,
+            int horizonHours
+    ) {
+        if (snapshot != null) {
+            try {
+                return parseHorizonSummary(
+                        snapshot.root(),
+                        horizonHours,
+                        "Evaluation report served from cached ML service snapshot."
+                );
+            } catch (RuntimeException ignored) {
+                // Fall through to unavailable summary if horizon is absent.
+            }
+        }
+        return ModelEvaluationSummary.unavailable(
+                "Evaluation metrics are temporarily unavailable."
+        );
     }
 
     private JsonNode fetchMetricsRoot() throws IOException {
@@ -155,7 +210,7 @@ public class MlMetricsClient {
         return new ModelEvaluationSummary.SafeMarginFpr(
                 percentage == null || percentage.isNull()
                         ? null
-                        : percentage.decimalValue(),
+                        : percentage.decimalValue().setScale(2, RoundingMode.HALF_UP),
                 rerouteCount.intValue(),
                 falseRerouteCount.intValue()
         );
@@ -166,6 +221,6 @@ public class MlMetricsClient {
         if (value == null || !value.isNumber()) {
             throw new IllegalStateException("ML metric is missing: " + field);
         }
-        return value.decimalValue();
+        return value.decimalValue().setScale(2, RoundingMode.HALF_UP);
     }
 }

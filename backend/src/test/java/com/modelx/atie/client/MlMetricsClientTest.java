@@ -35,7 +35,8 @@ class MlMetricsClientTest {
         server.expect(requestTo("http://localhost:8000/metrics"))
                 .andRespond(withSuccess(metricsJson(), MediaType.APPLICATION_JSON));
 
-        ModelEvaluationSummary summary = client(builder).fetchSummary(48);
+        MlMetricsClient metricsClient = client(builder);
+        ModelEvaluationSummary summary = metricsClient.fetchSummary(48);
 
         assertThat(summary.available()).isTrue();
         assertThat(summary.modelDirectionalSymmetryPct())
@@ -55,12 +56,16 @@ class MlMetricsClientTest {
         server.expect(requestTo("http://localhost:8000/metrics"))
                 .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
 
-        ModelEvaluationSummary summary = client(builder).fetchSummary(48);
+        MlMetricsClient metricsClient = client(builder);
+        ModelEvaluationSummary summary = metricsClient.fetchSummary(48);
 
         assertThat(summary.available()).isFalse();
         assertThat(summary.message()).contains("temporarily unavailable");
         assertThat(summary.modelDirectionalSymmetryPct()).isNull();
         assertThat(summary.modelMaeLkr()).isNull();
+        // Second call within negative-cache window must not hit upstream again.
+        ModelEvaluationSummary cachedUnavailable = metricsClient.fetchSummary(48);
+        assertThat(cachedUnavailable.available()).isFalse();
         server.verify();
     }
 
@@ -127,7 +132,8 @@ class MlMetricsClientTest {
 
         MDC.put(RequestIdFilter.MDC_KEY, "trace-e2e-99");
         try {
-            ModelEvaluationSummary summary = client(builder).fetchSummary(48);
+            MlMetricsClient metricsClient = client(builder);
+        ModelEvaluationSummary summary = metricsClient.fetchSummary(48);
             assertThat(summary.available()).isTrue();
         } finally {
             MDC.remove(RequestIdFilter.MDC_KEY);

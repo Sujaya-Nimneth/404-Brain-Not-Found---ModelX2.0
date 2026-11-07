@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.modelx.atie.domain.Origin;
 
 public record MetadataConfigResponse(
@@ -29,6 +30,7 @@ public record MetadataConfigResponse(
     public record CropInfo(
             String code,
             String name,
+            @JsonProperty("spoilage_rate_per_100km_pct")
             BigDecimal spoilageRatePer100KmPct
     ) {
     }

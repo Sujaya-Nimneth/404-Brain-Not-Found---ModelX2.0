@@ -118,10 +118,37 @@ class DataStatusServiceTest {
                 .singleElement()
                 .extracting("freshness")
                 .isEqualTo("STALE");
-        assertThat(result.overallStatus()).isEqualTo("UNAVAILABLE");
+        assertThat(result.overallStatus()).isEqualTo("FALLBACK");
         assertThat(result.priceCoverage())
                 .singleElement()
                 .extracting("state")
                 .isEqualTo("SEED");
+    }
+
+    @Test
+    void cropixLiveUsesDailyStalenessThresholdAndSeededDbReportsFallback() {
+        var result = DataStatusService.build(
+                List.of(),
+                List.of(
+                        new DataStatusService.CoverageRow(
+                                "DAMBULLA",
+                                "TOMATO",
+                                LocalDate.of(2026, 10, 15),
+                                "CROPIX_LIVE"
+                        ),
+                        new DataStatusService.CoverageRow(
+                                "PETTAH_COLOMBO",
+                                "TOMATO",
+                                LocalDate.of(2026, 10, 26),
+                                "CROPIX_LIVE"
+                        )
+                ),
+                LocalDate.of(2026, 10, 27)
+        );
+
+        assertThat(result.overallStatus()).isEqualTo("FALLBACK");
+        assertThat(result.priceCoverage())
+                .extracting("state")
+                .containsExactly("STALE", "CURRENT");
     }
 }
