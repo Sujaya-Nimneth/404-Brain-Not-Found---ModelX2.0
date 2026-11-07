@@ -7,6 +7,7 @@ import threading
 import time
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from typing import Any
 
@@ -24,13 +25,21 @@ from app.schemas import (
     PredictBatchRequest,
     PredictBatchResponse,
 )
-from etl.feature_engineering import FEATURE_COLUMNS, build_features, movement_direction
-from etl.seed_loader import generate_demo_history
+from etl.feature_engineering import (
+    FEATURE_COLUMNS,
+    build_features,
+    movement_direction,
+)
+from etl.seed_loader import generate_demo_history, round_half_up_2
 
 logger = logging.getLogger(__name__)
 
 SUPPORTED_CROPS = {"TOMATO", "CARROT", "GREEN_CHILI", "RED_ONION"}
 DEMO_REFERENCE_DATE = date(2026, 10, 27)
+
+
+class FallbackUnavailableError(ValueError):
+    """Raised when both the model and local fallback snapshot are unusable."""
 
 
 @dataclass(frozen=True)
@@ -40,7 +49,8 @@ class FixtureMarket:
     predicted_72h: float
     ma7: float
     glut_risk: GlutRisk
-    confidence: float
+    confidence_48h: float
+    confidence_72h: float
     driver: str
 
 
@@ -51,7 +61,8 @@ DEMO_FIXTURE = {
         predicted_72h=155.0,
         ma7=237.76,
         glut_risk=GlutRisk.HIGH,
-        confidence=0.89,
+        confidence_48h=0.89,
+        confidence_72h=0.87,
         driver="Supply glut from Northern province harvest and elevated arrivals.",
     ),
     "PETTAH_COLOMBO": FixtureMarket(
@@ -60,7 +71,8 @@ DEMO_FIXTURE = {
         predicted_72h=188.5,
         ma7=171.2,
         glut_risk=GlutRisk.LOW,
-        confidence=0.86,
+        confidence_48h=0.86,
+        confidence_72h=0.84,
         driver="High urban demand with constrained upcountry arrivals.",
     ),
     "KEPPETIPOLA": FixtureMarket(
@@ -69,7 +81,8 @@ DEMO_FIXTURE = {
         predicted_72h=166.0,
         ma7=176.4,
         glut_risk=GlutRisk.MEDIUM,
-        confidence=0.75,
+        confidence_48h=0.75,
+        confidence_72h=0.73,
         driver="Hill-country arrivals offset by elevated transit spoilage.",
     ),
     "MEEGODA": FixtureMarket(
@@ -78,7 +91,8 @@ DEMO_FIXTURE = {
         predicted_72h=173.0,
         ma7=181.3,
         glut_risk=GlutRisk.LOW,
-        confidence=0.74,
+        confidence_48h=0.74,
+        confidence_72h=0.72,
         driver="Western market arrivals remain close to recent demand levels.",
     ),
     "NUWARA_ELIYA": FixtureMarket(
@@ -87,7 +101,8 @@ DEMO_FIXTURE = {
         predicted_72h=183.0,
         ma7=186.1,
         glut_risk=GlutRisk.MEDIUM,
-        confidence=0.72,
+        confidence_48h=0.72,
+        confidence_72h=0.70,
         driver="Upcountry arrivals remain close to seasonal demand.",
     ),
     "THAMBUTTEGAMA": FixtureMarket(
@@ -96,7 +111,8 @@ DEMO_FIXTURE = {
         predicted_72h=175.0,
         ma7=191.2,
         glut_risk=GlutRisk.HIGH,
-        confidence=0.78,
+        confidence_48h=0.78,
+        confidence_72h=0.76,
         driver="Northern and North Central arrivals are elevating supply.",
     ),
     "JAFFNA": FixtureMarket(
@@ -105,16 +121,25 @@ DEMO_FIXTURE = {
         predicted_72h=159.0,
         ma7=161.4,
         glut_risk=GlutRisk.LOW,
-        confidence=0.7,
+        confidence_48h=0.70,
+        confidence_72h=0.68,
         driver="Local demand is balanced against steady arrivals.",
     ),
 }
+
+
+def _pct_change_2dp(current: float, predicted: float) -> float:
+    cur_dec = Decimal(str(current))
+    pred_dec = Decimal(str(predicted))
+    pct = (pred_dec - cur_dec) / cur_dec * Decimal("100")
+    return float(pct.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
 class Predictor:
     def __init__(self, settings: Settings):
         self.settings = settings
         self._lock = threading.Lock()
+        self._refresh_lock = threading.Lock()
         self.artifact: dict[str, Any] | None = None
         self.metadata: dict[str, Any] = {}
         self.history = pd.DataFrame()
@@ -140,7 +165,9 @@ class Predictor:
             EOFError,
             pickle.UnpicklingError,
         ) as error:
-            logger.warning("Model unavailable; fallback predictions enabled: %s", error)
+            logger.warning(
+                "Model unavailable; fallback predictions enabled: %s", error
+            )
             self.artifact = None
 
         if self.settings.metadata_path.exists():
@@ -171,6 +198,12 @@ class Predictor:
         if self.artifact:
             return str(self.artifact.get("model_version", "unknown"))
         return "fallback-v1.0"
+
+    @property
+    def _feature_columns(self) -> list[str]:
+        if self.artifact and isinstance(self.artifact.get("feature_columns"), list):
+            return list(self.artifact["feature_columns"])
+        return FEATURE_COLUMNS
 
     def _load_history(
         self,
@@ -233,6 +266,16 @@ class Predictor:
                        AS diesel_price_lkr,
                    COALESCE(weather.precipitation_mm, 0.0)
                        AS precipitation_mm,
+                   COALESCE(
+                       weather_48h.precipitation_mm,
+                       weather.precipitation_mm,
+                       0.0
+                   ) AS forecast_rain_48h_mm,
+                   COALESCE(
+                       weather_72h.precipitation_mm,
+                       weather.precipitation_mm,
+                       0.0
+                   ) AS forecast_rain_72h_mm,
                    history.source
             FROM historical_prices history
             JOIN markets ON markets.id = history.market_id
@@ -247,6 +290,12 @@ class Predictor:
             LEFT JOIN weather_observations weather
               ON weather.market_id = history.market_id
              AND weather.observation_date = history.recorded_date
+            LEFT JOIN weather_observations weather_48h
+              ON weather_48h.market_id = history.market_id
+             AND weather_48h.observation_date = history.recorded_date + INTERVAL '2 days'
+            LEFT JOIN weather_observations weather_72h
+              ON weather_72h.market_id = history.market_id
+             AND weather_72h.observation_date = history.recorded_date + INTERVAL '3 days'
             WHERE history.recorded_date >= (
                 SELECT MAX(recorded_date) FROM historical_prices
             ) - INTERVAL '730 days'
@@ -283,7 +332,14 @@ class Predictor:
             < self.settings.feature_refresh_seconds
         ):
             return
+        if not self._refresh_lock.acquire(blocking=False):
+            return
         try:
+            if (
+                time.monotonic() - self._history_loaded_at
+                < self.settings.feature_refresh_seconds
+            ):
+                return
             history, data_state = self._load_history(
                 allow_seed_fallback=self.history.empty
             )
@@ -305,6 +361,8 @@ class Predictor:
             )
             with self._lock:
                 self._history_loaded_at = time.monotonic()
+        finally:
+            self._refresh_lock.release()
 
     def _build_feature_cache(
         self, history: pd.DataFrame
@@ -330,27 +388,49 @@ class Predictor:
         with self._lock:
             history = self.history
             feature_frame = self._feature_frame
-            data_state = self.input_data_state
+            cached_data_state = self.input_data_state
+
+        if history.empty:
+            predictions, fallback_ref_date, fallback_state = (
+                self._fallback_predictions_with_meta(request)
+            )
+            return PredictBatchResponse(
+                crop_code=request.crop_code,
+                horizon_hours=request.horizon_hours,
+                reference_date=fallback_ref_date,
+                forecast_source=ForecastSource.FALLBACK,
+                input_data_state=fallback_state,
+                model_version="fallback-v1.0",
+                predictions=predictions,
+            )
 
         reference_date = self._reference_date_for_request(request, history)
-        source = ForecastSource.MODEL if self.model_loaded else ForecastSource.FALLBACK
+        source = (
+            ForecastSource.MODEL if self.model_loaded else ForecastSource.FALLBACK
+        )
+        effective_data_state = cached_data_state
         if self.model_loaded:
             try:
                 rows = self._select_rows(request, reference_date, feature_frame)
                 predictions = self._model_predictions(request, rows)
+                effective_data_state = _rows_data_state(rows, cached_data_state)
             except (KeyError, ValueError, TypeError) as error:
                 logger.warning("Model inference failed; using fallback: %s", error)
                 source = ForecastSource.FALLBACK
-                predictions = self._fallback_predictions(request)
+                predictions, reference_date, effective_data_state = (
+                    self._fallback_predictions_with_meta(request)
+                )
         else:
-            predictions = self._fallback_predictions(request)
+            predictions, _, effective_data_state = (
+                self._fallback_predictions_with_meta(request)
+            )
 
         return PredictBatchResponse(
             crop_code=request.crop_code,
             horizon_hours=request.horizon_hours,
             reference_date=reference_date,
             forecast_source=source,
-            input_data_state=data_state,
+            input_data_state=effective_data_state,
             model_version=(
                 self.model_version
                 if source == ForecastSource.MODEL
@@ -392,7 +472,7 @@ class Predictor:
                 "no observations exist on or before reference_date for: "
                 + ", ".join(sorted(missing))
             )
-        return min(latest).date()
+        return max(latest).date()
 
     def _select_rows(
         self,
@@ -405,11 +485,12 @@ class Predictor:
         )
         if active_features is None:
             raise ValueError("feature cache is unavailable")
+        feature_columns = self._feature_columns
         eligible = active_features[
             (active_features["crop_code"] == request.crop_code)
             & (active_features["market_code"].isin(request.markets))
             & (active_features["recorded_date"] <= pd.Timestamp(reference_date))
-        ].dropna(subset=FEATURE_COLUMNS)
+        ].dropna(subset=feature_columns)
         if eligible.empty:
             raise ValueError("no complete feature rows exist for reference_date")
         latest = (
@@ -435,27 +516,48 @@ class Predictor:
     ) -> list[MarketForecast]:
         assert self.artifact is not None
         model = self.artifact["models"][str(request.horizon_hours)]
-        feature_matrix = pd.DataFrame(
-            [
-                rows[market_code][FEATURE_COLUMNS].to_numpy(dtype=float)
-                for market_code in request.markets
-            ],
-            columns=FEATURE_COLUMNS,
-        )
-        predicted_prices = model.predict(feature_matrix)
+        feature_columns = self._feature_columns
+        rain_col = f"forecast_rain_{request.horizon_hours}h_mm"
 
-        return [
-            self._market_forecast(
-                market_code=market_code,
-                row=rows[market_code],
-                predicted=float(predicted),
+        matrix_rows: list[list[float]] = []
+        for market_code in request.markets:
+            row = rows[market_code]
+            values: list[float] = []
+            for column in feature_columns:
+                if (
+                    column == "forecast_rain_mm"
+                    and rain_col in row.index
+                    and pd.notna(row[rain_col])
+                ):
+                    values.append(float(row[rain_col]))
+                else:
+                    values.append(float(row[column]))
+            matrix_rows.append(values)
+
+        feature_matrix = pd.DataFrame(matrix_rows, columns=feature_columns)
+        raw_predictions = model.predict(feature_matrix)
+        target_mode = str(self.artifact.get("target_mode", "absolute_price"))
+
+        forecasts: list[MarketForecast] = []
+        for market_code, raw_pred in zip(
+            request.markets,
+            raw_predictions,
+            strict=True,
+        ):
+            row = rows[market_code]
+            current = float(row["wholesale_price_lkr_per_kg"])
+            if target_mode == "relative_return":
+                predicted = max(1.0, current * (1.0 + float(raw_pred)))
+            else:
+                predicted = float(raw_pred)
+            forecasts.append(
+                self._market_forecast(
+                    market_code=market_code,
+                    row=row,
+                    predicted=predicted,
+                )
             )
-            for market_code, predicted in zip(
-                request.markets,
-                predicted_prices,
-                strict=True,
-            )
-        ]
+        return forecasts
 
     def _load_fallback_data(self) -> dict[str, Any]:
         path = self.settings.fallback_data_path
@@ -477,22 +579,35 @@ class Predictor:
     def _fallback_predictions(
         self, request: PredictBatchRequest
     ) -> list[MarketForecast]:
+        predictions, _, _ = self._fallback_predictions_with_meta(request)
+        return predictions
+
+    def _fallback_predictions_with_meta(
+        self, request: PredictBatchRequest
+    ) -> tuple[list[MarketForecast], date, InputDataState]:
         try:
             data = self._load_fallback_data()
             crop_data = data["markets"][request.crop_code]
+            snap_ref = date.fromisoformat(
+                str(data.get("reference_date", request.reference_date.isoformat()))
+            )
+            snap_state = InputDataState(str(data.get("input_data_state", "SEED")))
             result: list[MarketForecast] = []
             for market_code in request.markets:
                 market_data = crop_data[market_code][str(request.horizon_hours)]
-                current = float(market_data["current_price_lkr"])
-                predicted = float(market_data["predicted_price_lkr"])
-                pct_change = round((predicted - current) / current * 100, 2)
+                current = round_half_up_2(float(market_data["current_price_lkr"]))
+                predicted = round_half_up_2(
+                    float(market_data["predicted_price_lkr"])
+                )
+                ma7 = round_half_up_2(float(market_data["baseline_ma7_lkr"]))
+                pct_change = _pct_change_2dp(current, predicted)
                 result.append(
                     MarketForecast(
                         market_code=market_code,
                         current_price_lkr=current,
                         predicted_price_lkr=predicted,
                         baseline_naive_lkr=current,
-                        baseline_ma7_lkr=float(market_data["baseline_ma7_lkr"]),
+                        baseline_ma7_lkr=ma7,
                         pct_change=pct_change,
                         direction=Direction(
                             movement_direction(
@@ -502,11 +617,13 @@ class Predictor:
                             )
                         ),
                         glut_risk_level=GlutRisk(market_data["glut_risk_level"]),
-                        confidence_score=float(market_data["confidence_score"]),
+                        confidence_score=round_half_up_2(
+                            float(market_data["confidence_score"])
+                        ),
                         primary_driver=str(market_data["primary_driver"]),
                     )
                 )
-            return result
+            return result, snap_ref, snap_state
         except (
             OSError,
             json.JSONDecodeError,
@@ -514,7 +631,7 @@ class Predictor:
             TypeError,
             ValueError,
         ) as error:
-            raise ValueError(
+            raise FallbackUnavailableError(
                 "fallback forecast snapshot is unavailable or incomplete"
             ) from error
 
@@ -524,21 +641,27 @@ class Predictor:
         row: pd.Series,
         predicted: float,
     ) -> MarketForecast:
-        current = float(row["wholesale_price_lkr_per_kg"])
-        ma7 = float(row["rolling_mean_7d"])
-        pct_change = (predicted - current) / current * 100
+        current = round_half_up_2(float(row["wholesale_price_lkr_per_kg"]))
+        predicted_2dp = round_half_up_2(predicted)
+        ma7 = round_half_up_2(float(row["rolling_mean_7d"]))
+        pct_change = _pct_change_2dp(current, predicted_2dp)
         direction = movement_direction(
             current,
-            predicted,
+            predicted_2dp,
             self.settings.movement_threshold_pct,
         )
         arrivals = float(row["arrival_volume_tonnes"])
-        mean_arrivals = float(row.get("rolling_mean_7d_arrivals", arrivals))
+        baseline_arrivals = float(
+            row.get(
+                "rolling_mean_14d_arrivals",
+                row.get("rolling_mean_7d_arrivals", arrivals),
+            )
+        )
         volatility = abs(float(row["rolling_std_7d"]) / current)
-        confidence = max(0.55, min(0.9, 0.9 - volatility * 2))
-        if direction == "CRASH" or arrivals >= mean_arrivals * 1.15:
+        confidence = max(0.55, min(0.92, 0.90 - volatility * 1.8))
+        if direction == "CRASH" or arrivals >= baseline_arrivals * 1.15:
             glut_risk = GlutRisk.HIGH
-        elif direction == "SURGE" or arrivals <= mean_arrivals * 0.85:
+        elif direction == "SURGE" or arrivals <= baseline_arrivals * 0.85:
             glut_risk = GlutRisk.LOW
         else:
             glut_risk = GlutRisk.MEDIUM
@@ -561,14 +684,14 @@ class Predictor:
 
         return MarketForecast(
             market_code=market_code,
-            current_price_lkr=round(current, 2),
-            predicted_price_lkr=round(predicted, 2),
-            baseline_naive_lkr=round(current, 2),
-            baseline_ma7_lkr=round(ma7, 2),
-            pct_change=round(pct_change, 2),
+            current_price_lkr=current,
+            predicted_price_lkr=predicted_2dp,
+            baseline_naive_lkr=current,
+            baseline_ma7_lkr=ma7,
+            pct_change=pct_change,
             direction=Direction(direction),
             glut_risk_level=glut_risk,
-            confidence_score=round(confidence, 2),
+            confidence_score=round_half_up_2(confidence),
             primary_driver=driver,
         )
 
@@ -588,16 +711,19 @@ class Predictor:
                 if request.horizon_hours == 48
                 else fixture.predicted_72h
             )
+            confidence = (
+                fixture.confidence_48h
+                if request.horizon_hours == 48
+                else fixture.confidence_72h
+            )
             predictions.append(
                 MarketForecast(
                     market_code=market_code,
-                    current_price_lkr=fixture.current,
-                    predicted_price_lkr=predicted,
-                    baseline_naive_lkr=fixture.current,
-                    baseline_ma7_lkr=fixture.ma7,
-                    pct_change=round(
-                        (predicted - fixture.current) / fixture.current * 100, 2
-                    ),
+                    current_price_lkr=round_half_up_2(fixture.current),
+                    predicted_price_lkr=round_half_up_2(predicted),
+                    baseline_naive_lkr=round_half_up_2(fixture.current),
+                    baseline_ma7_lkr=round_half_up_2(fixture.ma7),
+                    pct_change=_pct_change_2dp(fixture.current, predicted),
                     direction=Direction(
                         movement_direction(
                             fixture.current,
@@ -606,7 +732,7 @@ class Predictor:
                         )
                     ),
                     glut_risk_level=fixture.glut_risk,
-                    confidence_score=fixture.confidence,
+                    confidence_score=round_half_up_2(confidence),
                     primary_driver=fixture.driver,
                 )
             )
@@ -626,13 +752,31 @@ class Predictor:
         return self.metadata
 
 
+def _rows_data_state(
+    rows: dict[str, pd.Series],
+    fallback_state: InputDataState,
+) -> InputDataState:
+    sources = {
+        str(row["source"])
+        for row in rows.values()
+        if "source" in row.index and pd.notna(row["source"])
+    }
+    if not sources:
+        return fallback_state
+    if all(source.endswith("_LIVE") for source in sources):
+        return InputDataState.LIVE
+    if any(
+        source.endswith("_LIVE") or source.endswith("_CACHED")
+        for source in sources
+    ):
+        return InputDataState.CACHED
+    return InputDataState.SEED
+
+
 def _data_state(frame: pd.DataFrame) -> InputDataState:
     if "source" not in frame.columns:
         return InputDataState.SEED
-    sources = {
-        str(value)
-        for value in frame["source"].dropna().unique()
-    }
+    sources = {str(value) for value in frame["source"].dropna().unique()}
     if sources and all(source.endswith("_LIVE") for source in sources):
         return InputDataState.LIVE
     if any(

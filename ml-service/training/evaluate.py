@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Sequence
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +10,7 @@ import pandas as pd
 from sklearn.metrics import mean_absolute_error
 
 from etl.feature_engineering import directional_symmetry
+from etl.seed_loader import fuel_prices_for_date, round_half_up_2
 from training.routing import (
     VEHICLES,
     Route,
@@ -61,6 +62,9 @@ ROUTES = {
         "THAMBUTTEGAMA": Route(
             "JAFFNA", "THAMBUTTEGAMA", Decimal("275"), Decimal("1.00"), Decimal("2.50")
         ),
+        "JAFFNA": Route(
+            "JAFFNA", "JAFFNA", Decimal("5"), Decimal("1.00"), Decimal("2.50")
+        ),
     },
     "DAMBULLA": {
         "DAMBULLA": Route(
@@ -92,6 +96,9 @@ ROUTES = {
         "PETTAH_COLOMBO": Route(
             "NUWARA_ELIYA", "PETTAH_COLOMBO", Decimal("180"), Decimal("1.25"), Decimal("2.50")
         ),
+        "NUWARA_ELIYA": Route(
+            "NUWARA_ELIYA", "NUWARA_ELIYA", Decimal("3"), Decimal("1.25"), Decimal("2.50")
+        ),
         "KEPPETIPOLA": Route(
             "NUWARA_ELIYA", "KEPPETIPOLA", Decimal("55"), Decimal("1.25"), Decimal("2.50")
         ),
@@ -120,6 +127,9 @@ ROUTES = {
         ),
         "MEEGODA": Route(
             "THAMBUTTEGAMA", "MEEGODA", Decimal("175"), Decimal("1.00"), Decimal("2.50")
+        ),
+        "THAMBUTTEGAMA": Route(
+            "THAMBUTTEGAMA", "THAMBUTTEGAMA", Decimal("3"), Decimal("1.00"), Decimal("2.50")
         ),
         "JAFFNA": Route(
             "THAMBUTTEGAMA", "JAFFNA", Decimal("275"), Decimal("1.00"), Decimal("2.50")
@@ -169,10 +179,10 @@ def evaluate_predictions(
     actual = frame[target_column]
     predicted = frame[prediction_column]
     return {
-        "directional_symmetry_pct": round(
-            directional_symmetry(current, actual, predicted), 2
+        "directional_symmetry_pct": round_half_up_2(
+            directional_symmetry(current, actual, predicted)
         ),
-        "mae_lkr": round(float(mean_absolute_error(actual, predicted)), 2),
+        "mae_lkr": round_half_up_2(float(mean_absolute_error(actual, predicted))),
     }
 
 
@@ -185,7 +195,9 @@ def safe_margin_fpr(
     | pd.Series,
     default_realized_net: Sequence[Decimal | float | int | str] | pd.Series,
 ) -> dict[str, Any]:
-    alternatives = [_to_decimal(item) for item in recommended_alternative_realized_net]
+    alternatives = [
+        _to_decimal(item) for item in recommended_alternative_realized_net
+    ]
     defaults = [_to_decimal(item) for item in default_realized_net]
     if len(alternatives) != len(defaults):
         raise ValueError(
@@ -205,8 +217,13 @@ def safe_margin_fpr(
         )
         if alternative_net < default_net
     )
+    pct = (
+        Decimal(false_count)
+        * Decimal("100")
+        / Decimal(reroute_count)
+    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     return {
-        "safe_margin_fpr_pct": round(false_count / reroute_count * 100, 2),
+        "safe_margin_fpr_pct": float(pct),
         "reroute_count": reroute_count,
         "false_reroute_count": false_count,
     }
@@ -242,12 +259,16 @@ def evaluate_routing_decisions(
     price_columns = [target_column]
     if prediction_column not in price_columns:
         price_columns.append(prediction_column)
+    extra_columns = (
+        ["diesel_price_lkr"] if "diesel_price_lkr" in frame.columns else []
+    )
     decisions = frame[
         [
             "recorded_date",
             "market_code",
             "crop_code",
             *price_columns,
+            *extra_columns,
         ]
     ].copy()
     decisions["recorded_date"] = pd.to_datetime(
@@ -269,6 +290,9 @@ def evaluate_routing_decisions(
         if not set(snapshot["market_code"]).issubset(route_set):
             continue
         by_market = snapshot.set_index("market_code")
+        diesel_price, petrol_price = _resolve_fuel_prices(
+            recorded_date, by_market
+        )
         predicted_net = _net_profits(
             by_market,
             crop_code,
@@ -276,6 +300,8 @@ def evaluate_routing_decisions(
             route_set,
             quantity_kg,
             vehicle_code,
+            diesel_price,
+            petrol_price,
         )
         alternative = select_reroute(
             DEFAULT_MARKET,
@@ -292,6 +318,8 @@ def evaluate_routing_decisions(
             route_set,
             quantity_kg,
             vehicle_code,
+            diesel_price,
+            petrol_price,
         )
         recommended_alternative_realized.append(realized_net[alternative])
         default_realized.append(realized_net[DEFAULT_MARKET])
@@ -302,6 +330,22 @@ def evaluate_routing_decisions(
     )
 
 
+def _resolve_fuel_prices(
+    recorded_date: pd.Timestamp,
+    snapshot: pd.DataFrame,
+) -> tuple[Decimal, Decimal]:
+    scheduled_diesel, scheduled_petrol = fuel_prices_for_date(recorded_date)
+    if "diesel_price_lkr" in snapshot.columns:
+        raw_diesel = snapshot["diesel_price_lkr"].iloc[0]
+        if pd.notna(raw_diesel):
+            diesel = Decimal(str(raw_diesel)).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+            petrol = diesel + (scheduled_petrol - scheduled_diesel)
+            return diesel, petrol
+    return scheduled_diesel, scheduled_petrol
+
+
 def _net_profits(
     snapshot: pd.DataFrame,
     crop_code: str,
@@ -309,6 +353,8 @@ def _net_profits(
     route_set: dict[str, Route],
     quantity_kg: Decimal,
     vehicle_code: str,
+    diesel_price_lkr: Decimal = Decimal("283.00"),
+    petrol_price_lkr: Decimal = Decimal("311.00"),
 ) -> dict[str, Decimal]:
     vehicle = VEHICLES[vehicle_code]
     spoilage_rate = SPOILAGE_RATES[crop_code]
@@ -320,8 +366,8 @@ def _net_profits(
             quantity_kg,
             route_set[str(market_code)],
             vehicle,
-            Decimal("283.00"),
-            Decimal("311.00"),
+            diesel_price_lkr,
+            petrol_price_lkr,
             spoilage_rate,
         )
         result[str(market_code)] = profit.net_profit_lkr
@@ -368,12 +414,19 @@ def evaluate_routing_matrix(
                         **result,
                     }
                 )
+    agg_fpr = (
+        None
+        if total_reroutes == 0
+        else float(
+            (
+                Decimal(total_false_reroutes)
+                * Decimal("100")
+                / Decimal(total_reroutes)
+            ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        )
+    )
     return {
-        "safe_margin_fpr_pct": (
-            None
-            if total_reroutes == 0
-            else round(total_false_reroutes / total_reroutes * 100, 2)
-        ),
+        "safe_margin_fpr_pct": agg_fpr,
         "reroute_count": total_reroutes,
         "false_reroute_count": total_false_reroutes,
         "scenario_count": len(results),

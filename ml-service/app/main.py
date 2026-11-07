@@ -7,7 +7,7 @@ import uuid
 from fastapi import FastAPI, HTTPException, Query, Request
 
 from app.config import get_settings
-from app.predictor import Predictor
+from app.predictor import FallbackUnavailableError, Predictor
 from app.schemas import (
     HealthResponse,
     PredictBatchRequest,
@@ -77,5 +77,7 @@ def predict_batch(
         if demo_mode:
             return predictor().predict_demo_fixture(request)
         return predictor().predict(request)
+    except FallbackUnavailableError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error

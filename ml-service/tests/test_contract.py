@@ -186,3 +186,87 @@ def test_fallback_snapshots_match_across_services_and_separate_demo_fixture():
     )
     assert demo_fixture.predictions[0].predicted_price_lkr == 154.0
 
+
+def test_evaluate_routes_match_seed_sql_routes():
+    import re
+    from training.evaluate import ROUTES
+
+    seed_sql = (ROOT.parent / "db" / "seed.sql").read_text(encoding="utf-8")
+    pattern = re.compile(
+        r"\('([A-Z_]+)',\s*'([A-Z_]+)',\s*([0-9.]+),\s*[0-9.]+,\s*([0-9.]+)\)"
+    )
+    sql_routes = {
+        (origin, market): (Decimal(dist), Decimal(terrain))
+        for origin, market, dist, terrain in pattern.findall(seed_sql)
+        if origin in ROUTES
+    }
+    py_routes = {
+        (origin, market): (route.distance_km, route.terrain_factor)
+        for origin, destinations in ROUTES.items()
+        for market, route in destinations.items()
+    }
+    assert len(sql_routes) == 35
+    assert py_routes == sql_routes
+
+
+def test_demo_fixture_72h_confidence_matches_fallback_snapshot():
+    import json
+    from app.schemas import PredictBatchRequest
+
+    snapshot = json.loads(
+        (ROOT / "data" / "fallback_forecasts.json").read_text(encoding="utf-8")
+    )
+    predictor = Predictor(Settings())
+    response = predictor.predict_demo_fixture(
+        PredictBatchRequest(
+            crop_code="TOMATO",
+            horizon_hours=72,
+            reference_date=date(2026, 10, 27),
+            markets=list(snapshot["demo_fixture"]["TOMATO"].keys()),
+        )
+    )
+    for item in response.predictions:
+        expected = snapshot["demo_fixture"]["TOMATO"][item.market_code]["72"][
+            "confidence_score"
+        ]
+        assert item.confidence_score == pytest.approx(expected)
+
+
+def test_live_model_canonical_scenario_detects_glut_and_reroutes_to_pettah():
+    from app.schemas import PredictBatchRequest
+    from training.evaluate import ROUTES
+    from training.routing import VEHICLES, calculate_profit, select_reroute
+
+    predictor = Predictor(Settings())
+    assert predictor.model_loaded
+    request = PredictBatchRequest(
+        crop_code="TOMATO",
+        horizon_hours=48,
+        reference_date=date(2026, 10, 27),
+        markets=list(ROUTES["ANURADHAPURA"].keys()),
+    )
+    response = predictor.predict(request)
+    assert response.forecast_source.value == "MODEL"
+    by_market = {item.market_code: item for item in response.predictions}
+    assert by_market["DAMBULLA"].direction.value == "CRASH"
+    assert by_market["DAMBULLA"].glut_risk_level.value == "HIGH"
+    assert by_market["PETTAH_COLOMBO"].direction.value == "SURGE"
+
+    net_profits = {
+        code: calculate_profit(
+            Decimal(str(forecast.predicted_price_lkr)),
+            Decimal("1000"),
+            ROUTES["ANURADHAPURA"][code],
+            VEHICLES["MINI_TRUCK_BATTA"],
+            Decimal("283.00"),
+            Decimal("311.00"),
+            Decimal("1.50"),
+        ).net_profit_lkr
+        for code, forecast in by_market.items()
+    }
+    recommended = select_reroute(
+        "DAMBULLA", net_profits, Decimal("5.0"), Decimal("1000.00")
+    )
+    assert recommended == "PETTAH_COLOMBO"
+
+
