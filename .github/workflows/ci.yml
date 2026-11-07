@@ -2,16 +2,16 @@ name: ATIE CI
 
 on:
   push:
-    branches: [main, final-main, "*-main", "codex/**"]
+    branches: [main, final-main, "final-main*", "*-main", "codex/**"]
   pull_request:
-    branches: [main, final-main, "*-main"]
+    branches: [main, final-main, "final-main*", "*-main"]
 
 permissions:
   contents: read
 
 jobs:
   ml-service:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:16-alpine
@@ -48,7 +48,7 @@ jobs:
           ATIE_TEST_POSTGRES_DSN: postgresql://atie:atie_dev_password@localhost:5432/atie
 
   backend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:16-alpine
@@ -88,7 +88,7 @@ jobs:
         run: mvn -B -Dnet.bytebuddy.experimental=true -Ppostgres-it -Dtest=PostgresSchemaIntegrationTest test
 
   frontend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -106,7 +106,7 @@ jobs:
         working-directory: frontend
 
   frontend-mobile:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -122,7 +122,7 @@ jobs:
         working-directory: frontend/mobile
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [ml-service, backend, frontend, frontend-mobile]
     steps:
       - uses: actions/checkout@v4
