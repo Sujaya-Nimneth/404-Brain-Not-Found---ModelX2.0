@@ -10,13 +10,13 @@ Team 404 Brain not found, ModelX 2.0.
 ## Architecture
 
 ```text
-React + Vite dashboard (:15173 in Compose)
+React + Vite dashboard (:15173 in Compose) / Android field app (frontend/mobile)
                  |
                  v
 Spring Boot API (:8080) -----> PostgreSQL 16 (:55432 on the host)
         |
         v
-FastAPI + RandomForest (:8000, internal Compose network only)
+FastAPI + XGBoost (:8000, internal Compose network only)
 
 Ingestion worker -----> HDX WFP / Open-Meteo / optional CROPIX
         |
@@ -106,7 +106,7 @@ generated. The backend exposes:
 - `/actuator/health` for Compose readiness
 - `/actuator/metrics` for runtime counters and timers
 
-The frontend Nginx image sends security headers including CSP, HSTS,
+The frontend Nginx image sends security headers including CSP,
 `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and a
 restrictive permissions policy. Compose health checks use IPv4 loopback so
 they behave consistently in Docker Desktop environments.
@@ -123,7 +123,8 @@ The GitHub Actions workflow in `.github/workflows/ci.yml` runs:
 1. ML tests with coverage against PostgreSQL, including provenance integration
 2. Backend tests on Java 21
 3. Frontend unit tests, lint, and production build
-4. A Compose-backed Playwright smoke test
+4. Android mobile typecheck, contract tests, and bundle export (`frontend/mobile/`)
+5. A Compose-backed Playwright smoke test
 
 The E2E test verifies the canonical fixture, the explicit `DEMO_FIXTURE` and
 `MODEL`/`FALLBACK` labels, a coherent safety-gated directive, the seven-market
@@ -227,11 +228,10 @@ running:
 
 ```bash
 cd backend
-mvn -Ppostgres-it \
-  -DATIE_TEST_DATABASE_URL=jdbc:postgresql://localhost:55432/atie \
-  -DATIE_TEST_DATABASE_USERNAME=atie \
-  -DATIE_TEST_DATABASE_PASSWORD=atie_dev_password \
-  test
+ATIE_TEST_DATABASE_URL=jdbc:postgresql://localhost:55432/atie \
+ATIE_TEST_DATABASE_USERNAME=atie \
+ATIE_TEST_DATABASE_PASSWORD=atie_dev_password \
+mvn -Ppostgres-it -Dnet.bytebuddy.experimental=true test
 ```
 
 ### Frontend
@@ -303,18 +303,18 @@ end `2026-07-09` and holdout start `2026-07-12`) are stored in
 
 | Horizon | DS | MAE (LKR/kg) | SM-FPR | Reroutes |
 |---|---:|---:|---:|---:|
-| 48h | 67.45% | 5.45 | 2.59% | 6,369 |
-| 72h | 68.03% | 5.95 | 2.93% | 6,624 |
+| 48h | 93.81% | 1.81 | 0.14% | 2,106 |
+| 72h | 92.86% | 2.87 | 0.19% | 2,071 |
 
 Naive and 7-day moving-average baselines are evaluated alongside the model.
 SM-FPR is `null` when no reroute decisions occur, never silently reported as
 zero.
 
-For the 48h holdout, the naive baseline has DS `0.00%`, MAE `6.23`, and SM-FPR
-`3.75%`; the MA7 baseline has DS `52.21%`, MAE `8.19`, and SM-FPR `5.15%`.
-For 72h, the corresponding model figures are DS `68.03%`, MAE `5.95`, and
-SM-FPR `2.93%` (versus naive MAE `7.00` / SM-FPR `4.44%` and MA7 DS `46.50%` /
-MAE `9.45` / SM-FPR `7.63%`).
+For the 48h holdout, the naive baseline has DS `0.00%`, MAE `12.25`, and SM-FPR
+`24.65%`; the MA7 baseline has DS `40.99%`, MAE `16.35`, and SM-FPR `23.59%`.
+For 72h, the corresponding model figures are DS `92.86%`, MAE `2.87`, and
+SM-FPR `0.19%` (versus naive MAE `16.32` / SM-FPR `37.11%` and MA7 DS `45.24%` /
+MAE `17.65` / SM-FPR `27.92%`).
 
 The fallback snapshot covers all four crops across all seven markets at both
 horizons. SM-FPR backtests 60 route profiles per horizon (five origins, three

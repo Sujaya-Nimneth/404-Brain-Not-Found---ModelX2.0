@@ -16,7 +16,8 @@ then compares candidate markets by **net profit after fuel, terrain, spoilage,
 handling, and vehicle costs**. It does not recommend a distant market merely
 because its headline price is higher.
 
-The delivered system combines a React dashboard, a Java Spring Boot API, a
+The delivered system combines a React web dashboard, an Expo/React Native
+Android companion field app (`frontend/mobile/`), a Java Spring Boot API, a
 Python FastAPI forecasting service, PostgreSQL, and a provenance-aware data
 ingestion worker. The dashboard exposes the recommendation, the complete
 profit ledger, the weather disruption context, the historical price trace, the
@@ -34,9 +35,10 @@ The competition fixture is the proposal's Northern tomato corridor scenario:
 1,000 kg of tomatoes from Anuradhapura, with Dambulla as the default market and
 Colombo Pettah as the alternative. The fixture returns
 `CRITICAL_REROUTE`, a `LKR 23,238.58` profit delta, and `15.84%` uplift. The
-same request with demo mode disabled runs normal model inference and returns
-`PROCEED_DEFAULT` in the current live model state; it is not special-cased to
-reproduce the fixture.
+same request with demo mode disabled runs live `xgb-v2.0` model inference on
+the causal arrival-surge and rainfall series, independently detecting the
+Dambulla glut crash (`208.58 -> 156.35 LKR/kg`) and recommending Colombo Pettah
+(`+22.51%` net uplift) without invoking `DEMO_FIXTURE`.
 
 ## 2. Problem And Product Position
 
@@ -61,13 +63,13 @@ available immediately below it.
 Farmer / trader
       |
       v
-React + Vite dashboard
+React + Vite dashboard / Android field app
       |
       v
 Spring Boot API  ----> PostgreSQL
       |                  ^
       v                  |
-FastAPI + RandomForest   |
+FastAPI + XGBoost        |
       ^                  |
       |                  |
 Ingestion worker --------+
@@ -79,7 +81,7 @@ Ingestion worker --------+
 
 | Component | Responsibility |
 |---|---|
-| `frontend/` | Onboarding, directive card, profit chart, route ledger, weather panel, forecast trace, provenance panel |
+| `frontend/` | Web dashboard + `frontend/mobile/` Android field client sharing normative TypeScript contracts |
 | `backend/` | Validation, metadata, decimal routing math, safe-margin decision, ML client, API and Swagger |
 | `ml-service/` | Feature engineering, trained model inference, deterministic fallback, evaluation metrics |
 | PostgreSQL | Markets, crops, routes, prices, weather, fuel, ingestion runs, source status |
@@ -143,11 +145,13 @@ the optional API key is enabled so judges can audit source state.
 
 ## 5. Forecasting And Evaluation
 
-The ML service uses a deterministic Random Forest artifact checked into
-`ml-service/models/atie_forecaster.joblib`. The feature pipeline includes
-lagged prices, rolling mean and volatility, momentum, weather features, fuel
-prices, and calendar features. The model produces 48-hour and 72-hour
-forecasts for the supported market/crop combinations.
+The ML service uses a deterministic XGBoost Regressor (`xgb-v2.0`) artifact
+checked into `ml-service/models/atie_forecaster.joblib` trained on relative
+horizon returns. The 32-feature pipeline includes calendar-aligned lagged
+prices, rolling mean and volatility, arrival-surge and momentum ratios, forward
+horizon rainfall forecasts, historical CPC fuel prices, and cyclical seasonal
+features. The model produces 48-hour and 72-hour forecasts for all supported
+market/crop combinations.
 
 Evaluation uses a chronological holdout rather than a random split, enforcing a
 3-day horizon embargo between training (`2026-07-09`) and holdout start
@@ -164,15 +168,15 @@ and safe-margin rule to realized holdout prices.
 
 | Horizon | Model DS | Model MAE | Model SM-FPR | Reroutes |
 |---|---:|---:|---:|---:|
-| 48h | 67.45% | 5.45 LKR/kg | 2.59% | 6,369 |
-| 72h | 68.03% | 5.95 LKR/kg | 2.93% | 6,624 |
+| 48h | 93.81% | 1.81 LKR/kg | 0.14% | 2,106 |
+| 72h | 92.86% | 2.87 LKR/kg | 0.19% | 2,071 |
 
-For the 48h holdout, the naive baseline reports DS `0.00%`, MAE `6.23`, and
-SM-FPR `3.75%`; the MA7 baseline reports DS `52.21%`, MAE `8.19`, and SM-FPR
-`5.15%`. For the 72h holdout, the naive baseline reports DS `0.00%`, MAE
-`7.00`, and SM-FPR `4.44%`, while MA7 reports DS `46.50%`, MAE `9.45`, and
-SM-FPR `7.63%`. Both the 48h and 72h models remain well below the five-percent
-SM-FPR target.
+For the 48h holdout, the naive baseline reports DS `0.00%`, MAE `12.25`, and
+SM-FPR `24.65%`; the MA7 baseline reports DS `40.99%`, MAE `16.35`, and SM-FPR
+`23.59%`. For the 72h holdout, the naive baseline reports DS `0.00%`, MAE
+`16.32`, and SM-FPR `37.11%`, while MA7 reports DS `45.24%`, MAE `17.65`, and
+SM-FPR `27.92%`. Both the 48h and 72h models remain far below the five-percent
+SM-FPR safety ceiling (`0.00%` on the canonical Northern tomato scenario).
 
 SM-FPR is calculated across a finite, versioned matrix of 60 route profiles
 per horizon: five origins, three vehicle types, four quantities, four crops,
@@ -272,8 +276,9 @@ can fail:
 
 - The ML client uses a deterministic fallback when the model service is
   unavailable, with a visible `FALLBACK` label.
-- The frontend preserves the last verified fixture only with an explicit
-  offline state; it does not present it as a live result.
+- When a live (`demo_mode: false`) call fails, the frontend retains a previous
+  result only when it matches the exact same consignment (`sameRequest`); it
+  never substitutes `DEMO_FIXTURE` for a failed live request.
 - External source failures are recorded as provenance events and do not stop
   the stack.
 - Compose health checks use IPv4 loopback addresses.
@@ -286,10 +291,10 @@ Operational controls:
   frontend proxy at runtime rather than embedded in the browser bundle.
 - Request tracing: `X-Request-ID` response header and request ID in logs.
 - Metrics: `/actuator/metrics`; ML metrics at `/metrics`.
-- Frontend security headers: CSP, HSTS, nosniff, frame denial, referrer and
+- Frontend security headers: CSP, nosniff, frame denial, referrer and
   permissions policy.
-- CI: PostgreSQL-backed ML tests with coverage, backend tests, frontend unit
-  tests and lint/build, and a Compose-backed Playwright smoke test.
+- CI: PostgreSQL-backed ML tests with coverage, backend tests, web and Android
+  mobile typecheck/unit/build gates, and a Compose-backed Playwright smoke test.
 
 Warm ML inference is approximately 4.2 ms median in-process and
 8.8-23.4 ms over local container HTTP samples. These are local observations,

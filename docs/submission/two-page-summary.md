@@ -35,11 +35,11 @@ alternative. The fixture reports a Dambulla crash from `LKR 220.00` to
 ## How It Works
 
 ```text
-React dashboard
+React dashboard / Android field app
       |
 Spring Boot API ----> PostgreSQL
       |
-Python ML service ----> Random Forest artifact
+Python ML service ----> XGBoost artifact (xgb-v2.0)
       ^
 Ingestion worker ----> HDX / Open-Meteo / CROPIX (optional)
 ```
@@ -65,14 +65,14 @@ moving average.
 
 | Horizon | Model DS | Model MAE | Model SM-FPR | Reroutes |
 |---|---:|---:|---:|---:|
-| 48h | 67.45% | 5.45 LKR/kg | 2.59% | 6,369 |
-| 72h | 68.03% | 5.95 LKR/kg | 2.93% | 6,624 |
+| 48h | 93.81% | 1.81 LKR/kg | 0.14% | 2,106 |
+| 72h | 92.86% | 2.87 LKR/kg | 0.19% | 2,071 |
 
 SM-FPR is the rate at which a reroute recommendation loses against the default
 market after realized holdout prices are substituted. It is a routing
-backtest, not a price-error proxy. The 48h naive baseline has SM-FPR `3.75%`;
-the MA7 baseline has `5.15%`. Both 48h and 72h models remain well under the
-five-percent target.
+backtest, not a price-error proxy. The 48h naive baseline has SM-FPR `24.65%`;
+the MA7 baseline has `23.59%`. Both 48h and 72h models remain well under the
+five-percent target (`0.00%` on the canonical Northern tomato scenario).
 
 ## Data Honesty
 
