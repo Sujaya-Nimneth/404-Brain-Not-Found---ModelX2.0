@@ -15,6 +15,7 @@ import {
   AUTO_DETECTED_BASE_URL,
   getActiveApiBaseUrl,
   getCustomApiBaseUrl,
+  getCustomApiKey,
   getDetectedLanGatewayUrl,
   pingEndpointHealth,
 } from "../api/atieClient";
@@ -26,7 +27,7 @@ interface Props {
   visible: boolean;
   language: LanguageCode;
   onClose: () => void;
-  onSaveEndpoint: (customUrl: string | null) => void;
+  onSaveEndpoint: (customUrl: string | null, customApiKey: string | null) => void;
 }
 
 export function ServerSettingsModal({
@@ -37,6 +38,7 @@ export function ServerSettingsModal({
 }: Props) {
   const t = UI_STRINGS[language];
   const [draftUrl, setDraftUrl] = useState("");
+  const [draftApiKey, setDraftApiKey] = useState("");
   const [testing, setTesting] = useState(false);
   const [probeStatus, setProbeStatus] = useState<{
     ok: boolean;
@@ -46,6 +48,7 @@ export function ServerSettingsModal({
   useEffect(() => {
     if (visible) {
       setDraftUrl(getCustomApiBaseUrl() ?? "");
+      setDraftApiKey(getCustomApiKey() ?? "");
       setProbeStatus(null);
     }
   }, [visible]);
@@ -83,7 +86,10 @@ export function ServerSettingsModal({
       draftUrl.trim().length > 0 ? draftUrl.trim() : AUTO_DETECTED_BASE_URL;
     setTesting(true);
     setProbeStatus(null);
-    const result = await pingEndpointHealth(candidate);
+    const result = await pingEndpointHealth(
+      candidate,
+      draftApiKey.trim() || null,
+    );
     setProbeStatus({ ok: result.ok, text: result.statusText });
     setTesting(false);
   };
@@ -161,9 +167,7 @@ export function ServerSettingsModal({
             })}
           </View>
 
-          <Text style={styles.inputLabel}>
-            CUSTOM LAN / HOST URL (FOR PHYSICAL ANDROID APK OR WI-FI)
-          </Text>
+          <Text style={styles.inputLabel}>{t.customUrlLabel}</Text>
           <TextInput
             value={draftUrl}
             onChangeText={(txt) => {
@@ -175,6 +179,21 @@ export function ServerSettingsModal({
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
+            style={styles.input}
+          />
+
+          <Text style={styles.inputLabel}>{t.apiKeyLabel}</Text>
+          <TextInput
+            value={draftApiKey}
+            onChangeText={(txt) => {
+              setDraftApiKey(txt);
+              setProbeStatus(null);
+            }}
+            placeholder={t.apiKeyHint}
+            placeholderTextColor={colors.ink45}
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry
             style={styles.input}
           />
 
@@ -221,7 +240,10 @@ export function ServerSettingsModal({
 
             <TouchableOpacity
               onPress={() => {
-                onSaveEndpoint(draftUrl.trim() || null);
+                onSaveEndpoint(
+                  draftUrl.trim() || null,
+                  draftApiKey.trim() || null,
+                );
                 onClose();
               }}
               style={styles.saveBtn}
@@ -247,7 +269,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     padding: 20,
-    gap: 11,
+    gap: 10,
   },
   topRow: {
     flexDirection: "row",

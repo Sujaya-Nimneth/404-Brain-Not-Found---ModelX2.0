@@ -1,4 +1,13 @@
-import type { DirectiveSeverity, LanguageCode } from "../types/atie";
+import type {
+  AnalyzeResponse,
+  DirectiveSeverity,
+  LanguageCode,
+} from "../types/atie";
+import {
+  formatCurrency,
+  formatSignedCurrency,
+  formatSignedPct,
+} from "../utils/format";
 
 export interface UiStrings {
   appSubtitle: string;
@@ -28,16 +37,35 @@ export interface UiStrings {
   recommendedForecast: string;
   profitUplift: string;
   extraTakeHome: string;
+  holdValue: string;
+  holdSuffix: string;
+  weakMarginSuffix: string;
+  defaultRouteValue: string;
+  keepRouteSuffix: string;
+  noRerouteValue: string;
+  belowSafeFloorSuffix: string;
+  vsDefaultSuffix: string;
+  netDeltaSuffix: string;
   dispatchHeading: string;
   shareWhatsApp: string;
   shareSms: string;
   shareMore: string;
   profitChartTag: string;
   profitChartTitle: string;
+  netProfitLegend: string;
+  fuelHandlingLegend: string;
+  spoilageLegend: string;
   routeLedgerTag: string;
   routeLedgerTitle: string;
   rankedByNetProfit: string;
   estimatedNetProfit: string;
+  recommendedBadgeLabel: string;
+  defaultBaselineLabel: string;
+  currentPriceLabel: string;
+  fuelCostLabel: string;
+  handlingCostLabel: string;
+  grossRevLabel: string;
+  spoilageCostLabel: string;
   forecastTag: string;
   forecastTitle: string;
   forecastSubtitle: string;
@@ -50,6 +78,9 @@ export interface UiStrings {
   benchmarksTitle: string;
   serverModalTitle: string;
   serverModalSubtitle: string;
+  customUrlLabel: string;
+  apiKeyLabel: string;
+  apiKeyHint: string;
   saveAndReconnect: string;
   testConnection: string;
   closeLabel: string;
@@ -86,16 +117,35 @@ export const UI_STRINGS: Record<LanguageCode, UiStrings> = {
     recommendedForecast: "RECOMMENDED",
     profitUplift: "PROFIT UPLIFT",
     extraTakeHome: "EXTRA TAKE-HOME",
+    holdValue: "Hold",
+    holdSuffix: "do not dispatch",
+    weakMarginSuffix: "weak net margin",
+    defaultRouteValue: "Default",
+    keepRouteSuffix: "keep route",
+    noRerouteValue: "No reroute",
+    belowSafeFloorSuffix: "below 5% floor",
+    vsDefaultSuffix: "vs default market",
+    netDeltaSuffix: "LKR net delta",
     dispatchHeading: "FIELD DISPATCH · SEND TO DRIVER OR CO-OP",
     shareWhatsApp: "WhatsApp",
     shareSms: "SMS",
     shareMore: "Share",
     profitChartTag: "MARKET ECONOMICS",
     profitChartTitle: "Net Profit vs Route Deductions",
+    netProfitLegend: "Net Profit",
+    fuelHandlingLegend: "Fuel + Handling",
+    spoilageLegend: "Spoilage Loss",
     routeLedgerTag: "ROUTE LEDGER",
     routeLedgerTitle: "Every rupee accounted for.",
     rankedByNetProfit: "RANKED BY NET PROFIT",
     estimatedNetProfit: "ESTIMATED NET PROFIT",
+    recommendedBadgeLabel: "RECOMMENDED",
+    defaultBaselineLabel: "DEFAULT BASELINE",
+    currentPriceLabel: "Current",
+    fuelCostLabel: "Fuel",
+    handlingCostLabel: "Handling",
+    grossRevLabel: "Gross rev",
+    spoilageCostLabel: "Spoilage opp. cost",
     forecastTag: "FORECAST TRACE",
     forecastTitle: "14-Day History & 48–72h Horizon",
     forecastSubtitle:
@@ -111,6 +161,9 @@ export const UI_STRINGS: Record<LanguageCode, UiStrings> = {
     serverModalTitle: "Android Backend Endpoint",
     serverModalSubtitle:
       "Connect through the Docker Nginx gateway (:15173) or directly to Spring Boot (:8080).",
+    customUrlLabel: "CUSTOM LAN / HOST URL (FOR PHYSICAL ANDROID APK OR WI-FI)",
+    apiKeyLabel: "OPTIONAL X-ATIE-API-KEY (FOR DIRECT :8080 AUTH)",
+    apiKeyHint: "Leave empty when using the :15173 gateway or local dev mode",
     saveAndReconnect: "Save & Refresh",
     testConnection: "Test Endpoint",
     closeLabel: "Close",
@@ -142,19 +195,38 @@ export const UI_STRINGS: Record<LanguageCode, UiStrings> = {
     analyzeBtn: "හොඳම වෙළඳපොළ විශ්ලේෂණය කරන්න",
     analyzingBtn: "ආරක්ෂිතම මාර්ගය ගණනය කරමින්…",
     defaultForecast: "සාමාන්‍ය වෙළඳපොළ මිල",
-    recommendedForecast: "නිර්දේශිත මිල",
+    recommendedForecast: "නිර්දේශය",
     profitUplift: "ශුද්ධ ලාභ වැඩිවීම",
     extraTakeHome: "අමතර ශුද්ධ ආදායම",
+    holdValue: "රඳවන්න",
+    holdSuffix: "පිටත් නොකරන්න",
+    weakMarginSuffix: "අඩු/සෘණ ශුද්ධ ලාභය",
+    defaultRouteValue: "සාමාන්‍ය",
+    keepRouteSuffix: "මාර්ගය තබාගන්න",
+    noRerouteValue: "වෙනසක් නැත",
+    belowSafeFloorSuffix: "5% සීමාවට අඩුයි",
+    vsDefaultSuffix: "සාමාන්‍ය වෙළඳපොළට සාපේක්ෂව",
+    netDeltaSuffix: "රු. ශුද්ධ වෙනස",
     dispatchHeading: "රියදුරු හෝ සමිතිය වෙත යවන්න",
     shareWhatsApp: "WhatsApp",
     shareSms: "SMS",
     shareMore: "බෙදාගන්න",
     profitChartTag: "වෙළඳපොළ ආර්ථිකය",
     profitChartTitle: "ශුද්ධ ලාභය සහ ප්‍රවාහන වියදම්",
+    netProfitLegend: "ශුද්ධ ලාභය",
+    fuelHandlingLegend: "ඉන්ධන + ගාස්තු",
+    spoilageLegend: "නරක්වීම් පාඩුව",
     routeLedgerTag: "මාර්ග ලෙජරය",
     routeLedgerTitle: "සෑම රුපියලකම නිවැරදි ගණනය.",
     rankedByNetProfit: "ශුද්ධ ලාභය අනුව",
     estimatedNetProfit: "ඇස්තමේන්තුගත ශුද්ධ ලාභය",
+    recommendedBadgeLabel: "නිර්දේශිතයි",
+    defaultBaselineLabel: "සාමාන්‍ය මට්ටම",
+    currentPriceLabel: "වත්මන් මිල",
+    fuelCostLabel: "ඉන්ධන",
+    handlingCostLabel: "වෙළඳපොළ ගාස්තු",
+    grossRevLabel: "දළ ආදායම",
+    spoilageCostLabel: "නරක්වීම් පිරිවැය",
     forecastTag: "මිල ගමන්මග",
     forecastTitle: "දින 14 ඉතිහාසය සහ පැය 48–72 පුරෝකථනය",
     forecastSubtitle:
@@ -170,6 +242,9 @@ export const UI_STRINGS: Record<LanguageCode, UiStrings> = {
     serverModalTitle: "Android සේවාදායක සම්බන්ධතාව",
     serverModalSubtitle:
       "Docker Nginx (:15173) හෝ Spring Boot (:8080) සේවාදායක ලිපිනය සකසන්න.",
+    customUrlLabel: "අභිරුචි LAN / සේවාදායක URL ලිපිනය",
+    apiKeyLabel: "විකල්ප X-ATIE-API-KEY (සෘජු :8080 සඳහා)",
+    apiKeyHint: ":15173 ද්වාරය භාවිතා කරන විට හිස්ව තබන්න",
     saveAndReconnect: "සුරකින්න",
     testConnection: "පරීක්ෂා කරන්න",
     closeLabel: "වසන්න",
@@ -201,19 +276,38 @@ export const UI_STRINGS: Record<LanguageCode, UiStrings> = {
     analyzeBtn: "சந்தை பாதையை பகுப்பாய்வு செய்",
     analyzingBtn: "பாதுகாப்பான பாதை கணக்கிடப்படுகிறது…",
     defaultForecast: "வழக்கமான சந்தை விலை",
-    recommendedForecast: "பரிந்துரைக்கப்பட்ட விலை",
+    recommendedForecast: "பரிந்துரை",
     profitUplift: "நிகர இலாப உயர்வு",
     extraTakeHome: "கூடுதல் நிகர வருமானம்",
+    holdValue: "நிறுத்துக",
+    holdSuffix: "அனுப்ப வேண்டாம்",
+    weakMarginSuffix: "குறைந்த/எதிர்மறை இலாபம்",
+    defaultRouteValue: "வழக்கமான",
+    keepRouteSuffix: "பாதையைத் தொடர்க",
+    noRerouteValue: "மாற்றம் இல்லை",
+    belowSafeFloorSuffix: "5% வரம்புக்கு கீழ்",
+    vsDefaultSuffix: "வழக்கமான சந்தையுடன் ஒப்பீடு",
+    netDeltaSuffix: "ரூ. நிகர வேறுபாடு",
     dispatchHeading: "சாரதி அல்லது கூட்டுறவுக்கு அனுப்புக",
     shareWhatsApp: "WhatsApp",
     shareSms: "SMS",
     shareMore: "பகிர்",
     profitChartTag: "சந்தை பொருளாதாரம்",
     profitChartTitle: "நிகர இலாபம் மற்றும் போக்குவரத்து செலவு",
+    netProfitLegend: "நிகர இலாபம்",
+    fuelHandlingLegend: "எரிபொருள் + கட்டணம்",
+    spoilageLegend: "வீணாகும் இழப்பு",
     routeLedgerTag: "பாதை கணக்கு",
     routeLedgerTitle: "ஒவ்வொரு ரூபாயும் துல்லியமாக கணக்கிடப்பட்டது.",
     rankedByNetProfit: "நிகர இலாப வரிசை",
     estimatedNetProfit: "மதிப்பிடப்பட்ட நிகர இலாபம்",
+    recommendedBadgeLabel: "பரிந்துரைக்கப்பட்டது",
+    defaultBaselineLabel: "வழக்கமான அடிப்படை",
+    currentPriceLabel: "தற்போதைய விலை",
+    fuelCostLabel: "எரிபொருள்",
+    handlingCostLabel: "சந்தைக் கட்டணம்",
+    grossRevLabel: "மொத்த வருவாய்",
+    spoilageCostLabel: "வீணாகும் செலவு",
     forecastTag: "விலை போக்கு",
     forecastTitle: "14-நாள் வரலாறு & 48–72 மணிநேர முன்னறிவிப்பு",
     forecastSubtitle:
@@ -229,6 +323,9 @@ export const UI_STRINGS: Record<LanguageCode, UiStrings> = {
     serverModalTitle: "Android சேவையக இணைப்பு",
     serverModalSubtitle:
       "Docker Nginx (:15173) அல்லது Spring Boot (:8080) முகவரியை அமைக்கவும்.",
+    customUrlLabel: "தனிப்பயன் LAN / சேவையக முகவரி",
+    apiKeyLabel: "விருப்ப X-ATIE-API-KEY (நேரடி :8080 இணைப்புக்கு)",
+    apiKeyHint: ":15173 நுழைவாயிலைப் பயன்படுத்தும்போது காலியாக விடவும்",
     saveAndReconnect: "சேமி & புதுப்பி",
     testConnection: "இணைப்பை சோதி",
     closeLabel: "மூடு",
@@ -304,4 +401,93 @@ export function localizeDirection(
   lang: LanguageCode,
 ): string {
   return DIRECTION_LABELS[direction]?.[lang] ?? direction;
+}
+
+export function localizeDirectiveCopy(
+  response: AnalyzeResponse,
+  lang: LanguageCode,
+): { headline: string; explanation: string; crashWarning: string | null } {
+  const directive = response.primaryDirective;
+  const defaultMarket = response.marketComparisons.find(
+    (m) => m.marketCode === directive.defaultMarketCode,
+  );
+  const recommended = directive.recommendedMarketCode
+    ? response.marketComparisons.find(
+        (m) => m.marketCode === directive.recommendedMarketCode,
+      )
+    : undefined;
+
+  const defaultName = localizePlaceName(
+    directive.defaultMarketCode,
+    defaultMarket?.marketName ?? directive.defaultMarketCode,
+    lang,
+  );
+  const recName = recommended
+    ? localizePlaceName(recommended.marketCode, recommended.marketName, lang)
+    : defaultName;
+
+  if (lang === "en") {
+    const crashWarning =
+      defaultMarket?.direction === "CRASH"
+        ? `${defaultName} is forecast to drop from ${defaultMarket.currentPriceLkr.toFixed(2)} to ${defaultMarket.predictedPriceLkr.toFixed(2)} LKR/kg.`
+        : null;
+    return {
+      headline: directive.headline,
+      explanation: directive.explanation,
+      crashWarning,
+    };
+  }
+
+  if (lang === "si") {
+    const crashWarning =
+      defaultMarket?.direction === "CRASH"
+        ? `${defaultName} තොග මිල කි.ග්‍රෑ. රු. ${defaultMarket.currentPriceLkr.toFixed(2)} සිට රු. ${defaultMarket.predictedPriceLkr.toFixed(2)} දක්වා පහත වැටෙනු ඇතැයි පුරෝකථනය කෙරේ.`
+        : null;
+
+    if (directive.severity === "CRITICAL_REROUTE" && recommended) {
+      return {
+        headline: `${recName} වෙත යොමු කරන්න`,
+        explanation: `${defaultName} වෙනුවට ${recName} වෙත ප්‍රවාහනය කිරීමෙන් ඉන්ධන, ගාස්තු සහ නරක්වීම් අඩු කළ පසු ${formatSignedCurrency(directive.profitDeltaLkr)} (${formatSignedPct(directive.profitUpliftPct)}) ක වැඩි ශුද්ධ ලාභයක් ලැබේ.`,
+        crashWarning,
+      };
+    }
+    if (directive.severity === "HOLD_HARVEST") {
+      return {
+        headline: "අස්වැන්න රඳවා තබන්න — දැන් පිටත් නොකරන්න",
+        explanation: `${defaultName} ඇතුළු ළඟා විය හැකි වෙළඳපොළවල ප්‍රවාහන සහ නරක්වීම් වියදම් අඩු කළ පසු ආරක්ෂිත ශුද්ධ ලාභයක් නොලැබේ${defaultMarket ? ` (${formatCurrency(defaultMarket.netProfitLkr)})` : ""}.`,
+        crashWarning,
+      };
+    }
+    return {
+      headline: `${defaultName} වෙත සාමාන්‍ය පරිදි යන්න`,
+      explanation: `වෙනත් කිසිදු වෙළඳපොළක් 5% සහ රු. 1,000 ආරක්ෂිත ශුද්ධ ලාභ සීමාව ඉක්මවා නොයයි${defaultMarket ? ` (${defaultName}: ${formatCurrency(defaultMarket.netProfitLkr)})` : ""}.`,
+      crashWarning,
+    };
+  }
+
+  // Tamil (ta)
+  const crashWarning =
+    defaultMarket?.direction === "CRASH"
+      ? `${defaultName} மொத்த விலை கி.கி ரூ. ${defaultMarket.currentPriceLkr.toFixed(2)} இலிருந்து ரூ. ${defaultMarket.predictedPriceLkr.toFixed(2)} ஆகக் குறையும் என கணிக்கப்பட்டுள்ளது.`
+      : null;
+
+  if (directive.severity === "CRITICAL_REROUTE" && recommended) {
+    return {
+      headline: `${recName} சந்தைக்கு மாற்றி அனுப்புக`,
+      explanation: `${defaultName} சந்தைக்குப் பதிலாக ${recName} சந்தைக்கு அனுப்புவதால் எரிபொருள், கட்டணம் மற்றும் வீணாகும் செலவுகளுக்குப் பிறகு ${formatSignedCurrency(directive.profitDeltaLkr)} (${formatSignedPct(directive.profitUpliftPct)}) கூடுதல் நிகர இலாபம் கிடைக்கும்.`,
+      crashWarning,
+    };
+  }
+  if (directive.severity === "HOLD_HARVEST") {
+    return {
+      headline: "அறுவடையை நிறுத்தி வைக்கவும் — அனுப்ப வேண்டாம்",
+      explanation: `${defaultName} உட்பட அணுகக்கூடிய சந்தைகளில் போக்குவரத்து மற்றும் வீணாகும் செலவுகளுக்குப் பிறகு பாதுகாப்பான நிகர இலாபம் இல்லை${defaultMarket ? ` (${formatCurrency(defaultMarket.netProfitLkr)})` : ""}.`,
+      crashWarning,
+    };
+  }
+  return {
+    headline: `${defaultName} சந்தைக்கு வழக்கம்போல் அனுப்புக`,
+    explanation: `மாற்றுச் சந்தைகள் எதுவும் 5% மற்றும் ரூ. 1,000 பாதுகாப்பான நிகர இலாப வரம்பைத் தாண்டவில்லை${defaultMarket ? ` (${defaultName}: ${formatCurrency(defaultMarket.netProfitLkr)})` : ""}.`,
+    crashWarning,
+  };
 }

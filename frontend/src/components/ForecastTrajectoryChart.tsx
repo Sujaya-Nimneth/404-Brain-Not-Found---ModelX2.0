@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, LineChart as LineChartIcon, LoaderCircle } from "lucide-react";
+import {
+  AlertCircle,
+  LineChart as LineChartIcon,
+  LoaderCircle,
+} from "lucide-react";
 import {
   CartesianGrid,
   Legend,
@@ -14,8 +18,10 @@ import {
 import { fetchMarketHistory } from "../api/atieClient";
 import type {
   ForecastSource,
+  MarketComparison,
   MarketHistoryResponse,
 } from "../types/atie";
+import { shortMarketName } from "./profitFormat";
 import {
   buildTrajectoryChartData,
   formatTrajectoryDate,
@@ -27,6 +33,9 @@ interface Props {
   marketName: string;
   cropCode: string;
   forecastSource: ForecastSource;
+  horizonHours?: 48 | 72;
+  recommendedMarketCode?: string | null;
+  markets?: MarketComparison[];
 }
 
 export function ForecastTrajectoryChart({
@@ -34,18 +43,41 @@ export function ForecastTrajectoryChart({
   marketName,
   cropCode,
   forecastSource,
+  horizonHours = 48,
+  recommendedMarketCode = null,
+  markets = [],
 }: Props) {
+  const [selectedMarketCode, setSelectedMarketCode] =
+    useState<string>(marketCode);
   const [history, setHistory] = useState<MarketHistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const demoMode = forecastSource === "DEMO_FIXTURE" && cropCode === "TOMATO";
 
   useEffect(() => {
+    setSelectedMarketCode(marketCode);
+  }, [marketCode, cropCode]);
+
+  const activeMarketName = useMemo(() => {
+    const matched = markets.find(
+      (item) => item.marketCode === selectedMarketCode,
+    );
+    if (matched) return matched.marketName;
+    return selectedMarketCode === marketCode ? marketName : selectedMarketCode;
+  }, [marketCode, marketName, markets, selectedMarketCode]);
+
+  useEffect(() => {
     let active = true;
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchMarketHistory(marketCode, cropCode, 14, demoMode, controller.signal)
+    fetchMarketHistory(
+      selectedMarketCode,
+      cropCode,
+      14,
+      demoMode,
+      controller.signal,
+    )
       .then((result) => {
         if (active) setHistory(result);
       })
@@ -65,7 +97,7 @@ export function ForecastTrajectoryChart({
       active = false;
       controller.abort();
     };
-  }, [marketCode, cropCode, demoMode]);
+  }, [selectedMarketCode, cropCode, demoMode]);
 
   const chartData = useMemo<TrajectoryChartPoint[]>(
     () => buildTrajectoryChartData(history),
@@ -73,7 +105,10 @@ export function ForecastTrajectoryChart({
   );
 
   const source = history?.forecastSource ?? forecastSource;
-  const finalPoint = history?.forecastTrajectory.at(-1);
+  const activePoint =
+    history?.forecastTrajectory.find(
+      (point) => point.horizonHours === horizonHours,
+    ) ?? history?.forecastTrajectory.at(-1);
 
   return (
     <section className="rise-in rounded-[2rem] border border-ink/10 bg-[#f8f2e5]/90 p-5 shadow-card md:p-7">
@@ -86,34 +121,67 @@ export function ForecastTrajectoryChart({
             History meets the horizon.
           </h2>
           <p className="mt-2 max-w-xl text-xs leading-6 text-ink/55">
-            Fourteen days at {marketName} compared with the trained model,
+            Fourteen days at {activeMarketName} compared with the trained model,
             naive persistence, and the 7-day moving average.
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <span className="rounded-full border border-ink/10 bg-white/55 px-3 py-1.5 font-mono text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-ink/50">
             {source.replaceAll("_", " ")}
           </span>
-          {finalPoint && (
+          {activePoint && (
             <span
               className={`rounded-full px-3 py-1.5 font-mono text-[0.58rem] font-bold uppercase tracking-[0.1em] ${
-                finalPoint.direction === "CRASH"
+                activePoint.direction === "CRASH"
                   ? "bg-[#f5d1c2] text-[#8b3e2b]"
-                  : finalPoint.direction === "SURGE"
+                  : activePoint.direction === "SURGE"
                     ? "bg-[#d8e8bd] text-moss"
                     : "bg-[#ebe5d8] text-ink/55"
               }`}
             >
-              {finalPoint.direction} at +72h
+              {activePoint.direction} at +{activePoint.horizonHours}h
             </span>
           )}
         </div>
       </div>
 
+      {markets.length > 1 && (
+        <div
+          className="mt-4 flex flex-wrap items-center gap-2"
+          role="group"
+          aria-label="Select market trajectory"
+        >
+          {markets.map((item) => {
+            const selected = item.marketCode === selectedMarketCode;
+            const isDefault = item.marketCode === marketCode;
+            const isRecommended =
+              recommendedMarketCode !== null &&
+              item.marketCode === recommendedMarketCode;
+            return (
+              <button
+                key={item.marketCode}
+                type="button"
+                onClick={() => setSelectedMarketCode(item.marketCode)}
+                aria-pressed={selected}
+                className={`rounded-full px-3 py-1.5 font-mono text-[0.6rem] font-semibold uppercase tracking-[0.09em] transition ${
+                  selected
+                    ? "bg-ink text-lime shadow-sm"
+                    : "border border-ink/12 bg-white/55 text-ink/65 hover:border-moss hover:text-moss"
+                }`}
+              >
+                {shortMarketName(item.marketName)}
+                {isDefault ? " · default" : ""}
+                {isRecommended ? " · ★ rec" : ""}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div
         className="relative mt-6 h-[20rem] w-full"
         role="img"
-        aria-label={`Historical and forecast prices for ${marketName}`}
+        aria-label={`Historical and forecast prices for ${activeMarketName}`}
       >
         {loading && (
           <div className="absolute inset-0 z-10 grid place-items-center rounded-2xl bg-[#f8f2e5]/75 backdrop-blur-sm">
@@ -161,7 +229,7 @@ export function ForecastTrajectoryChart({
                 domain={["auto", "auto"]}
                 axisLine={false}
                 tickLine={false}
-                width={44}
+                width={52}
                 tick={{ fill: "#17251f", opacity: 0.5, fontSize: 10 }}
                 tickFormatter={(value) => `LKR ${Math.round(value)}`}
               />
@@ -201,6 +269,7 @@ export function ForecastTrajectoryChart({
                 strokeWidth={2.4}
                 dot={false}
                 connectNulls={false}
+                isAnimationActive={false}
               />
               <Line
                 type="monotone"
@@ -210,6 +279,7 @@ export function ForecastTrajectoryChart({
                 strokeDasharray="7 4"
                 dot={{ r: 4, fill: "#315c45", strokeWidth: 0 }}
                 connectNulls={false}
+                isAnimationActive={false}
               />
               <Line
                 type="monotone"
@@ -219,6 +289,7 @@ export function ForecastTrajectoryChart({
                 strokeDasharray="3 5"
                 dot={{ r: 3, fill: "#c7643b", strokeWidth: 0 }}
                 connectNulls={false}
+                isAnimationActive={false}
               />
               <Line
                 type="monotone"
@@ -228,6 +299,7 @@ export function ForecastTrajectoryChart({
                 strokeDasharray="2 4"
                 dot={{ r: 3, fill: "#9b7a2f", strokeWidth: 0 }}
                 connectNulls={false}
+                isAnimationActive={false}
               />
             </LineChart>
           </ResponsiveContainer>

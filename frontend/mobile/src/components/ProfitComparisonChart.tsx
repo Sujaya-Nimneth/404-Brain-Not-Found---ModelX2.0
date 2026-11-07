@@ -35,15 +35,15 @@ export function ProfitComparisonChart({ markets, language }: Props) {
       <View style={styles.legendRow}>
         <View style={styles.legendItem}>
           <View style={[styles.swatch, { backgroundColor: colors.moss }]} />
-          <Text style={styles.legendText}>Net Profit</Text>
+          <Text style={styles.legendText}>{t.netProfitLegend}</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.swatch, { backgroundColor: colors.clay }]} />
-          <Text style={styles.legendText}>Fuel + Handling</Text>
+          <Text style={styles.legendText}>{t.fuelHandlingLegend}</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.swatch, { backgroundColor: colors.amber }]} />
-          <Text style={styles.legendText}>Spoilage Loss</Text>
+          <Text style={styles.legendText}>{t.spoilageLegend}</Text>
         </View>
       </View>
 

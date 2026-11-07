@@ -16,6 +16,8 @@ export interface MarketComparison {
   marketName: string;
   currentPriceLkr: number;
   predictedPriceLkr: number;
+  pctChange?: number | null;
+  effectiveVolumeKg?: number | null;
   grossRevenueLkr: number;
   transportCostLkr: number;
   spoilageLossLkr: number;
@@ -29,6 +31,9 @@ export interface MarketComparison {
   vehicleCapacityKg: number;
   recommended: boolean;
   direction: "CRASH" | "STABLE" | "SURGE";
+  glutRiskLevel?: "LOW" | "MEDIUM" | "HIGH" | null;
+  confidenceScore?: number | null;
+  primaryDriver?: string | null;
 }
 
 export interface PrimaryDirective {

@@ -95,7 +95,7 @@ export function RouteLedger({ markets, language }: Props) {
                 {isRec ? (
                   <View style={styles.recBadge}>
                     <Ionicons name="star" size={11} color={colors.moss} />
-                    <Text style={styles.recBadgeText}>RECOMMENDED</Text>
+                    <Text style={styles.recBadgeText}>{t.recommendedBadgeLabel}</Text>
                   </View>
                 ) : (
                   <View
@@ -159,7 +159,7 @@ export function RouteLedger({ markets, language }: Props) {
                     ]}
                   >
                     {m.profitDeltaLkr === 0
-                      ? "DEFAULT BASELINE"
+                      ? t.defaultBaselineLabel
                       : `${formatSignedCurrency(m.profitDeltaLkr)} (${upliftLabel})`}
                   </Text>
                 </View>
@@ -179,7 +179,7 @@ export function RouteLedger({ markets, language }: Props) {
                     </Text>
                   </View>
                   <Text style={styles.subDetail}>
-                    Current: {m.currentPriceLkr.toFixed(2)} LKR/kg
+                    {t.currentPriceLabel}: {m.currentPriceLkr.toFixed(2)} LKR/kg
                   </Text>
                 </View>
 
@@ -191,19 +191,19 @@ export function RouteLedger({ markets, language }: Props) {
                       color={colors.ink45}
                     />
                     <Text style={styles.metricText}>
-                      Fuel LKR {formatLkr(m.transportCostLkr)} (
+                      {t.fuelCostLabel} LKR {formatLkr(m.transportCostLkr)} (
                       {m.fuelLitres.toFixed(1)} L)
                     </Text>
                   </View>
                   <Text style={styles.subDetail}>
-                    Handling: LKR {formatLkr(m.handlingCostLkr)}
+                    {t.handlingCostLabel}: LKR {formatLkr(m.handlingCostLkr)}
                   </Text>
                 </View>
               </View>
 
               <View style={styles.footerLedgerRow}>
                 <Text style={styles.footerLedgerItem}>
-                  Gross rev: LKR {formatLkr(m.grossRevenueLkr)}
+                  {t.grossRevLabel}: LKR {formatLkr(m.grossRevenueLkr)}
                 </Text>
                 <View style={styles.metricRow}>
                   <MaterialCommunityIcons
@@ -212,7 +212,7 @@ export function RouteLedger({ markets, language }: Props) {
                     color={colors.amber}
                   />
                   <Text style={styles.footerLedgerItem}>
-                    Spoilage opp. cost: LKR {formatLkr(m.spoilageLossLkr)}
+                    {t.spoilageCostLabel}: LKR {formatLkr(m.spoilageLossLkr)}
                   </Text>
                 </View>
               </View>

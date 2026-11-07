@@ -1,4 +1,5 @@
 import type { MarketComparison } from "../types/atie";
+import { formatFixed2 } from "../utils/format";
 
 export function formatUpliftLabel(market: MarketComparison): string {
   if (
@@ -11,7 +12,7 @@ export function formatUpliftLabel(market: MarketComparison): string {
     return "n/a";
   }
   const sign = market.profitUpliftPct > 0 ? "+" : "";
-  return `${sign}${market.profitUpliftPct.toFixed(1)}%`;
+  return `${sign}${formatFixed2(market.profitUpliftPct)}%`;
 }
 
 export function shortMarketName(name: string): string {

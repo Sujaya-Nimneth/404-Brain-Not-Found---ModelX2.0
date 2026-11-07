@@ -29,7 +29,7 @@ import type {
   LanguageCode,
   MetadataConfig,
 } from "../types/atie";
-import { computeTripsAndLoad, formatLkr } from "../utils/format";
+import { computeTripsAndLoad, formatInteger, formatLkr } from "../utils/format";
 
 interface Props {
   value: AnalyzeRequest;
@@ -180,7 +180,7 @@ export function ConsignmentSetup({
             activeOpacity={0.8}
           >
             <Text style={styles.collapsedSummaryText}>
-              {formatLkr(value.quantityKg)} kg {summaryCrop} · {summaryOrigin} →{" "}
+              {formatInteger(value.quantityKg)} kg {summaryCrop} · {summaryOrigin} →{" "}
               {summaryMarket} · {value.horizonHours}h
             </Text>
           </TouchableOpacity>

@@ -9,7 +9,9 @@ test("renders the canonical fixture and switches to live model output", async ({
     page.getByRole("heading", { name: "Reroute to Colombo Pettah" }),
   ).toBeVisible();
   await expect(page.getByText("DEMO FIXTURE").first()).toBeVisible();
-  await expect(page.getByText("23,239", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByText("23,238.58", { exact: true }).first(),
+  ).toBeVisible();
   await expect(page.getByText("15.84%").first()).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Live where it can be." }),
@@ -48,6 +50,9 @@ test("renders the canonical fixture and switches to live model output", async ({
     timeout: 20_000,
   });
   await expect(
+    page.getByText(/Metadata API unavailable/i),
+  ).not.toBeVisible();
+  await expect(
     page.getByRole("heading", { name: "Accuracy is not the only safety test." }),
   ).toBeVisible();
   await expect(
@@ -57,10 +62,12 @@ test("renders the canonical fixture and switches to live model output", async ({
     page.getByRole("cell", { name: "7-day moving average", exact: true }),
   ).toBeVisible();
 
-  await page.screenshot({
-    path: "../docs/evidence/live-dashboard.png",
-    fullPage: true,
-  });
+  if (process.env.ATIE_UPDATE_EVIDENCE === "true") {
+    await page.screenshot({
+      path: "../docs/evidence/live-dashboard.png",
+      fullPage: true,
+    });
+  }
 
   await page.getByRole("button", { name: "Show all 7 market alerts" }).click();
   await expect(

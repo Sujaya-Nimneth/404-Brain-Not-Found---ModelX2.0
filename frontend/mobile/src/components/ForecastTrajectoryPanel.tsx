@@ -324,8 +324,8 @@ export function ForecastTrajectoryPanel({
                   LKR {pt.predictedPriceLkr.toFixed(2)}/kg
                 </Text>
                 <Text style={styles.horizonBaselines}>
-                  Naive {pt.baselineNaiveLkr.toFixed(1)} · MA7{" "}
-                  {pt.baselineMa7Lkr.toFixed(1)}
+                  Naive {pt.baselineNaiveLkr.toFixed(2)} · MA7{" "}
+                  {pt.baselineMa7Lkr.toFixed(2)}
                 </Text>
               </View>
             );

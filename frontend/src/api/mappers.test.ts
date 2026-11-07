@@ -42,6 +42,11 @@ describe("ATIE API contract mappers", () => {
           vehicle_capacity_kg: 1500,
           is_recommended: true,
           direction: "SURGE",
+          pct_change: 10.29,
+          effective_volume_kg: 969.25,
+          glut_risk_level: "LOW",
+          confidence_score: 0.87,
+          primary_driver: "Low arrivals keep Colombo wholesale firm.",
         },
       ],
       weather_alerts: [
@@ -87,6 +92,11 @@ describe("ATIE API contract mappers", () => {
       trips: 1,
       vehicleCapacityKg: 1500,
       recommended: true,
+      pctChange: 10.29,
+      effectiveVolumeKg: 969.25,
+      glutRiskLevel: "LOW",
+      confidenceScore: 0.87,
+      primaryDriver: "Low arrivals keep Colombo wholesale firm.",
     });
     expect(response.modelEvaluationSummary.modelSafeMarginFpr).toEqual({
       safeMarginFprPct: 3,

@@ -37,6 +37,7 @@ export {
 
 const expoHostUri = Constants.expoConfig?.hostUri ?? null;
 const envApiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? null;
+const envApiKey = process.env.EXPO_PUBLIC_ATIE_API_KEY?.trim() || null;
 
 export const AUTO_DETECTED_BASE_URL = resolveDefaultAndroidBaseUrl(
   envApiBaseUrl,
@@ -44,6 +45,7 @@ export const AUTO_DETECTED_BASE_URL = resolveDefaultAndroidBaseUrl(
 );
 
 let customApiBaseUrl: string | null = null;
+let customApiKey: string | null = null;
 
 export function setCustomApiBaseUrl(url: string | null): void {
   customApiBaseUrl =
@@ -52,6 +54,19 @@ export function setCustomApiBaseUrl(url: string | null): void {
 
 export function getCustomApiBaseUrl(): string | null {
   return customApiBaseUrl;
+}
+
+export function setCustomApiKey(apiKey: string | null): void {
+  const trimmed = apiKey?.trim() ?? "";
+  customApiKey = trimmed.length > 0 ? trimmed : null;
+}
+
+export function getCustomApiKey(): string | null {
+  return customApiKey;
+}
+
+export function getActiveApiKey(): string | null {
+  return customApiKey ?? envApiKey;
 }
 
 export function getActiveApiBaseUrl(): string {
@@ -131,6 +146,18 @@ function mergeAbortSignals(
   };
 }
 
+function buildAuthHeaders(apiKeyOverride?: string | null): Record<string, string> {
+  const effectiveKey =
+    apiKeyOverride !== undefined
+      ? apiKeyOverride?.trim() || null
+      : getActiveApiKey();
+  return effectiveKey ? { "X-ATIE-API-Key": effectiveKey } : {};
+}
+
+function shouldRetryDirectBackendOnHttpStatus(status: number | null): boolean {
+  return status === 404 || status === 502 || status === 503 || status === 504;
+}
+
 async function parseErrorResponse(
   response: Response,
   endpointLabel: string,
@@ -180,8 +207,11 @@ async function fetchJsonWithGatewayFallback(
   const bases = fallbackBase ? [primaryBase, fallbackBase] : [primaryBase];
 
   let lastNetworkError: unknown = null;
+  let lastGatewayError: AtieMobileApiError | null = null;
 
-  for (const base of bases) {
+  for (let idx = 0; idx < bases.length; idx++) {
+    const base = bases[idx];
+    const hasMoreBases = idx < bases.length - 1;
     const requestId = createRequestId();
     const { signal, cleanup } = mergeAbortSignals(externalSignal, timeoutMs);
     try {
@@ -190,13 +220,19 @@ async function fetchJsonWithGatewayFallback(
         headers: {
           Accept: "application/json",
           "X-Request-ID": requestId,
+          ...buildAuthHeaders(),
           ...(init.headers ?? {}),
         },
         signal,
       });
 
       if (!response.ok) {
-        throw await parseErrorResponse(response, endpointLabel);
+        const apiErr = await parseErrorResponse(response, endpointLabel);
+        if (hasMoreBases && shouldRetryDirectBackendOnHttpStatus(apiErr.status)) {
+          lastGatewayError = apiErr;
+          continue;
+        }
+        throw apiErr;
       }
 
       try {
@@ -221,6 +257,10 @@ async function fetchJsonWithGatewayFallback(
     } finally {
       cleanup();
     }
+  }
+
+  if (lastGatewayError && lastNetworkError === null) {
+    throw lastGatewayError;
   }
 
   const detail =
@@ -334,25 +374,47 @@ export async function fetchMarketHistory(
 
 export async function pingEndpointHealth(
   candidateBaseUrl: string,
+  candidateApiKey?: string | null,
 ): Promise<{ ok: boolean; statusText: string }> {
   const normalized = normalizeBaseUrl(candidateBaseUrl);
   const { signal, cleanup } = mergeAbortSignals(undefined, 4500);
+  const authHeaders = buildAuthHeaders(candidateApiKey);
   try {
-    const response = await fetch(`${normalized}/metadata/data-status`, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "X-Request-ID": createRequestId(),
-      },
-      signal,
-    });
-    if (!response.ok) {
+    const [statusResp, configResp] = await Promise.all([
+      fetch(`${normalized}/metadata/data-status`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "X-Request-ID": createRequestId(),
+          ...authHeaders,
+        },
+        signal,
+      }),
+      fetch(`${normalized}/metadata/config`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "X-Request-ID": createRequestId(),
+          ...authHeaders,
+        },
+        signal,
+      }),
+    ]);
+    if (configResp.status === 401) {
       return {
         ok: false,
-        statusText: `HTTP ${response.status} from ${normalized}`,
+        statusText: `HTTP 401 Unauthorized · enter X-ATIE-API-Key or use :15173 gateway`,
       };
     }
-    const status = mapDataStatus(await response.json());
+    if (!statusResp.ok || !configResp.ok) {
+      const code = !configResp.ok ? configResp.status : statusResp.status;
+      return {
+        ok: false,
+        statusText: `HTTP ${code} from ${normalized}`,
+      };
+    }
+    const status = mapDataStatus(await statusResp.json());
+    mapMetadataConfig(await configResp.json());
     return {
       ok: true,
       statusText: `Connected (${status.overallStatus}) · ${normalized}`,

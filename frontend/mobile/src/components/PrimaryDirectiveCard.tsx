@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import {
+  localizeDirectiveCopy,
   localizePlaceName,
   localizeSeverity,
   UI_STRINGS,
@@ -42,6 +43,7 @@ export function PrimaryDirectiveCard({ request, response, language }: Props) {
   const isHold = directive.severity === "HOLD_HARVEST";
   const cardBg = isHold ? "#4c2720" : isReroute ? colors.ink : colors.moss;
 
+  const copy = localizeDirectiveCopy(response, language);
   const dispatchText = buildDispatchMessage(request, response, language);
 
   return (
@@ -101,8 +103,8 @@ export function PrimaryDirectiveCard({ request, response, language }: Props) {
       </View>
 
       {/* Headline & Explanation */}
-      <Text style={styles.headline}>{directive.headline}</Text>
-      <Text style={styles.explanation}>{directive.explanation}</Text>
+      <Text style={styles.headline}>{copy.headline}</Text>
+      <Text style={styles.explanation}>{copy.explanation}</Text>
 
       {/* 2x2 Key Economics Grid */}
       <View style={styles.metricsGrid}>
@@ -130,21 +132,25 @@ export function PrimaryDirectiveCard({ request, response, language }: Props) {
           <Text
             style={[
               styles.metricValue,
-              recommended?.direction === "SURGE"
-                ? styles.textLime
-                : styles.textLight,
+              isHold
+                ? styles.textDanger
+                : recommended?.direction === "SURGE"
+                  ? styles.textLime
+                  : styles.textLight,
             ]}
           >
-            {recommended
-              ? recommended.predictedPriceLkr.toFixed(2)
-              : defaultMarket
-                ? defaultMarket.predictedPriceLkr.toFixed(2)
-                : "—"}
+            {isHold
+              ? t.holdValue
+              : recommended
+                ? recommended.predictedPriceLkr.toFixed(2)
+                : t.defaultRouteValue}
           </Text>
           <Text style={styles.metricSuffix}>
-            {recommended
-              ? `${localizePlaceName(recommended.marketCode, recommended.marketName, language)} · LKR/kg`
-              : "Baseline · LKR/kg"}
+            {isHold
+              ? t.holdSuffix
+              : recommended
+                ? `${localizePlaceName(recommended.marketCode, recommended.marketName, language)} · LKR/kg`
+                : t.keepRouteSuffix}
           </Text>
         </View>
 
@@ -153,14 +159,26 @@ export function PrimaryDirectiveCard({ request, response, language }: Props) {
           <Text
             style={[
               styles.metricValue,
-              (directive.profitUpliftPct ?? 0) > 0
-                ? styles.textLime
-                : styles.textLight,
+              isHold
+                ? styles.textDanger
+                : (directive.profitUpliftPct ?? 0) > 0
+                  ? styles.textLime
+                  : styles.textLight,
             ]}
           >
-            {formatSignedPct(directive.profitUpliftPct)}
+            {isHold
+              ? t.holdValue
+              : directive.profitUpliftPct === null
+                ? t.noRerouteValue
+                : formatSignedPct(directive.profitUpliftPct)}
           </Text>
-          <Text style={styles.metricSuffix}>vs default market</Text>
+          <Text style={styles.metricSuffix}>
+            {isHold
+              ? t.weakMarginSuffix
+              : directive.profitUpliftPct === null
+                ? t.belowSafeFloorSuffix
+                : t.vsDefaultSuffix}
+          </Text>
         </View>
 
         <View style={styles.metricCell}>
@@ -168,34 +186,30 @@ export function PrimaryDirectiveCard({ request, response, language }: Props) {
           <Text
             style={[
               styles.metricValue,
-              (directive.profitDeltaLkr ?? 0) > 0
-                ? styles.textLime
-                : styles.textLight,
+              isHold
+                ? styles.textDanger
+                : (directive.profitDeltaLkr ?? 0) > 0
+                  ? styles.textLime
+                  : styles.textLight,
             ]}
           >
-            {formatSignedLkr(directive.profitDeltaLkr)}
+            {directive.profitDeltaLkr === null
+              ? "—"
+              : formatSignedLkr(directive.profitDeltaLkr)}
           </Text>
-          <Text style={styles.metricSuffix}>LKR net delta</Text>
+          <Text style={styles.metricSuffix}>{t.netDeltaSuffix}</Text>
         </View>
       </View>
 
       {/* Default Market Crash Warning */}
-      {defaultMarket?.direction === "CRASH" && (
+      {copy.crashWarning && (
         <View style={styles.crashAlert}>
           <MaterialCommunityIcons
             name="trending-down"
             size={18}
             color="#f6c6b2"
           />
-          <Text style={styles.crashAlertText}>
-            {localizePlaceName(
-              defaultMarket.marketCode,
-              defaultMarket.marketName,
-              language,
-            )}{" "}
-            is forecast to drop from {defaultMarket.currentPriceLkr.toFixed(2)}{" "}
-            to {defaultMarket.predictedPriceLkr.toFixed(2)} LKR/kg.
-          </Text>
+          <Text style={styles.crashAlertText}>{copy.crashWarning}</Text>
         </View>
       )}
 

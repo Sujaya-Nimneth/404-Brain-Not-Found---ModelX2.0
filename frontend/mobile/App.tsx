@@ -15,6 +15,7 @@ import {
   fetchMetadataConfig,
   getActiveApiBaseUrl,
   setCustomApiBaseUrl,
+  setCustomApiKey,
 } from "./src/api/atieClient";
 import { BottomTabBar } from "./src/components/BottomTabBar";
 import { ConsignmentSetup } from "./src/components/ConsignmentSetup";
@@ -42,10 +43,12 @@ import {
   findMatchingCachedResult,
   loadCachedLiveResult,
   loadCachedMetadata,
+  loadCustomApiKey,
   loadCustomEndpoint,
   loadSavedLanguage,
   saveCachedLiveResult,
   saveCachedMetadata,
+  saveCustomApiKey,
   saveCustomEndpoint,
   saveLanguage,
 } from "./src/storage/offlineCache";
@@ -145,17 +148,20 @@ export default function App() {
     const bootController = new AbortController();
 
     async function hydrateAndConnect() {
-      const [savedLang, savedUrl, cachedMeta, cachedLive] = await Promise.all([
-        loadSavedLanguage(),
-        loadCustomEndpoint(),
-        loadCachedMetadata(),
-        loadCachedLiveResult(),
-      ]);
+      const [savedLang, savedUrl, savedApiKey, cachedMeta, cachedLive] =
+        await Promise.all([
+          loadSavedLanguage(),
+          loadCustomEndpoint(),
+          loadCustomApiKey(),
+          loadCachedMetadata(),
+          loadCachedLiveResult(),
+        ]);
 
       if (!mounted) return;
 
       if (savedLang) setLanguage(savedLang);
       if (savedUrl) setCustomApiBaseUrl(savedUrl);
+      if (savedApiKey) setCustomApiKey(savedApiKey);
       if (cachedMeta) setMetadata(cachedMeta);
       if (cachedLive) persistedLiveRef.current = cachedLive;
 
@@ -219,7 +225,7 @@ export default function App() {
         const toCache: CachedResultSnapshot = {
           request: nextRequest,
           response: nextSnapshot.response,
-          cachedAt: new Date().toISOString().replace("T", " ").slice(0, 16),
+          cachedAt: new Date().toISOString(),
         };
         persistedLiveRef.current = toCache;
         void saveCachedLiveResult(toCache);
@@ -290,9 +296,11 @@ export default function App() {
   }, [refreshMetadataAndStatus, request, runAnalysis]);
 
   const handleSaveEndpoint = useCallback(
-    (customUrl: string | null) => {
+    (customUrl: string | null, customApiKey: string | null) => {
       setCustomApiBaseUrl(customUrl);
+      setCustomApiKey(customApiKey);
       void saveCustomEndpoint(customUrl);
+      void saveCustomApiKey(customApiKey);
       void refreshMetadataAndStatus();
       void runAnalysis({ ...request, demoMode: false });
     },

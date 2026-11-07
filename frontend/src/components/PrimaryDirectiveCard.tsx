@@ -4,11 +4,20 @@ import {
   TriangleAlert,
   TrendingDown,
 } from "lucide-react";
-import type { AnalyzeResponse } from "../types/atie";
-import { formatLkr } from "../utils/format";
+import type { AnalyzeResponse, MarketComparison } from "../types/atie";
+import { formatFixed2, formatLkr } from "../utils/format";
 
 interface Props {
   response: AnalyzeResponse;
+}
+
+function resolveDropPct(market: MarketComparison): string {
+  const rawPct =
+    market.pctChange ??
+    ((market.predictedPriceLkr - market.currentPriceLkr) /
+      market.currentPriceLkr) *
+      100;
+  return formatFixed2(Math.abs(rawPct));
 }
 
 export function PrimaryDirectiveCard({ response }: Props) {
@@ -55,6 +64,8 @@ export function PrimaryDirectiveCard({ response }: Props) {
             >
               {isReroute ? (
                 <ArrowUpRight className="h-3.5 w-3.5" />
+              ) : isHold ? (
+                <TriangleAlert className="h-3.5 w-3.5" />
               ) : (
                 <BadgeCheck className="h-3.5 w-3.5" />
               )}
@@ -81,7 +92,7 @@ export function PrimaryDirectiveCard({ response }: Props) {
             label="Default forecast"
             value={
               defaultMarket
-                ? `${defaultMarket.predictedPriceLkr.toFixed(2)}`
+                ? formatFixed2(defaultMarket.predictedPriceLkr)
                 : "—"
             }
             suffix="LKR/kg"
@@ -90,22 +101,50 @@ export function PrimaryDirectiveCard({ response }: Props) {
           <Metric
             label="Recommended"
             value={
-              recommended
-                ? `${recommended.predictedPriceLkr.toFixed(2)}`
-                : "—"
+              isHold
+                ? "Hold"
+                : recommended
+                  ? formatFixed2(recommended.predictedPriceLkr)
+                  : "Default"
             }
-            suffix="LKR/kg"
-            tone={recommended?.direction === "SURGE" ? "good" : "neutral"}
+            suffix={
+              isHold
+                ? "do not dispatch"
+                : recommended
+                  ? "LKR/kg"
+                  : "keep route"
+            }
+            tone={
+              isHold
+                ? "danger"
+                : recommended?.direction === "SURGE"
+                  ? "good"
+                  : "neutral"
+            }
           />
           <Metric
             label="Profit uplift"
             value={
-              directive.profitUpliftPct === null
-                ? "n/a"
-                : `+${directive.profitUpliftPct.toFixed(2)}%`
+              isHold
+                ? "Hold"
+                : directive.profitUpliftPct === null
+                  ? "No reroute"
+                  : `+${formatFixed2(directive.profitUpliftPct)}%`
             }
-            suffix="net"
-            tone="good"
+            suffix={
+              isHold
+                ? "weak net margin"
+                : directive.profitUpliftPct === null
+                  ? "below 5% floor"
+                  : "net"
+            }
+            tone={
+              isHold
+                ? "danger"
+                : directive.profitUpliftPct === null
+                  ? "neutral"
+                  : "good"
+            }
           />
           <Metric
             label="Extra take-home"
@@ -115,7 +154,13 @@ export function PrimaryDirectiveCard({ response }: Props) {
                 : formatLkr(directive.profitDeltaLkr)
             }
             suffix="LKR"
-            tone="good"
+            tone={
+              isHold
+                ? "danger"
+                : directive.profitDeltaLkr === null
+                  ? "neutral"
+                  : "good"
+            }
           />
         </div>
       </div>
@@ -126,17 +171,14 @@ export function PrimaryDirectiveCard({ response }: Props) {
           <p>
             {defaultMarket.marketName} prices are forecast to fall{" "}
             <strong className="text-cream">
-              {Math.abs(
-                ((defaultMarket.predictedPriceLkr -
-                  defaultMarket.currentPriceLkr) /
-                  defaultMarket.currentPriceLkr) *
-                  100,
-              ).toFixed(1)}
-              %
+              {resolveDropPct(defaultMarket)}%
             </strong>{" "}
-            within the selected forecast window.
-            Do not commit the consignment to the default market without reviewing
-            this route.
+            within the selected forecast window.{" "}
+            {isReroute
+              ? "Do not commit the consignment to the default market without reviewing this reroute."
+              : isHold
+                ? "Hold dispatch until wholesale demand recovers."
+                : "Alternative markets do not clear the safe net-profit margin after transport and spoilage, so monitor arrivals closely."}
           </p>
         </div>
       )}

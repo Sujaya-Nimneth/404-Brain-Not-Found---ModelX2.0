@@ -8,7 +8,11 @@ import type {
   ModelEvaluationSummary,
   SafeMarginFpr,
 } from "../types/atie";
-import { formatLkr, formatMetricLkr, formatMetricPct } from "../utils/format";
+import {
+  formatInteger,
+  formatMetricLkr,
+  formatMetricPct,
+} from "../utils/format";
 
 interface Props {
   summary: ModelEvaluationSummary;
@@ -121,7 +125,7 @@ export function ModelEvaluationCard({ summary, language }: Props) {
                 row.highlight && styles.cellHighlight,
               ]}
             >
-              {formatMetricPct(row.ds, 1)}
+              {formatMetricPct(row.ds, 2)}
             </Text>
 
             <Text
@@ -145,8 +149,8 @@ export function ModelEvaluationCard({ summary, language }: Props) {
               </Text>
               {row.fpr && (
                 <Text style={styles.fprCounts}>
-                  {formatLkr(row.fpr.falseRerouteCount)}/
-                  {formatLkr(row.fpr.rerouteCount)}
+                  {formatInteger(row.fpr.falseRerouteCount)}/
+                  {formatInteger(row.fpr.rerouteCount)}
                 </Text>
               )}
             </View>
