@@ -108,6 +108,8 @@ CREATE TABLE fuel_prices (
 CREATE INDEX idx_market_routes_origin ON market_routes(origin_code);
 CREATE INDEX idx_historical_prices_lookup
     ON historical_prices(crop_id, market_id, recorded_date DESC);
+CREATE INDEX idx_historical_prices_recorded_date
+    ON historical_prices(recorded_date DESC);
 CREATE INDEX idx_weather_lookup
     ON weather_observations(market_id, observation_date DESC);
 CREATE INDEX idx_fuel_prices_effective_date
@@ -157,6 +159,7 @@ LANGUAGE SQL
 IMMUTABLE
 AS $$
     SELECT CASE
+        WHEN source_value = 'CROPIX_LIVE' THEN 4
         WHEN source_value LIKE '%!_LIVE' ESCAPE '!' THEN 3
         WHEN source_value LIKE '%!_CACHED' ESCAPE '!' THEN 2
         WHEN source_value = 'SEED'
