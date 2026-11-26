@@ -33,7 +33,7 @@ services:
       OPEN_METEO_CACHE_PATH: ${OPEN_METEO_CACHE_PATH:-/app/data/cache/weather_forecasts.json}
       INGESTION_SCHEMA_PATH: /app/ingestion_schema.sql
     volumes:
-      - ./db/ingestion_schema.sql:/app/ingestion_schema.sql:ro
+      - ./db/migrations/001_ingestion_schema.sql:/app/ingestion_schema.sql:ro
       - ingestion_cache:/app/data/cache
     depends_on:
       postgres:
@@ -56,12 +56,14 @@ services:
     build:
       context: ./ml-service
     environment:
-      ML_MODEL_PATH: /app/models/atie_forecaster.joblib
+      ML_MODEL_PATH: /app/models/atie_forecaster.json
       ML_METADATA_PATH: /app/models/evaluation_report.json
       ML_FALLBACK_DATA_PATH: /app/data/fallback_forecasts.json
       ML_DATABASE_DSN: postgresql://${POSTGRES_USER:-atie}:${POSTGRES_PASSWORD:-atie_dev_password}@postgres:5432/${POSTGRES_DB:-atie}
       ML_FEATURE_REFRESH_SECONDS: ${ML_FEATURE_REFRESH_SECONDS:-900}
       ML_MOVEMENT_THRESHOLD_PCT: ${MOVEMENT_THRESHOLD_PCT:-10.0}
+      ML_SAFE_MARGIN_PCT: ${SAFE_MARGIN_PCT:-5.0}
+      ML_SAFE_ABSOLUTE_FLOOR_LKR: ${SAFE_ABSOLUTE_FLOOR_LKR:-1000.00}
     expose:
       - "8000"
     depends_on:

@@ -126,12 +126,15 @@ CREATE TABLE fuel_prices (
 );
 
 CREATE INDEX idx_market_routes_origin ON market_routes(origin_code);
+CREATE INDEX idx_market_routes_destination ON market_routes(destination_market_id);
 CREATE INDEX idx_historical_prices_lookup
     ON historical_prices(crop_id, market_id, recorded_date DESC);
 CREATE INDEX idx_historical_prices_recorded_date
     ON historical_prices(recorded_date DESC);
 CREATE INDEX idx_weather_lookup
     ON weather_observations(market_id, observation_date DESC);
+CREATE INDEX idx_weather_observations_obs_date
+    ON weather_observations(observation_date DESC);
 CREATE INDEX idx_fuel_prices_effective_date
     ON fuel_prices(effective_date DESC);
 
@@ -151,8 +154,15 @@ CREATE TABLE data_ingestion_runs (
     CONSTRAINT data_ingestion_runs_status_check
         CHECK (status IN ('SUCCESS', 'FALLBACK', 'FAILED')),
     CONSTRAINT data_ingestion_runs_state_check
-        CHECK (data_state IN ('LIVE', 'CACHED', 'SEED', 'UNAVAILABLE'))
+        CHECK (data_state IN ('LIVE', 'CACHED', 'SEED', 'UNAVAILABLE')),
+    CONSTRAINT data_ingestion_runs_counts_check
+        CHECK (records_received >= 0 AND records_written >= 0),
+    CONSTRAINT data_ingestion_runs_time_check
+        CHECK (finished_at >= started_at)
 );
+
+CREATE INDEX idx_data_ingestion_runs_source_time
+    ON data_ingestion_runs(source_code, started_at DESC);
 
 CREATE TABLE data_source_status (
     source_code VARCHAR(32) PRIMARY KEY,
@@ -167,11 +177,12 @@ CREATE TABLE data_source_status (
     CONSTRAINT data_source_status_source_check
         CHECK (source_code IN ('HDX', 'CROPIX', 'OPEN_METEO')),
     CONSTRAINT data_source_status_state_check
-        CHECK (data_state IN ('LIVE', 'CACHED', 'SEED', 'UNAVAILABLE'))
+        CHECK (data_state IN ('LIVE', 'CACHED', 'SEED', 'UNAVAILABLE')),
+    CONSTRAINT data_source_status_written_check
+        CHECK (records_written >= 0),
+    CONSTRAINT data_source_status_success_order_check
+        CHECK (last_success_at IS NULL OR last_success_at <= last_attempt_at)
 );
-
-CREATE INDEX idx_data_ingestion_runs_source_time
-    ON data_ingestion_runs(source_code, started_at DESC);
 
 CREATE OR REPLACE FUNCTION atie_source_priority(source_value TEXT)
 RETURNS INT
