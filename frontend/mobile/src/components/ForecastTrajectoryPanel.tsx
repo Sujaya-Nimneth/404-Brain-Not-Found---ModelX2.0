@@ -96,7 +96,7 @@ export function ForecastTrajectoryPanel({
       active = false;
       controller.abort();
     };
-  }, [selectedMarket, cropCode, demoMode]);
+  }, [selectedMarket, cropCode, demoMode, forecastSource]);
 
   const points = useMemo<TrajectoryChartPoint[]>(
     () => buildTrajectoryChartData(history),
@@ -407,23 +407,32 @@ function computeSvgGeometry(points: TrajectoryChartPoint[]) {
     return { value, y: Number((PAD_TOP + frac * plotH).toFixed(1)) };
   });
 
+  const startX = xAt(0);
+  const endX = xAt(points.length - 1);
+  const midX = lastActualIdx !== null ? xAt(lastActualIdx) : null;
+  const showMidLabel =
+    lastActualIdx !== null &&
+    midX !== null &&
+    Math.abs(midX - startX) >= 48 &&
+    Math.abs(endX - midX) >= 48;
+
   const xLabels: Array<{
     x: number;
     label: string;
     anchor: "start" | "middle" | "end";
   }> = [
-    { x: xAt(0), label: points[0].label, anchor: "start" },
-    ...(lastActualIdx !== null
+    { x: startX, label: points[0].label, anchor: "start" },
+    ...(showMidLabel && lastActualIdx !== null && midX !== null
       ? [
           {
-            x: xAt(lastActualIdx),
+            x: midX,
             label: points[lastActualIdx].label,
             anchor: "middle" as const,
           },
         ]
       : []),
     {
-      x: xAt(points.length - 1),
+      x: endX,
       label: points[points.length - 1].label,
       anchor: "end",
     },

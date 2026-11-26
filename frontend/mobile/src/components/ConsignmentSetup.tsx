@@ -455,9 +455,12 @@ export function ConsignmentSetup({
             {currentRoute
               ? `${currentRoute.distanceKm.toFixed(0)} km one-way · terrain ×${currentRoute.terrainFactor.toFixed(2)}`
               : "Validated route matrix"}
-            {metadata.fuelPrices.dieselLkrPerLiter !== null
-              ? ` · CPC Diesel LKR ${metadata.fuelPrices.dieselLkrPerLiter.toFixed(0)}/L`
-              : ""}
+            {selectedVehicle?.fuelType === "PETROL" &&
+            metadata.fuelPrices.petrolLkrPerLiter !== null
+              ? ` · CPC Petrol LKR ${metadata.fuelPrices.petrolLkrPerLiter.toFixed(0)}/L`
+              : metadata.fuelPrices.dieselLkrPerLiter !== null
+                ? ` · CPC Diesel LKR ${metadata.fuelPrices.dieselLkrPerLiter.toFixed(0)}/L`
+                : ""}
             {metadataLive ? " · LIVE CONFIG" : " · VERIFIED DEFAULTS"}
           </Text>
         </View>

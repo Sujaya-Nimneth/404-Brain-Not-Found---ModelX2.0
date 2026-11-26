@@ -23,9 +23,10 @@ import {
 interface Props {
   markets: MarketComparison[];
   language: LanguageCode;
+  defaultMarketCode?: string;
 }
 
-export function RouteLedger({ markets, language }: Props) {
+export function RouteLedger({ markets, language, defaultMarketCode }: Props) {
   const t = UI_STRINGS[language];
 
   const uniqueMarkets = useMemo(() => {
@@ -56,6 +57,9 @@ export function RouteLedger({ markets, language }: Props) {
           const isSurge = m.direction === "SURGE";
           const upliftLabel = formatUpliftLabel(m);
 
+          const isDefault = defaultMarketCode
+            ? m.marketCode === defaultMarketCode
+            : m.profitDeltaLkr === 0;
           return (
             <View
               key={m.marketCode}
@@ -158,7 +162,7 @@ export function RouteLedger({ markets, language }: Props) {
                       m.profitDeltaLkr === 0 && styles.deltaTextBaseline,
                     ]}
                   >
-                    {m.profitDeltaLkr === 0
+                    {isDefault && m.profitDeltaLkr === 0
                       ? t.defaultBaselineLabel
                       : `${formatSignedCurrency(m.profitDeltaLkr)} (${upliftLabel})`}
                   </Text>

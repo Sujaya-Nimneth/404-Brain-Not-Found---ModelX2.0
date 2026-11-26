@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -101,7 +103,10 @@ export function ServerSettingsModal({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.backdrop}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.backdrop}
+      >
         <View style={styles.sheet}>
           <View style={styles.topRow}>
             <View style={{ flex: 1 }}>
@@ -253,7 +258,7 @@ export function ServerSettingsModal({
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -289,9 +294,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   closeIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.canvas,
     alignItems: "center",
     justifyContent: "center",
