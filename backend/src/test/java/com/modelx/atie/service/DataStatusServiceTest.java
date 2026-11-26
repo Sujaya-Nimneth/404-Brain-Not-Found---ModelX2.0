@@ -153,35 +153,37 @@ class DataStatusServiceTest {
     }
 
     @Test
-    void allLiveSourcesWithSeededCoverageGapsStillReportPartial() {
+    void allSourcesLiveWithCoverageGapsReportsPartialInsteadOfLive() {
         Instant now = Instant.parse("2026-10-27T12:00:00Z");
-        var result = DataStatusService.build(
+        LocalDate today = LocalDate.of(2026, 10, 27);
+        var partial = DataStatusService.build(
                 List.of(
-                        new DataStatusService.SourceRow(
-                                "HDX", "LIVE", now, now,
-                                LocalDate.of(2026, 10, 25), "https://example.test/hdx",
-                                101, "ok"
-                        ),
-                        new DataStatusService.SourceRow(
-                                "CROPIX", "LIVE", now, now,
-                                LocalDate.of(2026, 10, 27), "https://example.test/cropix",
-                                10, "ok"
-                        ),
-                        new DataStatusService.SourceRow(
-                                "OPEN_METEO", "LIVE", now, now,
-                                LocalDate.of(2026, 10, 27), "https://example.test/weather",
-                                49, "ok"
-                        )
+                        new DataStatusService.SourceRow("HDX", "LIVE", now, now, today, "https://hdx.test", 10, "ok"),
+                        new DataStatusService.SourceRow("CROPIX", "LIVE", now, now, today, "https://cropix.test", 10, "ok"),
+                        new DataStatusService.SourceRow("OPEN_METEO", "LIVE", now, now, today, "https://om.test", 7, "ok")
                 ),
                 List.of(
-                        new DataStatusService.CoverageRow(
-                                "DAMBULLA", "TOMATO", LocalDate.of(2026, 10, 27), "HDX_SEED"
-                        )
+                        new DataStatusService.CoverageRow("DAMBULLA", "TOMATO", today, "CROPIX_LIVE"),
+                        new DataStatusService.CoverageRow("JAFFNA", "TOMATO", today, "HDX_SEED")
                 ),
-                LocalDate.of(2026, 10, 27),
+                today,
                 now
         );
+        assertThat(partial.overallStatus()).isEqualTo("PARTIAL");
 
-        assertThat(result.overallStatus()).isEqualTo("PARTIAL");
+        var fullyLive = DataStatusService.build(
+                List.of(
+                        new DataStatusService.SourceRow("HDX", "LIVE", now, now, today, "https://hdx.test", 10, "ok"),
+                        new DataStatusService.SourceRow("CROPIX", "LIVE", now, now, today, "https://cropix.test", 10, "ok"),
+                        new DataStatusService.SourceRow("OPEN_METEO", "LIVE", now, now, today, "https://om.test", 7, "ok")
+                ),
+                List.of(
+                        new DataStatusService.CoverageRow("DAMBULLA", "TOMATO", today, "CROPIX_LIVE"),
+                        new DataStatusService.CoverageRow("JAFFNA", "TOMATO", today, "HDX_LIVE")
+                ),
+                today,
+                now
+        );
+        assertThat(fullyLive.overallStatus()).isEqualTo("LIVE");
     }
 }

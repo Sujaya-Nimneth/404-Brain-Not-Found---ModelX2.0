@@ -376,3 +376,59 @@ def test_gap_row_dropped_from_features_does_not_leak_reference_date():
     assert by_market["DAMBULLA"].current_price_lkr == 208.58
 
 
+def test_health_returns_503_when_both_model_and_fallback_are_unavailable(tmp_path):
+    app.state.predictor = Predictor(
+        Settings(
+            model_path=tmp_path / "missing.joblib",
+            fallback_data_path=tmp_path / "missing_fallback.json",
+        )
+    )
+    with TestClient(app) as client:
+        response = client.get("/health")
+    assert response.status_code == 503
+
+
+def test_ingestion_cache_oserror_does_not_abort_live_db_write(tmp_path, monkeypatch):
+    from datetime import date as dt_date
+    from etl import ingestion_worker
+    from etl.ingestion_worker import IngestionConfig, ingest_hdx
+    from etl.live_data import PriceObservation
+
+    cfg = IngestionConfig(
+        dsn="postgresql://atie:test@127.0.0.1:5432/atie",
+        schema_path=tmp_path / "schema.sql",
+        hdx_cache_path=tmp_path / "hdx.csv",
+    )
+    monkeypatch.setattr(ingestion_worker, "fetch_text", lambda *a, **k: "csv")
+    monkeypatch.setattr(
+        ingestion_worker,
+        "parse_hdx_prices",
+        lambda *a, **k: [
+            PriceObservation("DAMBULLA", "TOMATO", dt_date(2026, 10, 27), 210.0, "HDX_LIVE")
+        ],
+    )
+    monkeypatch.setattr(
+        ingestion_worker,
+        "read_or_write_cache",
+        lambda *a, **k: (_ for _ in ()).throw(OSError("read-only cache")),
+    )
+    monkeypatch.setattr(
+        ingestion_worker,
+        "_ingest_prices",
+        lambda config, obs, started, **kw: {
+            "source": "HDX",
+            "status": kw["status"],
+            "data_state": kw["data_state"],
+            "records_received": len(list(obs)),
+            "records_written": 1,
+            "message": kw["message"],
+        },
+    )
+
+    result = ingest_hdx(cfg)
+    assert result["status"] == "SUCCESS"
+    assert result["data_state"] == "LIVE"
+    assert result["records_written"] == 1
+
+
+

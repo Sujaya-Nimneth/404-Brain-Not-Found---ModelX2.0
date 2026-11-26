@@ -62,5 +62,4 @@ public class MarketHistoryController {
                 history.history(marketCode, cropCode, days, demoMode)
         );
     }
-
 }

@@ -53,6 +53,11 @@ def predictor() -> Predictor:
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     service = predictor()
+    if not service.model_loaded and not service.fallback_available():
+        raise HTTPException(
+            status_code=503,
+            detail="neither ML model nor fallback snapshot is available",
+        )
     return HealthResponse(
         status="UP",
         model_loaded=service.model_loaded,

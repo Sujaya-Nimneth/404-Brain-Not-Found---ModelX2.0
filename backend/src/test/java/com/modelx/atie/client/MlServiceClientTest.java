@@ -252,6 +252,26 @@ class MlServiceClientTest {
                 .isEqualTo(java.nio.file.Files.readAllBytes(mlPath));
     }
 
+    @Test
+    void rateLimited429FallsBackAndOpensCircuitBreaker() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("http://localhost:8000/predict-batch?demo_mode=false"))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+
+        MlServiceClient client = client(builder);
+        MlServiceClient.MlForecastResponse first = client.predictBatch(
+                "TOMATO", 48, LocalDate.of(2026, 10, 27), List.of("DAMBULLA"), false
+        );
+        MlServiceClient.MlForecastResponse second = client.predictBatch(
+                "TOMATO", 72, LocalDate.of(2026, 10, 27), List.of("DAMBULLA"), false
+        );
+
+        assertThat(first.forecastSource()).isEqualTo("FALLBACK");
+        assertThat(second.forecastSource()).isEqualTo("FALLBACK");
+        server.verify();
+    }
+
     private MlServiceClient client(RestClient.Builder builder) {
         return new MlServiceClient(builder, properties(), new ObjectMapper());
     }

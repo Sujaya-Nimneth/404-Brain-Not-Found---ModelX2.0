@@ -29,7 +29,7 @@ class InputDataState(str, Enum):
 
 
 class MarketForecast(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     market_code: str
     current_price_lkr: float = Field(gt=0)

@@ -44,5 +44,4 @@ public class DirectiveController {
     public AnalyzeResponse analyze(@Valid @RequestBody AnalyzeRequest request) {
         return routingService.analyze(request);
     }
-
 }

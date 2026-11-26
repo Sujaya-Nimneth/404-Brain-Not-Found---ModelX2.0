@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import pickle
 import threading
 import time
@@ -14,6 +15,7 @@ from typing import Any
 import joblib
 import pandas as pd
 import psycopg
+from xgboost.core import XGBoostError
 
 from app.config import Settings
 from app.schemas import (
@@ -367,8 +369,27 @@ class Predictor:
             ) - INTERVAL '730 days'
             ORDER BY history.recorded_date, markets.code, crops.code
         """
-        with psycopg.connect(dsn, connect_timeout=3) as connection:
-            return pd.read_sql_query(query, connection)
+        with psycopg.connect(
+            dsn,
+            connect_timeout=3,
+            options="-c statement_timeout=10000",
+        ) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query)
+                columns = [desc.name for desc in cursor.description]
+                records = cursor.fetchall()
+        frame = pd.DataFrame(records, columns=columns)
+        for col in (
+            "wholesale_price_lkr_per_kg",
+            "arrival_volume_tonnes",
+            "diesel_price_lkr",
+            "precipitation_mm",
+            "forecast_rain_48h_mm",
+            "forecast_rain_72h_mm",
+        ):
+            if col in frame.columns:
+                frame[col] = pd.to_numeric(frame[col], errors="coerce")
+        return frame
 
     def _replace_history(
         self,
@@ -404,25 +425,8 @@ class Predictor:
             self._feature_frame = feature_frame
             self._history_loaded_at = time.monotonic()
 
-    def _refresh_history_if_due(self) -> None:
-        if (
-            not self.settings.database_dsn
-            and not self.settings.history_path.exists()
-        ):
-            return
-        if (
-            time.monotonic() - self._history_loaded_at
-            < self.settings.feature_refresh_seconds
-        ):
-            return
-        if not self._refresh_lock.acquire(blocking=False):
-            return
+    def _run_refresh_worker(self) -> None:
         try:
-            if (
-                time.monotonic() - self._history_loaded_at
-                < self.settings.feature_refresh_seconds
-            ):
-                return
             history, data_state = self._load_history(
                 allow_seed_fallback=self.history.empty
             )
@@ -442,10 +446,42 @@ class Predictor:
             logger.warning(
                 "Feature refresh failed; keeping previous snapshot: %s", error
             )
+            retry_delay = min(30.0, max(5.0, self.settings.feature_refresh_seconds * 0.25))
             with self._lock:
-                self._history_loaded_at = time.monotonic()
+                self._history_loaded_at = (
+                    time.monotonic()
+                    - self.settings.feature_refresh_seconds
+                    + retry_delay
+                )
         finally:
             self._refresh_lock.release()
+
+    def _refresh_history_if_due(self) -> None:
+        if (
+            not self.settings.database_dsn
+            and not self.settings.history_path.exists()
+        ):
+            return
+        if (
+            time.monotonic() - self._history_loaded_at
+            < self.settings.feature_refresh_seconds
+        ):
+            return
+        if not self._refresh_lock.acquire(blocking=False):
+            return
+        if (
+            time.monotonic() - self._history_loaded_at
+            < self.settings.feature_refresh_seconds
+        ):
+            self._refresh_lock.release()
+            return
+        thread = threading.Thread(
+            target=self._run_refresh_worker,
+            name="atie-feature-refresh",
+            daemon=True,
+        )
+        thread.start()
+        thread.join(timeout=0.05)
 
     def _build_feature_cache(
         self, history: pd.DataFrame
@@ -498,7 +534,7 @@ class Predictor:
             )
             predictions = self._model_predictions(request, rows)
             effective_data_state = _rows_data_state(rows, cached_data_state)
-        except (KeyError, ValueError, TypeError) as error:
+        except (KeyError, ValueError, TypeError, ArithmeticError, XGBoostError) as error:
             logger.warning("Model inference failed; using fallback: %s", error)
             source = ForecastSource.FALLBACK
             predictions, reference_date, effective_data_state = (
@@ -627,9 +663,12 @@ class Predictor:
             row = rows[market_code]
             current = float(row["wholesale_price_lkr_per_kg"])
             if target_mode == "relative_return":
-                predicted = max(1.0, current * (1.0 + float(raw_pred)))
+                predicted = current * (1.0 + float(raw_pred))
             else:
                 predicted = float(raw_pred)
+            if not math.isfinite(predicted):
+                raise ValueError(f"non-finite prediction generated for {market_code}")
+            predicted = max(1.0, predicted)
             forecasts.append(
                 self._market_forecast(
                     market_code=market_code,
@@ -715,19 +754,28 @@ class Predictor:
                 "fallback forecast snapshot is unavailable or incomplete"
             ) from error
 
+    def fallback_available(self) -> bool:
+        try:
+            data = self._load_fallback_data()
+            markets = data.get("markets")
+            return isinstance(markets, dict) and bool(markets)
+        except (OSError, json.JSONDecodeError, ValueError, TypeError):
+            return False
+
     def _market_forecast(
         self,
         market_code: str,
         row: pd.Series,
         predicted: float,
     ) -> MarketForecast:
-        current = round_half_up_2(float(row["wholesale_price_lkr_per_kg"]))
+        current_raw = float(row["wholesale_price_lkr_per_kg"])
+        current = round_half_up_2(current_raw)
         predicted_2dp = round_half_up_2(predicted)
         ma7 = round_half_up_2(float(row["rolling_mean_7d"]))
         pct_change = _pct_change_2dp(current, predicted_2dp)
         direction = movement_direction(
-            current,
-            predicted_2dp,
+            current_raw,
+            predicted,
             self.settings.movement_threshold_pct,
         )
         arrivals = float(row["arrival_volume_tonnes"])

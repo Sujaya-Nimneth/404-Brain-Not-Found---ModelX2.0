@@ -86,9 +86,10 @@ public class MlMetricsClient {
                         "Evaluation report loaded from the ML service."
                 );
             } catch (RuntimeException invalidCached) {
-                log.warn("Cached ML metrics invalid for horizon {}: {}", horizonHours, invalidCached.getMessage());
-                cachedMetrics = null;
-                snapshot = null;
+                log.warn("Cached ML metrics unavailable for horizon {}: {}", horizonHours, invalidCached.getMessage());
+                return ModelEvaluationSummary.unavailable(
+                        "Evaluation metrics are temporarily unavailable."
+                );
             }
         }
         if (now.isBefore(retryAfter)) {
