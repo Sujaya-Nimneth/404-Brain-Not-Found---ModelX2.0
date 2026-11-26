@@ -114,6 +114,32 @@ class DirectiveControllerContractTest {
     }
 
     @Test
+    void returns415ForNonJsonContentTypeAndSnakeCaseValidationMessage() throws Exception {
+        mvc.perform(post("/api/v1/directives/analyze")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("hello"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"));
+
+        String badHorizonJson = """
+                {
+                  "origin_code": "ANURADHAPURA",
+                  "default_market_code": "DAMBULLA",
+                  "crop_code": "TOMATO",
+                  "quantity_kg": 1000,
+                  "vehicle_type": "MINI_TRUCK_BATTA",
+                  "horizon_hours": 24
+                }
+                """;
+        mvc.perform(post("/api/v1/directives/analyze")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(badHorizonJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("horizon_hours: horizon_hours must be 48 or 72"));
+    }
+
+    @Test
     void returns415ForUnsupportedMediaTypeInsteadOf500() throws Exception {
         mvc.perform(post("/api/v1/directives/analyze")
                         .contentType(MediaType.TEXT_PLAIN)

@@ -2,7 +2,6 @@ package com.modelx.atie.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -138,6 +137,41 @@ class MarketHistoryServiceTest {
         MarketHistoryResponse response = service.history("DAMBULLA", "TOMATO", 14, false);
 
         assertThat(response.forecastSource()).isEqualTo("FALLBACK");
+        assertThat(response.forecastTrajectory()).hasSize(2);
+    }
+
+    @Test
+    void recoversWhen72hTransientlyDegradesToFallbackAnd48hIsModel() {
+        Market market = entity(
+                Market.class,
+                "code", "DAMBULLA",
+                "name", "Dambulla Dedicated Economic Centre"
+        );
+        when(crops.findByCode("TOMATO")).thenReturn(
+                Optional.of(entity(Crop.class, "code", "TOMATO"))
+        );
+        when(markets.findByCode("DAMBULLA")).thenReturn(Optional.of(market));
+        when(prices.findTopByMarketCodeAndCropCodeOrderByRecordedDateDesc("DAMBULLA", "TOMATO"))
+                .thenReturn(Optional.of(price("2026-10-27", "203.05")));
+        when(prices.findByMarketCodeAndCropCodeAndRecordedDateGreaterThanEqualOrderByRecordedDateAsc(
+                eq("DAMBULLA"),
+                eq("TOMATO"),
+                eq(LocalDate.of(2026, 10, 14))
+        )).thenReturn(List.of(price("2026-10-27", "203.05")));
+
+        when(forecasts.predictBatch(
+                eq("TOMATO"), eq(48), eq(LocalDate.of(2026, 10, 27)), eq(List.of("DAMBULLA")), eq(false)
+        )).thenReturn(forecast(48, "210.00", "STABLE", "MODEL"));
+        when(forecasts.predictBatch(
+                eq("TOMATO"), eq(72), eq(LocalDate.of(2026, 10, 27)), eq(List.of("DAMBULLA")), eq(false)
+        )).thenReturn(
+                forecast(72, "215.56", "STABLE", "FALLBACK"),
+                forecast(72, "212.00", "STABLE", "MODEL")
+        );
+
+        MarketHistoryResponse response = service.history("DAMBULLA", "TOMATO", 14, false);
+
+        assertThat(response.forecastSource()).isEqualTo("MODEL");
         assertThat(response.forecastTrajectory()).hasSize(2);
     }
 

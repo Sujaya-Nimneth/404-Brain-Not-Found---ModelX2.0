@@ -10,11 +10,13 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.modelx.atie.client.ForecastClient;
-import com.modelx.atie.client.MlServiceClient;
 import com.modelx.atie.client.MlMetricsClient;
+import com.modelx.atie.client.MlServiceClient;
+import com.modelx.atie.client.MlServiceException;
 import com.modelx.atie.config.AtieProperties;
 import com.modelx.atie.config.OriginCatalog;
 import com.modelx.atie.domain.VehicleType;
@@ -107,12 +109,6 @@ class ArbitrageRoutingServiceTest {
                         "observationDate", LocalDate.of(2026, 10, 29),
                         "precipitationMm", new BigDecimal("18.40"),
                         "extremeWeatherFlag", true,
-                        "source", "OPEN_METEO_LIVE"),
-                entity(WeatherObservation.class,
-                        "market", dambulla,
-                        "observationDate", LocalDate.of(2026, 10, 27),
-                        "precipitationMm", new BigDecimal("2.00"),
-                        "extremeWeatherFlag", false,
                         "source", "OPEN_METEO_LIVE")
         ));
         AnalyzeResponse response = service.analyze(new AnalyzeRequest(
@@ -160,22 +156,82 @@ class ArbitrageRoutingServiceTest {
     }
 
     @Test
-    void extremeWeatherFlagWithLowRainStillRaisesHighRiskAlert() {
+    void demoModeRejectsNonCanonicalConsignmentAndMissingRouteNeverCallsMl() {
+        assertThatThrownBy(() -> service.analyze(new AnalyzeRequest(
+                "ANURADHAPURA",
+                "DAMBULLA",
+                "CARROT",
+                new BigDecimal("1000"),
+                VehicleType.MINI_TRUCK_BATTA,
+                48,
+                true
+        )))
+                .isInstanceOfSatisfying(DomainValidationException.class, error ->
+                        assertThat(error.code()).isEqualTo("DEMO_FIXTURE_MISMATCH"));
+
+        Crop tomato = entity(Crop.class, "id", 1L, "code", "TOMATO", "name", "Tomato",
+                "spoilageRatePer100KmPct", new BigDecimal("1.50"));
+        Market pettah = market(2L, "PETTAH_COLOMBO", "Pettah", "205");
+        when(crops.findByCode("TOMATO")).thenReturn(Optional.of(tomato));
+        when(routes.findByOriginCodeOrderByDistanceKmAsc("ANURADHAPURA"))
+                .thenReturn(List.of(route("ANURADHAPURA", pettah, "205", "1.00")));
+        var trackedForecast = stub(ForecastClient.class);
+        var trackedService = new ArbitrageRoutingService(
+                crops, routes, fuelPrices, weather, new OriginCatalog(),
+                trackedForecast, metricsClient, calculator,
+                new RoutingDecisionService(properties), properties
+        );
+
+        assertThatThrownBy(() -> trackedService.analyze(new AnalyzeRequest(
+                "ANURADHAPURA",
+                "DAMBULLA",
+                "TOMATO",
+                new BigDecimal("1000"),
+                VehicleType.MINI_TRUCK_BATTA,
+                48,
+                false
+        )))
+                .isInstanceOfSatisfying(DomainValidationException.class, error ->
+                        assertThat(error.code()).isEqualTo("ROUTE_NOT_FOUND"));
+        org.mockito.Mockito.verifyNoInteractions(trackedForecast);
+    }
+
+    @Test
+    void missingFuelPricesThrows503AndExtremeWeatherForcesHighRisk() {
         Crop tomato = entity(Crop.class, "id", 1L, "code", "TOMATO", "name", "Tomato",
                 "spoilageRatePer100KmPct", new BigDecimal("1.50"));
         Market dambulla = market(1L, "DAMBULLA", "Dambulla", "70");
         Market pettah = market(2L, "PETTAH_COLOMBO", "Pettah", "205");
-        FuelPrice fuel = entity(FuelPrice.class, "id", 1L,
-                "effectiveDate", LocalDate.of(2026, 10, 1),
-                "dieselLkrPerLiter", new BigDecimal("283"),
-                "petrolLkrPerLiter", new BigDecimal("311"));
-
+        Market meegoda = market(3L, "MEEGODA", "Meegoda", "195");
+        Market keppetipola = market(4L, "KEPPETIPOLA", "Keppetipola", "175");
         when(crops.findByCode("TOMATO")).thenReturn(Optional.of(tomato));
         when(routes.findByOriginCodeOrderByDistanceKmAsc("ANURADHAPURA"))
                 .thenReturn(List.of(
                         route("ANURADHAPURA", dambulla, "70", "1.00"),
-                        route("ANURADHAPURA", pettah, "205", "1.00")
+                        route("ANURADHAPURA", pettah, "205", "1.00"),
+                        route("ANURADHAPURA", meegoda, "195", "1.00"),
+                        route("ANURADHAPURA", keppetipola, "175", "1.25")
                 ));
+        when(fuelPrices.findTopByOrderByEffectiveDateDesc()).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.analyze(new AnalyzeRequest(
+                "ANURADHAPURA",
+                "DAMBULLA",
+                "TOMATO",
+                new BigDecimal("1000"),
+                VehicleType.MINI_TRUCK_BATTA,
+                48,
+                true
+        )))
+                .isInstanceOfSatisfying(MlServiceException.class, error -> {
+                    assertThat(error.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                    assertThat(error.code()).isEqualTo("FUEL_PRICES_UNAVAILABLE");
+                });
+
+        FuelPrice fuel = entity(FuelPrice.class, "id", 1L,
+                "effectiveDate", LocalDate.of(2026, 10, 1),
+                "dieselLkrPerLiter", new BigDecimal("283"),
+                "petrolLkrPerLiter", new BigDecimal("311"));
         when(fuelPrices.findTopByOrderByEffectiveDateDesc()).thenReturn(Optional.of(fuel));
         when(weather.findLatestByMarketCodesOnOrBefore(
                 org.mockito.ArgumentMatchers.anyCollection(),
@@ -183,20 +239,25 @@ class ArbitrageRoutingServiceTest {
         )).thenReturn(List.of(
                 entity(WeatherObservation.class,
                         "market", dambulla,
-                        "observationDate", LocalDate.of(2026, 10, 29),
+                        "observationDate", LocalDate.of(2026, 10, 28),
                         "precipitationMm", new BigDecimal("2.00"),
                         "extremeWeatherFlag", true,
                         "source", "OPEN_METEO_LIVE")
         ));
 
         AnalyzeResponse response = service.analyze(new AnalyzeRequest(
-                "ANURADHAPURA", "DAMBULLA", "TOMATO",
-                new BigDecimal("1000"), VehicleType.MINI_TRUCK_BATTA, 48, true
+                "ANURADHAPURA",
+                "DAMBULLA",
+                "TOMATO",
+                new BigDecimal("1000"),
+                VehicleType.MINI_TRUCK_BATTA,
+                48,
+                true
         ));
-
-        assertThat(response.weatherAlerts()).singleElement()
-                .extracting("riskLevel")
-                .isEqualTo("HIGH");
+        assertThat(response.weatherAlerts()).singleElement().satisfies(alert -> {
+            assertThat(alert.riskLevel()).isEqualTo("HIGH");
+            assertThat(alert.extremeWeather()).isTrue();
+        });
     }
 
     private MlServiceClient.MlForecastResponse fixtureForecast() {

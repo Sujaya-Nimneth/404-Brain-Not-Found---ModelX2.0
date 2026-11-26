@@ -142,6 +142,52 @@ class MlMetricsClientTest {
     }
 
     @Test
+    void missing72hHorizonInCachedReportFallsBackWithoutThrowing500() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("http://localhost:8000/metrics"))
+                .andRespond(withSuccess(metricsJson(), MediaType.APPLICATION_JSON));
+
+        MlMetricsClient metricsClient = client(builder);
+        assertThat(metricsClient.fetchSummary(48).available()).isTrue();
+
+        ModelEvaluationSummary h72 = metricsClient.fetchSummary(72);
+        assertThat(h72.available()).isFalse();
+        assertThat(h72.message()).contains("temporarily unavailable");
+        server.verify();
+    }
+
+    @Test
+    void nonNumericOrNullFprPercentageDoesNotFabricateZero() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        String json = """
+                {
+                  "metrics": {
+                    "48": {
+                      "model": { "directional_symmetry_pct": 80.0, "mae_lkr": 2.0 },
+                      "baseline_naive": { "directional_symmetry_pct": 0.0, "mae_lkr": 10.0 },
+                      "baseline_ma7": { "directional_symmetry_pct": 40.0, "mae_lkr": 12.0 },
+                      "safe_margin_fpr": {
+                        "model": { "safe_margin_fpr_pct": null, "reroute_count": 0, "false_reroute_count": 0 },
+                        "baseline_naive": { "safe_margin_fpr_pct": "NaN", "reroute_count": 5, "false_reroute_count": 1 },
+                        "baseline_ma7": { "safe_margin_fpr_pct": 10.0, "reroute_count": 10, "false_reroute_count": 1 }
+                      }
+                    }
+                  }
+                }
+                """;
+        server.expect(requestTo("http://localhost:8000/metrics"))
+                .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
+
+        ModelEvaluationSummary summary = client(builder).fetchSummary(48);
+        assertThat(summary.modelSafeMarginFpr().safeMarginFprPct()).isNull();
+        assertThat(summary.naiveSafeMarginFpr()).isNull();
+        assertThat(summary.ma7SafeMarginFpr().safeMarginFprPct()).isEqualByComparingTo("10.00");
+        server.verify();
+    }
+
+    @Test
     void malformedMetricsNeverPoisonCacheOrThrow500OnMissingHorizon() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
