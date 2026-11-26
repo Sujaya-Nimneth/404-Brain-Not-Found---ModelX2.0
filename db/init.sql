@@ -19,7 +19,9 @@ CREATE TABLE markets (
     handling_fee_per_kg_lkr DECIMAL(8, 2) NOT NULL DEFAULT 2.50,
     CONSTRAINT markets_latitude_range CHECK (latitude BETWEEN -90 AND 90),
     CONSTRAINT markets_longitude_range CHECK (longitude BETWEEN -180 AND 180),
-    CONSTRAINT markets_handling_non_negative CHECK (handling_fee_per_kg_lkr >= 0)
+    CONSTRAINT markets_handling_non_negative CHECK (
+        handling_fee_per_kg_lkr <> 'NaN' AND handling_fee_per_kg_lkr >= 0
+    )
 );
 
 CREATE TABLE crops (
@@ -28,7 +30,8 @@ CREATE TABLE crops (
     name VARCHAR(100) NOT NULL,
     spoilage_rate_per_100km_pct DECIMAL(5, 2) NOT NULL DEFAULT 1.50,
     CONSTRAINT crops_spoilage_range CHECK (
-        spoilage_rate_per_100km_pct >= 0
+        spoilage_rate_per_100km_pct <> 'NaN'
+        AND spoilage_rate_per_100km_pct >= 0
         AND spoilage_rate_per_100km_pct <= 100
     )
 );
@@ -42,9 +45,15 @@ CREATE TABLE market_routes (
     road_terrain_factor DECIMAL(4, 2) NOT NULL DEFAULT 1.00,
     CONSTRAINT market_routes_unique_origin_destination
         UNIQUE (origin_code, destination_market_id),
-    CONSTRAINT market_routes_distance_positive CHECK (distance_km > 0),
-    CONSTRAINT market_routes_duration_positive CHECK (estimated_duration_hours > 0),
-    CONSTRAINT market_routes_terrain_positive CHECK (road_terrain_factor > 0)
+    CONSTRAINT market_routes_distance_positive CHECK (
+        distance_km <> 'NaN' AND distance_km > 0
+    ),
+    CONSTRAINT market_routes_duration_positive CHECK (
+        estimated_duration_hours <> 'NaN' AND estimated_duration_hours > 0
+    ),
+    CONSTRAINT market_routes_terrain_positive CHECK (
+        road_terrain_factor <> 'NaN' AND road_terrain_factor > 0
+    )
 );
 
 CREATE TABLE historical_prices (
@@ -58,9 +67,12 @@ CREATE TABLE historical_prices (
     CONSTRAINT historical_prices_unique_market_crop_date
         UNIQUE (market_id, crop_id, recorded_date),
     CONSTRAINT historical_prices_price_positive
-        CHECK (wholesale_price_lkr_per_kg > 0),
+        CHECK (wholesale_price_lkr_per_kg <> 'NaN' AND wholesale_price_lkr_per_kg > 0),
     CONSTRAINT historical_prices_arrivals_non_negative
-        CHECK (arrival_volume_tonnes IS NULL OR arrival_volume_tonnes >= 0),
+        CHECK (
+            arrival_volume_tonnes IS NULL
+            OR (arrival_volume_tonnes <> 'NaN' AND arrival_volume_tonnes >= 0)
+        ),
     CONSTRAINT historical_prices_source_check
         CHECK (
             source IN (
@@ -84,11 +96,17 @@ CREATE TABLE weather_observations (
     extreme_weather_flag BOOLEAN NOT NULL DEFAULT FALSE,
     source VARCHAR(32) NOT NULL DEFAULT 'SEED',
     CONSTRAINT weather_unique_market_date UNIQUE (market_id, observation_date),
-    CONSTRAINT weather_precipitation_non_negative CHECK (precipitation_mm >= 0),
+    CONSTRAINT weather_precipitation_non_negative CHECK (
+        precipitation_mm <> 'NaN' AND precipitation_mm >= 0
+    ),
     CONSTRAINT weather_temperature_order CHECK (
-        temp_max_c IS NULL
-        OR temp_min_c IS NULL
-        OR temp_max_c >= temp_min_c
+        (temp_max_c IS NULL OR temp_max_c <> 'NaN')
+        AND (temp_min_c IS NULL OR temp_min_c <> 'NaN')
+        AND (
+            temp_max_c IS NULL
+            OR temp_min_c IS NULL
+            OR temp_max_c >= temp_min_c
+        )
     ),
     CONSTRAINT weather_observations_source_check
         CHECK (source IN ('OPEN_METEO_LIVE', 'OPEN_METEO_CACHED', 'SEED'))
@@ -100,7 +118,9 @@ CREATE TABLE fuel_prices (
     diesel_lkr_per_liter DECIMAL(8, 2) NOT NULL,
     petrol_lkr_per_liter DECIMAL(8, 2) NOT NULL,
     CONSTRAINT fuel_prices_positive CHECK (
-        diesel_lkr_per_liter > 0
+        diesel_lkr_per_liter <> 'NaN'
+        AND petrol_lkr_per_liter <> 'NaN'
+        AND diesel_lkr_per_liter > 0
         AND petrol_lkr_per_liter > 0
     )
 );

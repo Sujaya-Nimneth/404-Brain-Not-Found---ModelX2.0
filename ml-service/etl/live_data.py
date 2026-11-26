@@ -2,14 +2,20 @@ from __future__ import annotations
 
 import csv
 import io
+import ipaddress
 import json
 import logging
+import math
 import os
+import socket
+import tempfile
+import time
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 from typing import Iterable
+from urllib.parse import urljoin, urlparse
 
 import httpx
 
@@ -17,6 +23,11 @@ logger = logging.getLogger(__name__)
 
 MAX_RESPONSE_BYTES = 25 * 1024 * 1024
 MAX_ERROR_MESSAGE_CHARS = 500
+MAX_PRICE_LKR_PER_KG = 99_999_999.99
+MAX_PRECIPITATION_MM = 9_999.99
+MIN_TEMP_C = -99.99
+MAX_TEMP_C = 99.99
+MAX_REDIRECT_HOPS = 5
 
 HDX_DEFAULT_URL = (
     "https://data.humdata.org/dataset/"
@@ -84,9 +95,34 @@ def utc_now() -> datetime:
 
 
 def round_half_up_2dp(value: float | Decimal | str) -> float:
-    return float(
-        Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    )
+    try:
+        dec = Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError) as exc:
+        raise ValueError(f"Non-numeric value: {value!r}") from exc
+    if not dec.is_finite():
+        raise ValueError(f"Non-finite value: {value!r}")
+    return float(dec.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+def _parse_finite_float(
+    raw: object,
+    *,
+    min_value: float | None = None,
+    max_value: float | None = None,
+) -> float:
+    if raw is None or isinstance(raw, bool):
+        raise ValueError(f"Invalid numeric value: {raw!r}")
+    try:
+        value = float(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Invalid numeric value: {raw!r}") from exc
+    if not math.isfinite(value):
+        raise ValueError(f"Non-finite numeric value: {raw!r}")
+    if min_value is not None and value < min_value:
+        raise ValueError(f"Value {value} below minimum {min_value}")
+    if max_value is not None and value > max_value:
+        raise ValueError(f"Value {value} above maximum {max_value}")
+    return round_half_up_2dp(value)
 
 
 def bound_message(
@@ -109,20 +145,29 @@ def parse_hdx_prices(
     if reader.fieldnames is None or not required.issubset(reader.fieldnames):
         raise ValueError("HDX price payload does not contain the expected columns")
 
+    has_currency = "currency" in reader.fieldnames
     observations: dict[tuple[str, str, date], PriceObservation] = {}
     for row in reader:
         market_code = MARKET_MAPPING.get((row.get("market") or "").strip())
         crop_code = COMMODITY_MAPPING.get((row.get("commodity") or "").strip())
         price_type = (row.get("pricetype") or "").strip().lower()
         unit = (row.get("unit") or "").strip().upper()
+        if has_currency:
+            currency = (row.get("currency") or "").strip().upper()
+            if currency and currency != "LKR":
+                continue
         if not market_code or not crop_code or price_type != "wholesale":
             continue
         if unit != "KG":
             continue
         try:
             recorded_date = date.fromisoformat((row.get("date") or "").strip())
-            price = float(row["price"])
-        except (TypeError, ValueError):
+            price = _parse_finite_float(
+                row.get("price"),
+                min_value=0.01,
+                max_value=MAX_PRICE_LKR_PER_KG,
+            )
+        except ValueError:
             continue
         if price <= 0:
             continue
@@ -131,7 +176,7 @@ def parse_hdx_prices(
             market_code=market_code,
             crop_code=crop_code,
             recorded_date=recorded_date,
-            wholesale_price_lkr_per_kg=round_half_up_2dp(price),
+            wholesale_price_lkr_per_kg=price,
             source=source_label,
         )
     return sorted(
@@ -160,8 +205,33 @@ def parse_open_meteo_weather(
     ):
         if precipitation is None:
             continue
-        parsed_max = None if maximum is None else round_half_up_2dp(maximum)
-        parsed_min = None if minimum is None else round_half_up_2dp(minimum)
+        try:
+            parsed_precip = _parse_finite_float(
+                precipitation,
+                max_value=MAX_PRECIPITATION_MM,
+            )
+            parsed_max = (
+                None
+                if maximum is None
+                else _parse_finite_float(
+                    maximum,
+                    min_value=MIN_TEMP_C,
+                    max_value=MAX_TEMP_C,
+                )
+            )
+            parsed_min = (
+                None
+                if minimum is None
+                else _parse_finite_float(
+                    minimum,
+                    min_value=MIN_TEMP_C,
+                    max_value=MAX_TEMP_C,
+                )
+            )
+        except ValueError as exc:
+            raise ValueError(
+                f"Invalid Open-Meteo observation on {day}: {exc}"
+            ) from exc
         if (
             parsed_max is not None
             and parsed_min is not None
@@ -172,13 +242,53 @@ def parse_open_meteo_weather(
             WeatherObservation(
                 market_code=market_code,
                 observation_date=date.fromisoformat(day),
-                precipitation_mm=max(0.0, round_half_up_2dp(precipitation)),
+                precipitation_mm=max(0.0, parsed_precip),
                 temp_max_c=parsed_max,
                 temp_min_c=parsed_min,
                 source=source_label,
             )
         )
     return result
+
+
+def validate_outbound_url(url: str, *, allow_private_hosts: bool = False) -> str:
+    parsed = urlparse(url.strip())
+    if parsed.scheme.lower() != "https":
+        raise ValueError(f"Only HTTPS URLs are permitted for ingestion: {url}")
+    if not parsed.netloc or not parsed.hostname:
+        raise ValueError(f"Outbound URL is missing a hostname: {url}")
+    if parsed.username or parsed.password:
+        raise ValueError("Outbound URL must not embed credentials")
+
+    hostname = parsed.hostname
+    if not allow_private_hosts:
+        _assert_public_host(hostname, parsed.port or 443)
+    return url.strip()
+
+
+def _assert_public_host(hostname: str, port: int) -> None:
+    lowered = hostname.lower()
+    if lowered in {"localhost", "localhost.localdomain"} or lowered.endswith(".local"):
+        raise ValueError(f"Refusing private/local ingestion host: {hostname}")
+    try:
+        ip_obj = ipaddress.ip_address(hostname)
+    except ValueError:
+        ip_obj = None
+    if ip_obj is not None:
+        if not ip_obj.is_global:
+            raise ValueError(f"Refusing non-global IP ingestion target: {hostname}")
+        return
+    try:
+        infos = socket.getaddrinfo(hostname, port, type=socket.SOCK_STREAM)
+    except OSError:
+        # Defer unreachable DNS failures to httpx transport so retry/fallback records them.
+        return
+    for info in infos:
+        addr_ip = ipaddress.ip_address(info[4][0])
+        if not addr_ip.is_global:
+            raise ValueError(
+                f"Refusing ingestion host resolving to non-global IP: {hostname}"
+            )
 
 
 def fetch_text(
@@ -188,26 +298,50 @@ def fetch_text(
     client: httpx.Client | None = None,
     timeout_seconds: float = 30.0,
     max_bytes: int = MAX_RESPONSE_BYTES,
+    allow_private_hosts: bool = False,
 ) -> str:
+    validate_outbound_url(url, allow_private_hosts=allow_private_hosts or client is not None)
     owns_client = client is None
     active_client = client or httpx.Client(
         timeout=timeout_seconds,
-        follow_redirects=True,
+        follow_redirects=False,
     )
+    deadline = time.monotonic() + max(1.0, float(timeout_seconds) * 2.0)
+    current_url = url.strip()
+    current_params = params
     try:
-        with active_client.stream("GET", url, params=params) as response:
-            response.raise_for_status()
-            chunks: list[bytes] = []
-            total = 0
-            for chunk in response.iter_bytes():
-                total += len(chunk)
-                if total > max_bytes:
-                    raise ValueError(
-                        f"Upstream payload exceeded {max_bytes} byte limit"
+        for _ in range(MAX_REDIRECT_HOPS + 1):
+            with active_client.stream("GET", current_url, params=current_params) as response:
+                if response.status_code in {301, 302, 303, 307, 308}:
+                    location = response.headers.get("location")
+                    if not location:
+                        response.raise_for_status()
+                    next_url = urljoin(current_url, location)
+                    validate_outbound_url(
+                        next_url,
+                        allow_private_hosts=allow_private_hosts or client is not None,
                     )
-                chunks.append(chunk)
-            encoding = response.encoding or "utf-8"
-            return b"".join(chunks).decode(encoding, errors="replace")
+                    current_url = next_url
+                    current_params = None
+                    if time.monotonic() > deadline:
+                        raise httpx.ReadTimeout("Overall HTTP fetch deadline exceeded")
+                    continue
+
+                response.raise_for_status()
+                chunks: list[bytes] = []
+                total = 0
+                for chunk in response.iter_bytes():
+                    if time.monotonic() > deadline:
+                        raise httpx.ReadTimeout("Overall HTTP fetch deadline exceeded")
+                    total += len(chunk)
+                    if total > max_bytes:
+                        raise ValueError(
+                            f"Upstream payload exceeded {max_bytes} byte limit"
+                        )
+                    chunks.append(chunk)
+                encoding = response.encoding or "utf-8"
+                return b"".join(chunks).decode(encoding, errors="replace")
+        raise ValueError(f"Exceeded maximum redirect hops ({MAX_REDIRECT_HOPS})")
     finally:
         if owns_client:
             active_client.close()
@@ -220,12 +354,22 @@ def atomic_write_text(
     encoding: str = "utf-8",
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temp_path = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    temp_path: Path | None = None
     try:
-        temp_path.write_text(content, encoding=encoding)
-        temp_path.replace(path)
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding=encoding,
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temp_path = Path(handle.name)
+            handle.write(content)
+        os.replace(temp_path, path)
     except Exception:
-        temp_path.unlink(missing_ok=True)
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
         raise
 
 

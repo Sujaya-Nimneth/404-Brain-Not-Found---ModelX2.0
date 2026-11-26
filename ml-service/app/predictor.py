@@ -256,30 +256,69 @@ class Predictor:
 
     def _load_database_history(self, dsn: str) -> pd.DataFrame:
         query = """
+            WITH latest_dates AS (
+                SELECT market_id, crop_id, MAX(recorded_date) AS max_date
+                FROM historical_prices
+                GROUP BY market_id, crop_id
+            ),
+            arrival_medians AS (
+                SELECT market_id,
+                       crop_id,
+                       PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY arrival_volume_tonnes)
+                           AS median_arrivals
+                FROM historical_prices
+                WHERE arrival_volume_tonnes IS NOT NULL
+                GROUP BY market_id, crop_id
+            ),
+            global_arrival_median AS (
+                SELECT COALESCE(
+                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY arrival_volume_tonnes),
+                    45.0
+                ) AS fallback_arrivals
+                FROM historical_prices
+                WHERE arrival_volume_tonnes IS NOT NULL
+            )
             SELECT markets.code AS market_code,
                    crops.code AS crop_code,
                    history.recorded_date,
                    history.wholesale_price_lkr_per_kg,
-                   COALESCE(history.arrival_volume_tonnes, 1.0)
-                       AS arrival_volume_tonnes,
+                   COALESCE(
+                       history.arrival_volume_tonnes,
+                       arrival_medians.median_arrivals,
+                       global_arrival_median.fallback_arrivals
+                   ) AS arrival_volume_tonnes,
                    COALESCE(fuel.diesel_lkr_per_liter, 283.0)
                        AS diesel_price_lkr,
-                   COALESCE(weather.precipitation_mm, 0.0)
-                       AS precipitation_mm,
+                   COALESCE(
+                       weather.precipitation_mm,
+                       live_weather_now.precipitation_mm,
+                       0.0
+                   ) AS precipitation_mm,
                    COALESCE(
                        weather_48h.precipitation_mm,
+                       live_weather_48h.precipitation_mm,
                        weather.precipitation_mm,
+                       live_weather_now.precipitation_mm,
                        0.0
                    ) AS forecast_rain_48h_mm,
                    COALESCE(
                        weather_72h.precipitation_mm,
+                       live_weather_72h.precipitation_mm,
                        weather.precipitation_mm,
+                       live_weather_now.precipitation_mm,
                        0.0
                    ) AS forecast_rain_72h_mm,
                    history.source
             FROM historical_prices history
             JOIN markets ON markets.id = history.market_id
             JOIN crops ON crops.id = history.crop_id
+            JOIN latest_dates
+              ON latest_dates.market_id = history.market_id
+             AND latest_dates.crop_id = history.crop_id
+            LEFT JOIN arrival_medians
+              ON arrival_medians.market_id = history.market_id
+             AND arrival_medians.crop_id = history.crop_id
+            CROSS JOIN global_arrival_median
             LEFT JOIN LATERAL (
                 SELECT diesel_lkr_per_liter
                 FROM fuel_prices
@@ -292,10 +331,37 @@ class Predictor:
              AND weather.observation_date = history.recorded_date
             LEFT JOIN weather_observations weather_48h
               ON weather_48h.market_id = history.market_id
-             AND weather_48h.observation_date = history.recorded_date + INTERVAL '2 days'
+             AND weather_48h.observation_date = history.recorded_date + 2
             LEFT JOIN weather_observations weather_72h
               ON weather_72h.market_id = history.market_id
-             AND weather_72h.observation_date = history.recorded_date + INTERVAL '3 days'
+             AND weather_72h.observation_date = history.recorded_date + 3
+            LEFT JOIN LATERAL (
+                SELECT w.precipitation_mm
+                FROM weather_observations w
+                WHERE w.market_id = history.market_id
+                  AND w.observation_date <= CURRENT_DATE
+                  AND w.source IN ('OPEN_METEO_LIVE', 'OPEN_METEO_CACHED')
+                ORDER BY w.observation_date DESC
+                LIMIT 1
+            ) live_weather_now ON history.recorded_date = latest_dates.max_date
+            LEFT JOIN LATERAL (
+                SELECT w.precipitation_mm
+                FROM weather_observations w
+                WHERE w.market_id = history.market_id
+                  AND w.observation_date >= CURRENT_DATE + 2
+                  AND w.source IN ('OPEN_METEO_LIVE', 'OPEN_METEO_CACHED')
+                ORDER BY w.observation_date ASC
+                LIMIT 1
+            ) live_weather_48h ON history.recorded_date = latest_dates.max_date
+            LEFT JOIN LATERAL (
+                SELECT w.precipitation_mm
+                FROM weather_observations w
+                WHERE w.market_id = history.market_id
+                  AND w.observation_date >= CURRENT_DATE + 3
+                  AND w.source IN ('OPEN_METEO_LIVE', 'OPEN_METEO_CACHED')
+                ORDER BY w.observation_date ASC
+                LIMIT 1
+            ) live_weather_72h ON history.recorded_date = latest_dates.max_date
             WHERE history.recorded_date >= (
                 SELECT MAX(recorded_date) FROM historical_prices
             ) - INTERVAL '730 days'
@@ -314,6 +380,23 @@ class Predictor:
             normalized["recorded_date"] = pd.to_datetime(
                 normalized["recorded_date"], errors="raise"
             )
+        if not normalized.empty and "arrival_volume_tonnes" in normalized.columns:
+            arrivals = pd.to_numeric(
+                normalized["arrival_volume_tonnes"], errors="coerce"
+            )
+            if arrivals.isna().any():
+                group_medians = arrivals.groupby(
+                    [normalized["market_code"], normalized["crop_code"]]
+                ).transform("median")
+                global_median = arrivals.median()
+                fallback_val = (
+                    float(global_median)
+                    if pd.notna(global_median)
+                    else 45.0
+                )
+                normalized["arrival_volume_tonnes"] = (
+                    arrivals.fillna(group_medians).fillna(fallback_val)
+                )
         feature_frame = self._build_feature_cache(normalized)
         with self._lock:
             self.history = normalized
@@ -390,7 +473,7 @@ class Predictor:
             feature_frame = self._feature_frame
             cached_data_state = self.input_data_state
 
-        if history.empty:
+        if history.empty or not self.model_loaded:
             predictions, fallback_ref_date, fallback_state = (
                 self._fallback_predictions_with_meta(request)
             )
@@ -405,23 +488,20 @@ class Predictor:
             )
 
         reference_date = self._reference_date_for_request(request, history)
-        source = (
-            ForecastSource.MODEL if self.model_loaded else ForecastSource.FALLBACK
-        )
+        source = ForecastSource.MODEL
         effective_data_state = cached_data_state
-        if self.model_loaded:
-            try:
-                rows = self._select_rows(request, reference_date, feature_frame)
-                predictions = self._model_predictions(request, rows)
-                effective_data_state = _rows_data_state(rows, cached_data_state)
-            except (KeyError, ValueError, TypeError) as error:
-                logger.warning("Model inference failed; using fallback: %s", error)
-                source = ForecastSource.FALLBACK
-                predictions, reference_date, effective_data_state = (
-                    self._fallback_predictions_with_meta(request)
-                )
-        else:
-            predictions, _, effective_data_state = (
+        try:
+            rows = self._select_rows(request, reference_date, feature_frame)
+            reference_date = max(
+                pd.Timestamp(row["recorded_date"]).date()
+                for row in rows.values()
+            )
+            predictions = self._model_predictions(request, rows)
+            effective_data_state = _rows_data_state(rows, cached_data_state)
+        except (KeyError, ValueError, TypeError) as error:
+            logger.warning("Model inference failed; using fallback: %s", error)
+            source = ForecastSource.FALLBACK
+            predictions, reference_date, effective_data_state = (
                 self._fallback_predictions_with_meta(request)
             )
 

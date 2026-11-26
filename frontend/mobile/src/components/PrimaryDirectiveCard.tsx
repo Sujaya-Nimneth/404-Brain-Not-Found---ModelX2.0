@@ -25,9 +25,17 @@ interface Props {
   request: AnalyzeRequest;
   response: AnalyzeResponse;
   language: LanguageCode;
+  safeMarginPct?: number;
+  safeAbsoluteFloorLkr?: number;
 }
 
-export function PrimaryDirectiveCard({ request, response, language }: Props) {
+export function PrimaryDirectiveCard({
+  request,
+  response,
+  language,
+  safeMarginPct = 5,
+  safeAbsoluteFloorLkr = 1000,
+}: Props) {
   const t = UI_STRINGS[language];
   const directive = response.primaryDirective;
   const recommended = directive.recommendedMarketCode
@@ -41,9 +49,16 @@ export function PrimaryDirectiveCard({ request, response, language }: Props) {
 
   const isReroute = directive.severity === "CRITICAL_REROUTE";
   const isHold = directive.severity === "HOLD_HARVEST";
+  const isRerouteNullUplift = isReroute && directive.profitUpliftPct === null;
+  const isProceedDefault = !isReroute && !isHold;
   const cardBg = isHold ? "#4c2720" : isReroute ? colors.ink : colors.moss;
 
-  const copy = localizeDirectiveCopy(response, language);
+  const copy = localizeDirectiveCopy(
+    response,
+    language,
+    safeMarginPct,
+    safeAbsoluteFloorLkr,
+  );
   const dispatchText = buildDispatchMessage(request, response, language);
 
   return (
@@ -161,23 +176,27 @@ export function PrimaryDirectiveCard({ request, response, language }: Props) {
               styles.metricValue,
               isHold
                 ? styles.textDanger
-                : (directive.profitUpliftPct ?? 0) > 0
+                : !isRerouteNullUplift && (directive.profitUpliftPct ?? 0) > 0
                   ? styles.textLime
                   : styles.textLight,
             ]}
           >
             {isHold
               ? t.holdValue
-              : directive.profitUpliftPct === null
+              : isProceedDefault
                 ? t.noRerouteValue
-                : formatSignedPct(directive.profitUpliftPct)}
+                : isRerouteNullUplift
+                  ? "n/a"
+                  : formatSignedPct(directive.profitUpliftPct)}
           </Text>
           <Text style={styles.metricSuffix}>
             {isHold
               ? t.weakMarginSuffix
-              : directive.profitUpliftPct === null
-                ? t.belowSafeFloorSuffix
-                : t.vsDefaultSuffix}
+              : isProceedDefault
+                ? t.belowSafeFloorSuffix.replace("{pct}", String(safeMarginPct))
+                : isRerouteNullUplift
+                  ? t.defaultNonPositiveSuffix
+                  : t.vsDefaultSuffix}
           </Text>
         </View>
 
@@ -188,14 +207,16 @@ export function PrimaryDirectiveCard({ request, response, language }: Props) {
               styles.metricValue,
               isHold
                 ? styles.textDanger
-                : (directive.profitDeltaLkr ?? 0) > 0
+                : !isProceedDefault && (directive.profitDeltaLkr ?? 0) > 0
                   ? styles.textLime
                   : styles.textLight,
             ]}
           >
-            {directive.profitDeltaLkr === null
+            {isHold || directive.profitDeltaLkr === null
               ? "—"
-              : formatSignedLkr(directive.profitDeltaLkr)}
+              : isProceedDefault
+                ? "0.00"
+                : formatSignedLkr(directive.profitDeltaLkr)}
           </Text>
           <Text style={styles.metricSuffix}>{t.netDeltaSuffix}</Text>
         </View>

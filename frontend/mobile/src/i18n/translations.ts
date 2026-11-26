@@ -44,6 +44,7 @@ export interface UiStrings {
   keepRouteSuffix: string;
   noRerouteValue: string;
   belowSafeFloorSuffix: string;
+  defaultNonPositiveSuffix: string;
   vsDefaultSuffix: string;
   netDeltaSuffix: string;
   dispatchHeading: string;
@@ -123,7 +124,8 @@ export const UI_STRINGS: Record<LanguageCode, UiStrings> = {
     defaultRouteValue: "Default",
     keepRouteSuffix: "keep route",
     noRerouteValue: "No reroute",
-    belowSafeFloorSuffix: "below 5% floor",
+    belowSafeFloorSuffix: "below {pct}% floor",
+    defaultNonPositiveSuffix: "default profit ≤ 0",
     vsDefaultSuffix: "vs default market",
     netDeltaSuffix: "LKR net delta",
     dispatchHeading: "FIELD DISPATCH · SEND TO DRIVER OR CO-OP",
@@ -204,7 +206,8 @@ export const UI_STRINGS: Record<LanguageCode, UiStrings> = {
     defaultRouteValue: "සාමාන්‍ය",
     keepRouteSuffix: "මාර්ගය තබාගන්න",
     noRerouteValue: "වෙනසක් නැත",
-    belowSafeFloorSuffix: "5% සීමාවට අඩුයි",
+    belowSafeFloorSuffix: "{pct}% සීමාවට අඩුයි",
+    defaultNonPositiveSuffix: "සාමාන්‍ය ලාභය ≤ 0",
     vsDefaultSuffix: "සාමාන්‍ය වෙළඳපොළට සාපේක්ෂව",
     netDeltaSuffix: "රු. ශුද්ධ වෙනස",
     dispatchHeading: "රියදුරු හෝ සමිතිය වෙත යවන්න",
@@ -285,7 +288,8 @@ export const UI_STRINGS: Record<LanguageCode, UiStrings> = {
     defaultRouteValue: "வழக்கமான",
     keepRouteSuffix: "பாதையைத் தொடர்க",
     noRerouteValue: "மாற்றம் இல்லை",
-    belowSafeFloorSuffix: "5% வரம்புக்கு கீழ்",
+    belowSafeFloorSuffix: "{pct}% வரம்புக்கு கீழ்",
+    defaultNonPositiveSuffix: "வழக்கமான இலாபம் ≤ 0",
     vsDefaultSuffix: "வழக்கமான சந்தையுடன் ஒப்பீடு",
     netDeltaSuffix: "ரூ. நிகர வேறுபாடு",
     dispatchHeading: "சாரதி அல்லது கூட்டுறவுக்கு அனுப்புக",
@@ -406,6 +410,8 @@ export function localizeDirection(
 export function localizeDirectiveCopy(
   response: AnalyzeResponse,
   lang: LanguageCode,
+  safeMarginPct = 5,
+  safeAbsoluteFloorLkr = 1000,
 ): { headline: string; explanation: string; crashWarning: string | null } {
   const directive = response.primaryDirective;
   const defaultMarket = response.marketComparisons.find(
@@ -445,9 +451,13 @@ export function localizeDirectiveCopy(
         : null;
 
     if (directive.severity === "CRITICAL_REROUTE" && recommended) {
+      const upliftClause =
+        directive.profitUpliftPct === null
+          ? ""
+          : ` (${formatSignedPct(directive.profitUpliftPct)})`;
       return {
         headline: `${recName} වෙත යොමු කරන්න`,
-        explanation: `${defaultName} වෙනුවට ${recName} වෙත ප්‍රවාහනය කිරීමෙන් ඉන්ධන, ගාස්තු සහ නරක්වීම් අඩු කළ පසු ${formatSignedCurrency(directive.profitDeltaLkr)} (${formatSignedPct(directive.profitUpliftPct)}) ක වැඩි ශුද්ධ ලාභයක් ලැබේ.`,
+        explanation: `${defaultName} වෙනුවට ${recName} වෙත ප්‍රවාහනය කිරීමෙන් ඉන්ධන, ගාස්තු සහ නරක්වීම් අඩු කළ පසු ${formatSignedCurrency(directive.profitDeltaLkr)}${upliftClause} ක වැඩි ශුද්ධ ලාභයක් ලැබේ.`,
         crashWarning,
       };
     }
@@ -460,7 +470,7 @@ export function localizeDirectiveCopy(
     }
     return {
       headline: `${defaultName} වෙත සාමාන්‍ය පරිදි යන්න`,
-      explanation: `වෙනත් කිසිදු වෙළඳපොළක් 5% සහ රු. 1,000 ආරක්ෂිත ශුද්ධ ලාභ සීමාව ඉක්මවා නොයයි${defaultMarket ? ` (${defaultName}: ${formatCurrency(defaultMarket.netProfitLkr)})` : ""}.`,
+      explanation: `වෙනත් කිසිදු වෙළඳපොළක් ${safeMarginPct}% සහ ${formatCurrency(safeAbsoluteFloorLkr)} ආරක්ෂිත ශුද්ධ ලාභ සීමාව ඉක්මවා නොයයි${defaultMarket ? ` (${defaultName}: ${formatCurrency(defaultMarket.netProfitLkr)})` : ""}.`,
       crashWarning,
     };
   }
@@ -472,9 +482,13 @@ export function localizeDirectiveCopy(
       : null;
 
   if (directive.severity === "CRITICAL_REROUTE" && recommended) {
+    const upliftClause =
+      directive.profitUpliftPct === null
+        ? ""
+        : ` (${formatSignedPct(directive.profitUpliftPct)})`;
     return {
       headline: `${recName} சந்தைக்கு மாற்றி அனுப்புக`,
-      explanation: `${defaultName} சந்தைக்குப் பதிலாக ${recName} சந்தைக்கு அனுப்புவதால் எரிபொருள், கட்டணம் மற்றும் வீணாகும் செலவுகளுக்குப் பிறகு ${formatSignedCurrency(directive.profitDeltaLkr)} (${formatSignedPct(directive.profitUpliftPct)}) கூடுதல் நிகர இலாபம் கிடைக்கும்.`,
+      explanation: `${defaultName} சந்தைக்குப் பதிலாக ${recName} சந்தைக்கு அனுப்புவதால் எரிபொருள், கட்டணம் மற்றும் வீணாகும் செலவுகளுக்குப் பிறகு ${formatSignedCurrency(directive.profitDeltaLkr)}${upliftClause} கூடுதல் நிகர இலாபம் கிடைக்கும்.`,
       crashWarning,
     };
   }
@@ -487,7 +501,7 @@ export function localizeDirectiveCopy(
   }
   return {
     headline: `${defaultName} சந்தைக்கு வழக்கம்போல் அனுப்புக`,
-    explanation: `மாற்றுச் சந்தைகள் எதுவும் 5% மற்றும் ரூ. 1,000 பாதுகாப்பான நிகர இலாப வரம்பைத் தாண்டவில்லை${defaultMarket ? ` (${defaultName}: ${formatCurrency(defaultMarket.netProfitLkr)})` : ""}.`,
+    explanation: `மாற்றுச் சந்தைகள் எதுவும் ${safeMarginPct}% மற்றும் ${formatCurrency(safeAbsoluteFloorLkr)} பாதுகாப்பான நிகர இலாப வரம்பைத் தாண்டவில்லை${defaultMarket ? ` (${defaultName}: ${formatCurrency(defaultMarket.netProfitLkr)})` : ""}.`,
     crashWarning,
   };
 }

@@ -77,8 +77,9 @@ def validate_price_frame(frame: pd.DataFrame) -> None:
         raise ValueError(f"missing required columns: {sorted(missing)}")
     if frame.empty:
         raise ValueError("price frame must not be empty")
-    if frame["wholesale_price_lkr_per_kg"].le(0).any():
-        raise ValueError("wholesale prices must be positive")
+    prices = pd.to_numeric(frame["wholesale_price_lkr_per_kg"], errors="coerce")
+    if prices.isna().any() or not np.isfinite(prices).all() or prices.le(0).any():
+        raise ValueError("wholesale prices must be finite and positive")
 
 
 def _has_calendar_gaps(result: pd.DataFrame) -> bool:

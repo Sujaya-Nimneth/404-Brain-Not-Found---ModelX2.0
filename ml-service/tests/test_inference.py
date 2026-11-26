@@ -318,3 +318,61 @@ def test_partial_live_market_updates_are_not_clamped_by_lagging_market():
     assert by_market["PETTAH_COLOMBO"].current_price_lkr == 205.0
 
 
+def test_missing_model_preserves_snapshot_reference_date(tmp_path):
+    predictor = Predictor(Settings(model_path=tmp_path / "missing.joblib"))
+    response = predictor.predict(
+        CANONICAL_REQUEST.model_copy(update={"reference_date": date(2026, 10, 20)})
+    )
+
+    assert response.forecast_source.value == "FALLBACK"
+    assert response.reference_date == date(2026, 10, 27)
+
+
+def test_null_arrival_rows_impute_historical_median_not_one_tonne():
+    import numpy as np
+    from etl.seed_loader import generate_demo_history
+
+    history = generate_demo_history().copy()
+    mask = (
+        (history["market_code"] == "DAMBULLA")
+        & (history["crop_code"] == "TOMATO")
+        & (history["recorded_date"] == history["recorded_date"].max())
+    )
+    history.loc[mask, "arrival_volume_tonnes"] = np.nan
+
+    predictor = Predictor(Settings())
+    predictor._replace_history(history, predictor.input_data_state)
+    response = predictor.predict(CANONICAL_REQUEST)
+    by_market = {item.market_code: item for item in response.predictions}
+
+    # With 1.0t fallback, Dambulla Tomato falsely predicted 218.71 (+4.9%).
+    # Median imputation keeps it below current price (208.58) without false surge.
+    assert by_market["DAMBULLA"].predicted_price_lkr < by_market["DAMBULLA"].current_price_lkr
+    assert by_market["DAMBULLA"].direction.value != "SURGE"
+
+
+def test_gap_row_dropped_from_features_does_not_leak_reference_date():
+    import pandas as pd
+    from etl.seed_loader import generate_demo_history
+
+    base = generate_demo_history()
+    gap_row = base[
+        (base["market_code"] == "DAMBULLA")
+        & (base["crop_code"] == "TOMATO")
+        & (base["recorded_date"] == pd.Timestamp("2026-10-27"))
+    ].copy()
+    gap_row["recorded_date"] = pd.Timestamp("2026-11-15")
+    gap_row["wholesale_price_lkr_per_kg"] = 310.0
+    gap_row["source"] = "HDX_LIVE"
+    combined = pd.concat([base, gap_row], ignore_index=True)
+
+    predictor = Predictor(Settings())
+    predictor._replace_history(combined, predictor.input_data_state)
+    response = predictor.predict(
+        CANONICAL_REQUEST.model_copy(update={"reference_date": date(2026, 11, 20)})
+    )
+    by_market = {item.market_code: item for item in response.predictions}
+    assert response.reference_date == date(2026, 10, 27)
+    assert by_market["DAMBULLA"].current_price_lkr == 208.58
+
+

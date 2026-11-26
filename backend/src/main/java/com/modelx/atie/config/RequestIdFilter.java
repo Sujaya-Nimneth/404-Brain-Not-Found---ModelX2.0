@@ -2,6 +2,7 @@ package com.modelx.atie.config;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import org.slf4j.MDC;
 import org.springframework.core.Ordered;
@@ -19,6 +20,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class RequestIdFilter extends OncePerRequestFilter {
     public static final String HEADER = "X-Request-ID";
     public static final String MDC_KEY = "requestId";
+    private static final Pattern REQUEST_ID_PATTERN = Pattern.compile("[A-Za-z0-9._-]{1,64}");
 
     @Override
     protected void doFilterInternal(
@@ -27,7 +29,7 @@ public class RequestIdFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
         String requestId = request.getHeader(HEADER);
-        if (requestId == null || !requestId.matches("[A-Za-z0-9._-]{1,64}")) {
+        if (requestId == null || !REQUEST_ID_PATTERN.matcher(requestId).matches()) {
             requestId = UUID.randomUUID().toString();
         }
         MDC.put(MDC_KEY, requestId);

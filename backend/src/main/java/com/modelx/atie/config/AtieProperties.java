@@ -12,15 +12,16 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 
 @Validated
 @ConfigurationProperties(prefix = "atie")
 public record AtieProperties(
         @NotBlank String mlServiceUrl,
-        @DecimalMin("0.0") @DecimalMax("100.0") BigDecimal safeMarginPct,
-        @DecimalMin("0.0") BigDecimal safeAbsoluteFloorLkr,
-        @DecimalMin("0.0") @DecimalMax("100.0") BigDecimal movementThresholdPct,
-        @NotEmpty List<String> corsAllowedOrigins,
+        @NotNull @DecimalMin("0.0") @DecimalMax("100.0") BigDecimal safeMarginPct,
+        @NotNull @DecimalMin("0.0") BigDecimal safeAbsoluteFloorLkr,
+        @NotNull @DecimalMin("0.0") @DecimalMax("100.0") BigDecimal movementThresholdPct,
+        @NotEmpty List<@NotBlank String> corsAllowedOrigins,
         String apiKey,
         @Min(1) @Max(60) int mlConnectTimeoutSeconds,
         @Min(1) @Max(120) int mlReadTimeoutSeconds

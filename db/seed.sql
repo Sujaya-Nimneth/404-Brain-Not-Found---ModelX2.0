@@ -290,7 +290,8 @@ FROM computed_series cs
 ON CONFLICT (market_id, crop_id, recorded_date) DO UPDATE SET
     wholesale_price_lkr_per_kg = EXCLUDED.wholesale_price_lkr_per_kg,
     arrival_volume_tonnes = EXCLUDED.arrival_volume_tonnes,
-    source = EXCLUDED.source;
+    source = EXCLUDED.source
+WHERE historical_prices.source IN ('SEED', 'HDX_SEED');
 
 WITH days AS (
     SELECT
@@ -383,6 +384,7 @@ ON CONFLICT (market_id, observation_date) DO UPDATE SET
     temp_max_c = EXCLUDED.temp_max_c,
     temp_min_c = EXCLUDED.temp_min_c,
     extreme_weather_flag = EXCLUDED.extreme_weather_flag,
-    source = EXCLUDED.source;
+    source = EXCLUDED.source
+WHERE weather_observations.source = 'SEED';
 
 COMMIT;

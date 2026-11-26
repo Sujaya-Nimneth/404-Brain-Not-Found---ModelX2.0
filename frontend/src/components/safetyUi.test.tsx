@@ -9,6 +9,7 @@ import { PrimaryDirectiveCard } from "./PrimaryDirectiveCard";
 import { formatUpliftLabel, shortMarketName } from "./profitFormat";
 import { RoutingLogisticsPanel } from "./RoutingLogisticsPanel";
 import { buildTrajectoryChartData } from "./trajectoryData";
+import { formatLkr, roundHalfUp2 } from "../utils/format";
 
 vi.mock("../api/atieClient", async () => {
   const actual = await vi.importActual<typeof import("../api/atieClient")>(
@@ -45,6 +46,45 @@ describe("safety-critical dashboard presentation", () => {
     expect(screen.getByText("Inputs SEED")).toBeVisible();
     expect(screen.getByText("Default")).toBeVisible();
     expect(screen.getByText("No reroute")).toBeVisible();
+  });
+
+  it("renders PROCEED_DEFAULT with backend 0.00 values as No reroute and neutral", () => {
+    const proceedResponse: AnalyzeResponse = {
+      ...demoResponse,
+      primaryDirective: {
+        ...demoResponse.primaryDirective,
+        severity: "PROCEED_DEFAULT",
+        recommendedMarketCode: null,
+        profitDeltaLkr: 0,
+        profitUpliftPct: 0,
+      },
+    };
+
+    render(<PrimaryDirectiveCard response={proceedResponse} safeMarginPct={5} />);
+
+    expect(screen.getByText("No reroute")).toBeVisible();
+    expect(screen.getByText("below 5.00% floor")).toBeVisible();
+    expect(screen.getByText("0.00")).toBeVisible();
+  });
+
+  it("renders CRITICAL_REROUTE with null uplift (NP_default <= 0) without saying No reroute", () => {
+    const nullUpliftReroute: AnalyzeResponse = {
+      ...demoResponse,
+      primaryDirective: {
+        ...demoResponse.primaryDirective,
+        severity: "CRITICAL_REROUTE",
+        recommendedMarketCode: "PETTAH_COLOMBO",
+        profitDeltaLkr: 15000,
+        profitUpliftPct: null,
+      },
+    };
+
+    render(<PrimaryDirectiveCard response={nullUpliftReroute} />);
+
+    expect(screen.queryByText("No reroute")).toBeNull();
+    expect(screen.getByText("n/a")).toBeVisible();
+    expect(screen.getByText("default profit ≤ 0")).toBeVisible();
+    expect(screen.getByText("15,000.00")).toBeVisible();
   });
 
   it("displays Hold safety badges when directive severity is HOLD_HARVEST", () => {
@@ -110,10 +150,11 @@ describe("safety-critical dashboard presentation", () => {
     expect(
       formatUpliftLabel({ ...sample, profitDeltaLkr: 0, profitUpliftPct: 0 }),
     ).toBe("baseline");
-    expect(
-      formatUpliftLabel({ ...sample, profitDeltaLkr: 4200, profitUpliftPct: null }),
-    ).toBe("n/a");
+    expect(formatUpliftLabel({ ...sample, profitDeltaLkr: 4200, profitUpliftPct: null })).toBe("n/a");
     expect(shortMarketName("Nuwara Eliya Dedicated Economic Centre")).toBe("N. Eliya");
+    expect(roundHalfUp2(35.855)).toBe(35.86);
+    expect(roundHalfUp2(-0.001)).toBe(0);
+    expect(formatLkr(-0.001)).toBe("0.00");
   });
 
   it("allows clearing the harvest quantity field without forcing a leading zero", () => {

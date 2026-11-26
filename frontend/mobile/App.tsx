@@ -386,6 +386,8 @@ export default function App() {
                   request={activeRequest}
                   response={response}
                   language={language}
+                  safeMarginPct={metadata.thresholds.safeMarginPct}
+                  safeAbsoluteFloorLkr={metadata.thresholds.safeAbsoluteFloorLkr}
                 />
               ) : (
                 !failure && <EmptyResultState />

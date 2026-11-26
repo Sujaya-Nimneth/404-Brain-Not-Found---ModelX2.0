@@ -9,6 +9,7 @@ import { formatFixed2, formatLkr } from "../utils/format";
 
 interface Props {
   response: AnalyzeResponse;
+  safeMarginPct?: number;
 }
 
 function resolveDropPct(market: MarketComparison): string {
@@ -20,7 +21,7 @@ function resolveDropPct(market: MarketComparison): string {
   return formatFixed2(Math.abs(rawPct));
 }
 
-export function PrimaryDirectiveCard({ response }: Props) {
+export function PrimaryDirectiveCard({ response, safeMarginPct = 5 }: Props) {
   const directive = response.primaryDirective;
   const recommended = response.marketComparisons.find(
     (market) => market.marketCode === directive.recommendedMarketCode,
@@ -30,6 +31,8 @@ export function PrimaryDirectiveCard({ response }: Props) {
   );
   const isReroute = directive.severity === "CRITICAL_REROUTE";
   const isHold = directive.severity === "HOLD_HARVEST";
+  const isRerouteNullUplift = isReroute && directive.profitUpliftPct === null;
+  const isProceedDefault = !isReroute && !isHold;
 
   return (
     <section
@@ -127,37 +130,45 @@ export function PrimaryDirectiveCard({ response }: Props) {
             value={
               isHold
                 ? "Hold"
-                : directive.profitUpliftPct === null
+                : isProceedDefault
                   ? "No reroute"
-                  : `+${formatFixed2(directive.profitUpliftPct)}%`
+                  : isRerouteNullUplift
+                    ? "n/a"
+                    : `+${formatFixed2(directive.profitUpliftPct ?? 0)}%`
             }
             suffix={
               isHold
                 ? "weak net margin"
-                : directive.profitUpliftPct === null
-                  ? "below 5% floor"
-                  : "net"
+                : isProceedDefault
+                  ? `below ${formatFixed2(safeMarginPct)}% floor`
+                  : isRerouteNullUplift
+                    ? "default profit ≤ 0"
+                    : "net"
             }
             tone={
               isHold
                 ? "danger"
-                : directive.profitUpliftPct === null
+                : isProceedDefault
                   ? "neutral"
-                  : "good"
+                  : isRerouteNullUplift
+                    ? "neutral"
+                    : "good"
             }
           />
           <Metric
             label="Extra take-home"
             value={
-              directive.profitDeltaLkr === null
-                ? "—"
+              isHold || isProceedDefault || directive.profitDeltaLkr === null
+                ? isProceedDefault
+                  ? "0.00"
+                  : "—"
                 : formatLkr(directive.profitDeltaLkr)
             }
             suffix="LKR"
             tone={
               isHold
                 ? "danger"
-                : directive.profitDeltaLkr === null
+                : isProceedDefault || directive.profitDeltaLkr === null
                   ? "neutral"
                   : "good"
             }
