@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-import joblib
 import pandas as pd
 from sklearn.metrics import mean_absolute_error
 from xgboost import XGBRegressor
@@ -13,16 +12,16 @@ from xgboost import XGBRegressor
 from app.config import get_settings
 from etl.feature_engineering import (
     FEATURE_COLUMNS,
+    add_targets,
     build_features,
     directional_symmetry,
-    feature_ready_frame,
     movement_direction,
 )
 from etl.seed_loader import generate_demo_history, round_half_up_2
 from training.evaluate import evaluate_routing_matrix, write_evaluation_report
 
-EMBARGO_DAYS = 3
-MODEL_VERSION = "xgb-v2.0"
+EMBARGO_DAYS = 4
+MODEL_VERSION = "xgb-v2.1"
 
 
 def _attach_forward_rain(
@@ -36,10 +35,28 @@ def _attach_forward_rain(
             out[explicit_col], errors="coerce"
         ).fillna(out["precipitation_mm"])
         return out
-    grouped = out.groupby(["market_code", "crop_code"], sort=False)
-    forward_rain = grouped["precipitation_mm"].shift(-horizon_days)
-    out["forecast_rain_mm"] = forward_rain.fillna(out["precipitation_mm"])
-    return out
+    out["recorded_date"] = pd.to_datetime(out["recorded_date"], errors="raise")
+    future_rain = (
+        out[["market_code", "crop_code", "recorded_date", "precipitation_mm"]]
+        .assign(
+            recorded_date=lambda df: df["recorded_date"]
+            - pd.Timedelta(days=horizon_days)
+        )
+        .drop_duplicates(
+            subset=["market_code", "crop_code", "recorded_date"],
+            keep="last",
+        )
+        .rename(columns={"precipitation_mm": "_future_precip_mm"})
+    )
+    out = out.merge(
+        future_rain,
+        on=["market_code", "crop_code", "recorded_date"],
+        how="left",
+    )
+    out["forecast_rain_mm"] = out["_future_precip_mm"].fillna(
+        out["precipitation_mm"]
+    )
+    return out.drop(columns=["_future_precip_mm"])
 
 
 def train(
@@ -49,10 +66,13 @@ def train(
 ) -> dict[str, object]:
     settings = get_settings()
     raw_history = history if history is not None else generate_demo_history()
-    frame = feature_ready_frame(raw_history)
-    frame = frame.sort_values(
-        ["recorded_date", "market_code", "crop_code"]
-    ).reset_index(drop=True)
+    featured_full = add_targets(build_features(raw_history))
+    target_cols = ["target_price_48h", "target_price_72h"]
+    frame = (
+        featured_full.dropna(subset=FEATURE_COLUMNS + target_cols)
+        .sort_values(["recorded_date", "market_code", "crop_code"])
+        .reset_index(drop=True)
+    )
 
     unique_dates = sorted(pd.to_datetime(frame["recorded_date"]).unique())
     split_index = max(EMBARGO_DAYS + 1, int(len(unique_dates) * 0.8))
@@ -69,7 +89,12 @@ def train(
     metrics: dict[str, dict[str, object]] = {}
     for horizon in (48, 72):
         target = f"target_price_{horizon}h"
-        horizon_frame = _attach_forward_rain(frame, horizon)
+        horizon_full = _attach_forward_rain(featured_full, horizon)
+        horizon_frame = (
+            horizon_full.dropna(subset=FEATURE_COLUMNS + target_cols)
+            .sort_values(["recorded_date", "market_code", "crop_code"])
+            .reset_index(drop=True)
+        )
         train_split = horizon_frame[
             horizon_frame["recorded_date"] <= train_cutoff
         ]
@@ -153,16 +178,23 @@ def train(
         }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(
-        {
-            "models": models,
-            "feature_columns": FEATURE_COLUMNS,
-            "model_version": MODEL_VERSION,
-            "target_mode": "relative_return",
-            "trained_through": str(max(train_base["recorded_date"])),
-        },
-        output_path,
+    manifest_path = (
+        output_path if output_path.suffix == ".json" else output_path.with_suffix(".json")
     )
+    model_files: dict[str, str] = {}
+    for horizon, model in models.items():
+        filename = f"model_{horizon}h.ubj"
+        model.save_model(manifest_path.parent / filename)
+        model_files[str(horizon)] = filename
+    manifest = {
+        "format": "xgboost_ubj_v1",
+        "model_version": MODEL_VERSION,
+        "target_mode": "relative_return",
+        "feature_columns": FEATURE_COLUMNS,
+        "trained_through": str(max(train_base["recorded_date"])),
+        "models": model_files,
+    }
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     report = {
         "model_version": MODEL_VERSION,
         "training_rows": int(len(train_base)),

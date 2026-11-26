@@ -671,6 +671,12 @@ def _record_run(
         """
         DELETE FROM data_ingestion_runs
         WHERE started_at < NOW() - INTERVAL '90 days'
+           OR id IN (
+               SELECT id
+               FROM data_ingestion_runs
+               ORDER BY started_at DESC, id DESC
+               OFFSET 1000
+           )
         """
     )
 

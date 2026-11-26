@@ -170,7 +170,7 @@ def test_train_enforces_three_day_embargo_between_train_and_holdout(tmp_path):
                 }
             )
     report = train(
-        tmp_path / "model.joblib",
+        tmp_path / "model.json",
         tmp_path / "report.json",
         history=pd.DataFrame(rows),
     )
@@ -178,4 +178,80 @@ def test_train_enforces_three_day_embargo_between_train_and_holdout(tmp_path):
     trained_through = pd.Timestamp(report["trained_through"])
     holdout_start = pd.Timestamp(report["holdout_start"])
     assert (holdout_start - trained_through) >= pd.Timedelta(days=EMBARGO_DAYS)
+
+
+def test_routing_backtest_skips_partial_two_of_three_snapshots():
+    rows = []
+    for market_code, current, predicted, realized in (
+        ("DAMBULLA", 100.0, 100.0, 100.0),
+        ("PETTAH_COLOMBO", 120.0, 190.0, 85.0),
+    ):
+        rows.append(
+            {
+                "recorded_date": pd.Timestamp("2026-09-01"),
+                "market_code": market_code,
+                "crop_code": "TOMATO",
+                "price_lag_1d": current,
+                "target_price_48h": realized,
+                "prediction_48h": predicted,
+            }
+        )
+
+    result = evaluate_routing_decisions(
+        pd.DataFrame(rows),
+        48,
+        "prediction_48h",
+        origin_code="ANURADHAPURA",
+        market_codes=("DAMBULLA", "PETTAH_COLOMBO", "THAMBUTTEGAMA"),
+    )
+
+    assert result == {
+        "safe_margin_fpr_pct": None,
+        "reroute_count": 0,
+        "false_reroute_count": 0,
+    }
+
+
+def test_routing_backtest_respects_safe_margin_pct_override(monkeypatch):
+    from app.config import get_settings
+
+    markets = (
+        "DAMBULLA",
+        "PETTAH_COLOMBO",
+        "NUWARA_ELIYA",
+        "KEPPETIPOLA",
+        "MEEGODA",
+        "THAMBUTTEGAMA",
+        "JAFFNA",
+    )
+    rows = []
+    for market_code in markets:
+        predicted = 110.0 if market_code == "DAMBULLA" else (126.0 if market_code == "PETTAH_COLOMBO" else 90.0)
+        rows.append(
+            {
+                "recorded_date": pd.Timestamp("2026-09-01"),
+                "market_code": market_code,
+                "crop_code": "TOMATO",
+                "price_lag_1d": 110.0,
+                "target_price_48h": 110.0,
+                "prediction_48h": predicted,
+            }
+        )
+    frame = pd.DataFrame(rows)
+
+    get_settings.cache_clear()
+    try:
+        monkeypatch.setenv("ML_SAFE_MARGIN_PCT", "5.0")
+        get_settings.cache_clear()
+        default_threshold = evaluate_routing_decisions(frame, 48, "prediction_48h")
+        assert default_threshold["reroute_count"] == 1
+
+        monkeypatch.setenv("ML_SAFE_MARGIN_PCT", "25.0")
+        get_settings.cache_clear()
+        strict_threshold = evaluate_routing_decisions(frame, 48, "prediction_48h")
+        assert strict_threshold["reroute_count"] == 0
+    finally:
+        monkeypatch.delenv("ML_SAFE_MARGIN_PCT", raising=False)
+        get_settings.cache_clear()
+
 

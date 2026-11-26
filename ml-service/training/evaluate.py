@@ -9,6 +9,7 @@ from typing import Any
 import pandas as pd
 from sklearn.metrics import mean_absolute_error
 
+from app.config import get_settings
 from etl.feature_engineering import directional_symmetry
 from etl.seed_loader import fuel_prices_for_date, round_half_up_2
 from training.routing import (
@@ -237,6 +238,9 @@ def evaluate_routing_decisions(
     quantity_kg: Decimal = QUANTITY_KG,
     vehicle_code: str = "MINI_TRUCK_BATTA",
     market_codes: tuple[str, ...] | None = None,
+    *,
+    safe_margin_pct: Decimal | None = None,
+    safe_absolute_floor_lkr: Decimal | None = None,
 ) -> dict[str, Any]:
     """Backtest complete decisions and settle them against realized prices."""
     target_column = f"target_price_{horizon_hours}h"
@@ -259,9 +263,11 @@ def evaluate_routing_decisions(
     price_columns = [target_column]
     if prediction_column not in price_columns:
         price_columns.append(prediction_column)
-    extra_columns = (
-        ["diesel_price_lkr"] if "diesel_price_lkr" in frame.columns else []
-    )
+    extra_columns = [
+        col
+        for col in ("diesel_price_lkr", "petrol_price_lkr")
+        if col in frame.columns
+    ]
     decisions = frame[
         [
             "recorded_date",
@@ -277,17 +283,32 @@ def evaluate_routing_decisions(
     if market_codes is not None:
         decisions = decisions[decisions["market_code"].isin(market_codes)].copy()
 
+    settings = get_settings()
+    resolved_safe_margin_pct = (
+        settings.safe_margin_pct if safe_margin_pct is None else safe_margin_pct
+    )
+    resolved_safe_absolute_floor_lkr = (
+        settings.safe_absolute_floor_lkr
+        if safe_absolute_floor_lkr is None
+        else safe_absolute_floor_lkr
+    )
+
     recommended_alternative_realized: list[Decimal] = []
     default_realized: list[Decimal] = []
     route_set = ROUTES[origin_code]
     if DEFAULT_MARKET not in route_set:
         raise ValueError(f"default market is unreachable from {origin_code}")
+    required_markets = (
+        set(market_codes) if market_codes is not None else set(route_set)
+    )
     for (recorded_date, crop_code), snapshot in decisions.groupby(
         ["recorded_date", "crop_code"], sort=True
     ):
-        if DEFAULT_MARKET not in set(snapshot["market_code"]):
+        snapshot = snapshot.drop_duplicates(subset=["market_code"], keep="last")
+        snapshot_markets = set(snapshot["market_code"])
+        if not required_markets.issubset(snapshot_markets):
             continue
-        if not set(snapshot["market_code"]).issubset(route_set):
+        if not snapshot_markets.issubset(route_set):
             continue
         by_market = snapshot.set_index("market_code")
         diesel_price, petrol_price = _resolve_fuel_prices(
@@ -306,8 +327,8 @@ def evaluate_routing_decisions(
         alternative = select_reroute(
             DEFAULT_MARKET,
             predicted_net,
-            SAFE_MARGIN_PCT,
-            SAFE_ABSOLUTE_FLOOR_LKR,
+            resolved_safe_margin_pct,
+            resolved_safe_absolute_floor_lkr,
         )
         if alternative is None:
             continue
@@ -335,15 +356,27 @@ def _resolve_fuel_prices(
     snapshot: pd.DataFrame,
 ) -> tuple[Decimal, Decimal]:
     scheduled_diesel, scheduled_petrol = fuel_prices_for_date(recorded_date)
+    diesel = scheduled_diesel
+    has_diesel = False
     if "diesel_price_lkr" in snapshot.columns:
         raw_diesel = snapshot["diesel_price_lkr"].iloc[0]
         if pd.notna(raw_diesel):
             diesel = Decimal(str(raw_diesel)).quantize(
                 Decimal("0.01"), rounding=ROUND_HALF_UP
             )
-            petrol = diesel + (scheduled_petrol - scheduled_diesel)
-            return diesel, petrol
-    return scheduled_diesel, scheduled_petrol
+            has_diesel = True
+    petrol = (
+        diesel + (scheduled_petrol - scheduled_diesel)
+        if has_diesel
+        else scheduled_petrol
+    )
+    if "petrol_price_lkr" in snapshot.columns:
+        raw_petrol = snapshot["petrol_price_lkr"].iloc[0]
+        if pd.notna(raw_petrol):
+            petrol = Decimal(str(raw_petrol)).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+    return diesel, petrol
 
 
 def _net_profits(
@@ -378,9 +411,13 @@ def evaluate_routing_matrix(
     frame: pd.DataFrame,
     horizon_hours: int,
     prediction_column: str,
+    *,
+    safe_margin_pct: Decimal | None = None,
+    safe_absolute_floor_lkr: Decimal | None = None,
 ) -> dict[str, Any]:
     """Evaluate the finite operational scenario matrix from CONTRACTS.md."""
     results: list[dict[str, Any]] = []
+    by_origin: dict[str, dict[str, Any]] = {}
     total_reroutes = 0
     total_false_reroutes = 0
     for origin_code in EVALUATION_ORIGINS:
@@ -392,7 +429,15 @@ def evaluate_routing_matrix(
             ),
             key=lambda item: (item[1], item[0]),
         )[:2]
-        compared_markets = (DEFAULT_MARKET, *(code for code, _ in alternatives))
+        compared_list = [DEFAULT_MARKET, *(code for code, _ in alternatives)]
+        if (
+            "PETTAH_COLOMBO" in ROUTES[origin_code]
+            and "PETTAH_COLOMBO" not in compared_list
+        ):
+            compared_list.append("PETTAH_COLOMBO")
+        compared_markets = tuple(compared_list)
+        origin_reroutes = 0
+        origin_false_reroutes = 0
         for vehicle_code in EVALUATION_VEHICLES:
             for quantity_kg in EVALUATION_QUANTITIES:
                 result = evaluate_routing_decisions(
@@ -403,9 +448,11 @@ def evaluate_routing_matrix(
                     quantity_kg,
                     vehicle_code,
                     compared_markets,
+                    safe_margin_pct=safe_margin_pct,
+                    safe_absolute_floor_lkr=safe_absolute_floor_lkr,
                 )
-                total_reroutes += result["reroute_count"]
-                total_false_reroutes += result["false_reroute_count"]
+                origin_reroutes += result["reroute_count"]
+                origin_false_reroutes += result["false_reroute_count"]
                 results.append(
                     {
                         "origin": origin_code,
@@ -414,6 +461,24 @@ def evaluate_routing_matrix(
                         **result,
                     }
                 )
+        total_reroutes += origin_reroutes
+        total_false_reroutes += origin_false_reroutes
+        origin_fpr = (
+            None
+            if origin_reroutes == 0
+            else float(
+                (
+                    Decimal(origin_false_reroutes)
+                    * Decimal("100")
+                    / Decimal(origin_reroutes)
+                ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            )
+        )
+        by_origin[origin_code] = {
+            "safe_margin_fpr_pct": origin_fpr,
+            "reroute_count": origin_reroutes,
+            "false_reroute_count": origin_false_reroutes,
+        }
     agg_fpr = (
         None
         if total_reroutes == 0
@@ -429,6 +494,7 @@ def evaluate_routing_matrix(
         "safe_margin_fpr_pct": agg_fpr,
         "reroute_count": total_reroutes,
         "false_reroute_count": total_false_reroutes,
+        "by_origin": by_origin,
         "scenario_count": len(results),
         "scenarios": results,
     }

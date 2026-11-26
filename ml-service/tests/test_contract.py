@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_canonical_fixture_matches_cross_service_contract():
-    predictor = Predictor(Settings(model_path=ROOT / "models" / "atie_forecaster.joblib"))
+    predictor = Predictor(Settings(model_path=ROOT / "models" / "atie_forecaster.json"))
     payload = {
         "crop_code": "TOMATO",
         "horizon_hours": 48,
@@ -68,6 +68,7 @@ def test_metrics_expose_all_forecasters_and_nullable_fpr():
                 "safe_margin_fpr_pct",
                 "reroute_count",
                 "false_reroute_count",
+                "by_origin",
                 "scenario_count",
                 "scenarios",
             }
@@ -124,14 +125,13 @@ def test_safe_margin_uses_decimal_floor_and_percentage():
 def test_ingestion_schema_ddl_is_consolidated_and_reentrant():
     repo_root = ROOT.parent
     init_sql = (repo_root / "db" / "init.sql").read_text(encoding="utf-8")
-    ingestion_sql = (repo_root / "db" / "ingestion_schema.sql").read_text(
-        encoding="utf-8"
-    )
     migration_sql = (
         repo_root / "db" / "migrations" / "001_ingestion_schema.sql"
     ).read_text(encoding="utf-8")
 
-    assert ingestion_sql == migration_sql
+    assert not (repo_root / "db" / "ingestion_schema.sql").exists()
+    assert "CREATE TABLE IF NOT EXISTS data_ingestion_runs" in migration_sql
+    assert "CREATE TABLE IF NOT EXISTS data_source_status" in migration_sql
     assert "DROP TABLE IF EXISTS data_ingestion_runs;" in init_sql
     assert "DROP TABLE IF EXISTS data_source_status;" in init_sql
     assert "CREATE OR REPLACE FUNCTION atie_source_priority" in init_sql
@@ -268,5 +268,31 @@ def test_live_model_canonical_scenario_detects_glut_and_reroutes_to_pettah():
         "DAMBULLA", net_profits, Decimal("5.0"), Decimal("1000.00")
     )
     assert recommended == "PETTAH_COLOMBO"
+
+
+def test_evaluation_report_has_by_origin_and_pettah_colombo_coverage():
+    import json
+
+    report = json.loads(
+        (ROOT / "models" / "evaluation_report.json").read_text(encoding="utf-8")
+    )
+    assert report["model_version"] == "xgb-v2.1"
+    for horizon in ("48", "72"):
+        model_fpr = report["metrics"][horizon]["safe_margin_fpr"]["model"]
+        assert model_fpr["safe_margin_fpr_pct"] is not None
+        assert model_fpr["safe_margin_fpr_pct"] < 5.0
+        assert set(model_fpr["by_origin"].keys()) == {
+            "ANURADHAPURA",
+            "JAFFNA",
+            "DAMBULLA",
+            "NUWARA_ELIYA",
+            "THAMBUTTEGAMA",
+        }
+        assert model_fpr["scenario_count"] == 60
+        anuradhapura_scenarios = [
+            s for s in model_fpr["scenarios"] if s["origin"] == "ANURADHAPURA"
+        ]
+        assert any(s["reroute_count"] > 0 for s in anuradhapura_scenarios)
+
 
 

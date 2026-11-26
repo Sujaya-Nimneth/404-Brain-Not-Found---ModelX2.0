@@ -27,7 +27,7 @@ def test_source_priority_and_actual_write_counts(tmp_path: Path):
     assert TEST_DSN is not None
     config = IngestionConfig(
         dsn=TEST_DSN,
-        schema_path=ROOT / "db" / "ingestion_schema.sql",
+        schema_path=ROOT / "db" / "migrations" / "001_ingestion_schema.sql",
         hdx_cache_path=tmp_path / "hdx.csv",
         cropix_cache_path=tmp_path / "cropix.csv",
         weather_cache_path=tmp_path / "weather.json",
@@ -176,7 +176,7 @@ def test_partial_weather_refresh_persists_fallback_run_without_check_violation(
     monkeypatch.setattr(ingestion_worker, "fetch_text", fake_fetch_text)
     config = IngestionConfig(
         dsn=TEST_DSN,
-        schema_path=ROOT / "db" / "ingestion_schema.sql",
+        schema_path=ROOT / "db" / "migrations" / "001_ingestion_schema.sql",
         hdx_cache_path=tmp_path / "hdx.csv",
         cropix_cache_path=tmp_path / "cropix.csv",
         weather_cache_path=weather_cache,

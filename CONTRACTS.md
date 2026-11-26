@@ -189,17 +189,19 @@ The operational evaluation matrix is finite and versioned:
   `THAMBUTTEGAMA`
 - default market: `DAMBULLA` for every origin
 - compared alternatives: the two nearest other reachable markets for each
-  origin
+  origin, plus `PETTAH_COLOMBO` whenever reachable and not already included
 - crops: `TOMATO`, `CARROT`, `GREEN_CHILI`, `RED_ONION`
 - vehicles: `THREE_WHEELER`, `MINI_TRUCK_BATTA`, `LORRY_3_5T`
 - quantities: `300`, `1000`, `1500`, `3500` kg
 - horizons: `48`, `72` hours
 
 The default market is fixed to Dambulla so the reported metric remains
-comparable across runs. The two alternatives are selected by configured
-one-way distance, with market code as the tie-breaker. The matrix is
-intentionally finite and does not claim coverage of every possible farm
-quantity.
+comparable across runs. Nearest alternatives are selected by configured
+one-way distance, with market code as the tie-breaker, and `PETTAH_COLOMBO` is
+always included among each origin's compared markets so long-haul arbitrage
+corridors remain covered under evaluation alongside aggregate and `by_origin`
+Safe-Margin FPR reporting. The matrix is intentionally finite and does not claim
+coverage of every possible farm quantity.
 
 If `reroute_decisions == 0`, `safe_margin_fpr_pct` is `null`, never `0`.
 Evaluation must use the same safe-margin and net-profit implementation as the

@@ -15,6 +15,7 @@ from typing import Any
 import joblib
 import pandas as pd
 import psycopg
+from xgboost import Booster, DMatrix
 from xgboost.core import XGBoostError
 
 from app.config import Settings
@@ -155,17 +156,44 @@ class Predictor:
 
     def _load_artifacts(self) -> None:
         try:
-            self.artifact = joblib.load(self.settings.model_path)
-            if not isinstance(self.artifact, dict) or "models" not in self.artifact:
-                raise ValueError("model artifact has an invalid shape")
-            logger.info("Loaded model artifact from %s", self.settings.model_path)
+            path = self.settings.model_path
+            if path.suffix == ".json" or (
+                not path.exists() and path.with_suffix(".json").exists()
+            ):
+                manifest_path = (
+                    path if path.suffix == ".json" else path.with_suffix(".json")
+                )
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                model_files = manifest.get("models")
+                if not isinstance(manifest, dict) or not isinstance(model_files, dict):
+                    raise ValueError("model manifest has an invalid shape")
+                loaded_models: dict[str, Booster] = {}
+                for horizon, rel_path in model_files.items():
+                    model_file = (manifest_path.parent / str(rel_path)).resolve()
+                    if not model_file.exists():
+                        raise ValueError(f"missing XGBoost binary model: {model_file}")
+                    booster = Booster({"nthread": 1})
+                    booster.load_model(model_file)
+                    loaded_models[str(horizon)] = booster
+                self.artifact = {
+                    **manifest,
+                    "models": loaded_models,
+                }
+                logger.info("Loaded model manifest from %s", manifest_path)
+            else:
+                self.artifact = joblib.load(path)
+                if not isinstance(self.artifact, dict) or "models" not in self.artifact:
+                    raise ValueError("model artifact has an invalid shape")
+                logger.info("Loaded model artifact from %s", path)
         except (
             OSError,
+            json.JSONDecodeError,
             ValueError,
             ImportError,
             KeyError,
             EOFError,
             pickle.UnpicklingError,
+            XGBoostError,
         ) as error:
             logger.warning(
                 "Model unavailable; fallback predictions enabled: %s", error
@@ -188,7 +216,9 @@ class Predictor:
             return
         for model in models.values():
             # Small batch inference is faster without process/thread pool setup.
-            if hasattr(model, "n_jobs"):
+            if isinstance(model, Booster):
+                model.set_param({"nthread": 1})
+            elif hasattr(model, "n_jobs"):
                 model.n_jobs = 1
 
     @property
@@ -651,7 +681,11 @@ class Predictor:
             matrix_rows.append(values)
 
         feature_matrix = pd.DataFrame(matrix_rows, columns=feature_columns)
-        raw_predictions = model.predict(feature_matrix)
+        raw_predictions = (
+            model.predict(DMatrix(feature_matrix))
+            if isinstance(model, Booster)
+            else model.predict(feature_matrix)
+        )
         target_mode = str(self.artifact.get("target_mode", "absolute_price"))
 
         forecasts: list[MarketForecast] = []
