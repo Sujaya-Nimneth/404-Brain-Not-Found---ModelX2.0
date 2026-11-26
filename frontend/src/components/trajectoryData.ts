@@ -1,6 +1,7 @@
 import type { MarketHistoryPoint, MarketHistoryResponse } from "../types/atie";
 
 export type TrajectoryChartPoint = {
+  key: string;
   label: string;
   actual: number | null;
   model: number | null;
@@ -10,6 +11,9 @@ export type TrajectoryChartPoint = {
 
 export function formatTrajectoryDate(value: string): string {
   const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
   return new Intl.DateTimeFormat("en-LK", {
     month: "short",
     day: "numeric",
@@ -28,10 +32,11 @@ export function trailingSevenDayAverage(
 export function buildTrajectoryChartData(
   history: MarketHistoryResponse | null,
 ): TrajectoryChartPoint[] {
-  if (!history) return [];
-  const points: TrajectoryChartPoint[] = history.history.map((point) => ({
+  if (!history || history.history.length === 0) return [];
+  const points: TrajectoryChartPoint[] = history.history.map((point, index) => ({
+    key: point.date || `obs-${index}`,
     label: formatTrajectoryDate(point.date),
-    actual: point.priceLkrPerKg,
+    actual: Number.isFinite(point.priceLkrPerKg) ? point.priceLkrPerKg : null,
     model: null,
     naive: null,
     ma7: null,
@@ -40,11 +45,18 @@ export function buildTrajectoryChartData(
   if (!last) return [];
   history.forecastTrajectory.forEach((forecast) => {
     points.push({
+      key: `forecast-${forecast.horizonHours}h`,
       label: `+${forecast.horizonHours}h`,
       actual: null,
-      model: forecast.predictedPriceLkr,
-      naive: forecast.baselineNaiveLkr,
-      ma7: forecast.baselineMa7Lkr,
+      model: Number.isFinite(forecast.predictedPriceLkr)
+        ? forecast.predictedPriceLkr
+        : null,
+      naive: Number.isFinite(forecast.baselineNaiveLkr)
+        ? forecast.baselineNaiveLkr
+        : null,
+      ma7: Number.isFinite(forecast.baselineMa7Lkr)
+        ? forecast.baselineMa7Lkr
+        : null,
     });
   });
   const bridge = history.forecastTrajectory[0];

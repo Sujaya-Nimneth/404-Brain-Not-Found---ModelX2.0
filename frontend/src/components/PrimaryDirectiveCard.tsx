@@ -66,18 +66,18 @@ export function PrimaryDirectiveCard({ response, safeMarginPct = 5 }: Props) {
               }`}
             >
               {isReroute ? (
-                <ArrowUpRight className="h-3.5 w-3.5" />
+                <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5" />
               ) : isHold ? (
-                <TriangleAlert className="h-3.5 w-3.5" />
+                <TriangleAlert aria-hidden="true" className="h-3.5 w-3.5" />
               ) : (
-                <BadgeCheck className="h-3.5 w-3.5" />
+                <BadgeCheck aria-hidden="true" className="h-3.5 w-3.5" />
               )}
               {directive.severity.replaceAll("_", " ")}
             </span>
-            <span className="rounded-full border border-white/20 px-3 py-1.5 font-mono text-[0.62rem] uppercase tracking-[0.12em] text-cream/65">
+            <span className="rounded-full border border-white/20 px-3 py-1.5 font-mono text-[0.6875rem] uppercase tracking-[0.1em] text-cream/80">
               {response.forecastSource.replaceAll("_", " ")}
             </span>
-            <span className="rounded-full border border-white/20 px-3 py-1.5 font-mono text-[0.62rem] uppercase tracking-[0.12em] text-cream/65">
+            <span className="rounded-full border border-white/20 px-3 py-1.5 font-mono text-[0.6875rem] uppercase tracking-[0.1em] text-cream/80">
               Inputs {response.inputDataState}
             </span>
           </div>
@@ -178,7 +178,7 @@ export function PrimaryDirectiveCard({ response, safeMarginPct = 5 }: Props) {
 
       {defaultMarket?.direction === "CRASH" && (
         <div className="relative z-10 mt-7 flex items-start gap-3 rounded-2xl border border-[#e9b29c]/20 bg-[#8b3e2b]/30 p-4 text-sm text-[#f6c6b2]">
-          <TrendingDown className="mt-0.5 h-5 w-5 shrink-0" />
+          <TrendingDown aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
           <p>
             {defaultMarket.marketName} prices are forecast to fall{" "}
             <strong className="text-cream">
@@ -196,7 +196,7 @@ export function PrimaryDirectiveCard({ response, safeMarginPct = 5 }: Props) {
 
       {isHold && (
         <div className="relative z-10 mt-7 flex items-start gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 text-sm">
-          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-[#f4b48d]" />
+          <TriangleAlert aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-[#f4b48d]" />
           <p>
             Every reachable market produces a weak net outcome. Hold the harvest
             and review local demand before dispatching transport.
@@ -220,7 +220,7 @@ function Metric({
 }) {
   return (
     <div className="bg-ink/85 p-4">
-      <p className="font-mono text-[0.58rem] uppercase tracking-[0.14em] text-cream/45">
+      <p className="font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-cream/70">
         {label}
       </p>
       <p
@@ -234,7 +234,7 @@ function Metric({
       >
         {value}
       </p>
-      <p className="mt-0.5 text-[0.68rem] text-cream/40">{suffix}</p>
+      <p className="mt-0.5 text-[0.6875rem] text-cream/70">{suffix}</p>
     </div>
   );
 }
