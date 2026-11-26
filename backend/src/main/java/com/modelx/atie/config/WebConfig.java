@@ -9,23 +9,13 @@ import org.springframework.core.Ordered;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
-public class WebConfig implements WebMvcConfigurer {
+public class WebConfig {
     private final AtieProperties properties;
 
     public WebConfig(AtieProperties properties) {
         this.properties = properties;
-    }
-
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
-                .allowedOrigins(properties.corsAllowedOrigins().toArray(String[]::new))
-                .allowedMethods("GET", "POST", "OPTIONS")
-                .allowedHeaders("*");
     }
 
     @Bean
@@ -33,7 +23,8 @@ public class WebConfig implements WebMvcConfigurer {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(properties.corsAllowedOrigins());
         configuration.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedHeaders(List.of("Content-Type", "X-ATIE-API-Key", "X-Request-ID"));
+        configuration.setExposedHeaders(List.of("X-Request-ID"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", configuration);
         FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(
