@@ -41,7 +41,7 @@ import com.modelx.atie.repository.WeatherObservationRepository;
 @Service
 public class ArbitrageRoutingService {
     private static final ZoneId COLOMBO_ZONE = ZoneId.of("Asia/Colombo");
-    private static final int WEATHER_STALE_DAYS = 14;
+    private static final int WEATHER_LOOKBACK_DAYS = 14;
 
     private final RoutingDataLoader dataLoader;
     private final OriginCatalog origins;
@@ -80,7 +80,7 @@ public class ArbitrageRoutingService {
             MlMetricsClient metricsClient,
             ProfitMarginCalculator calculator,
             RoutingDecisionService decisions,
-            AtieProperties properties
+            AtieProperties ignoredProperties
     ) {
         this(
                 new RoutingDataLoader(crops, routes, fuelPrices, weather),
@@ -101,10 +101,10 @@ public class ArbitrageRoutingService {
         String cropCode = normalize(request.cropCode());
         String defaultMarketCode = normalize(request.defaultMarketCode());
         if (request.horizonHours() == null || !Set.of(48, 72).contains(request.horizonHours())) {
-            throw new DomainValidationException("INVALID_HORIZON", "horizonHours must be 48 or 72");
+            throw new DomainValidationException("INVALID_HORIZON", "horizon_hours must be 48 or 72");
         }
-        if (request.quantityKg() == null || request.quantityKg().compareTo(BigDecimal.ONE) < 0) {
-            throw new DomainValidationException("INVALID_QUANTITY", "quantity_kg must be at least 1.0");
+        if (request.quantityKg() == null || request.quantityKg().signum() <= 0) {
+            throw new DomainValidationException("INVALID_QUANTITY", "quantity_kg must be positive");
         }
         if (request.vehicleType() == null) {
             throw new DomainValidationException("INVALID_VEHICLE", "vehicle_type is required");
@@ -115,13 +115,13 @@ public class ArbitrageRoutingService {
         Origin origin = origins.find(originCode).orElseThrow(
                 () -> new DomainValidationException("UNKNOWN_ORIGIN", "Unknown origin: " + originCode)
         );
-        RoutingDataLoader.RoutingInputs inputs = dataLoader.loadRoutingInputs(
+        RoutingDataLoader.RoutingInputs inputs = dataLoader.loadInputs(
                 origin.code(),
                 cropCode,
                 defaultMarketCode
         );
         Crop crop = inputs.crop();
-        List<MarketRoute> originRoutes = inputs.originRoutes();
+        List<MarketRoute> originRoutes = inputs.routes();
         FuelPrice fuel = inputs.fuel();
         List<String> marketCodes = originRoutes.stream()
                 .map(route -> route.getDestinationMarket().getCode())
@@ -233,11 +233,11 @@ public class ArbitrageRoutingService {
                 : requestedReferenceDate;
         LocalDate targetWeatherDate = weatherBaseDate
                 .plusDays(request.horizonHours() / 24L);
-        LocalDate earliestWeatherDate = weatherBaseDate.minusDays(WEATHER_STALE_DAYS);
-        Map<String, WeatherObservation> weatherByMarket = loadWeatherByMarket(
+        LocalDate minWeatherDate = forecast.referenceDate().minusDays(WEATHER_LOOKBACK_DAYS);
+        Map<String, WeatherObservation> weatherByMarket = dataLoader.loadWeatherByMarket(
                 marketCodes,
                 targetWeatherDate,
-                earliestWeatherDate
+                minWeatherDate
         );
         List<WeatherAlert> alerts = comparisons.stream()
                 .map(comparison -> weatherAlert(
@@ -270,8 +270,7 @@ public class ArbitrageRoutingService {
             throw new MlServiceException(
                     HttpStatus.BAD_GATEWAY,
                     "ML_CONTRACT_ERROR",
-                    "Forecast missing for market: "
-                            + route.getDestinationMarket().getCode()
+                    "Forecast missing for market: " + route.getDestinationMarket().getCode()
             );
         }
         Market market = route.getDestinationMarket();
@@ -308,33 +307,6 @@ public class ArbitrageRoutingService {
         return value == null ? null : calculator.displayPercentage(value);
     }
 
-    private Map<String, WeatherObservation> loadWeatherByMarket(
-            List<String> marketCodes,
-            LocalDate targetWeatherDate,
-            LocalDate earliestWeatherDate
-    ) {
-        List<WeatherObservation> rows = dataLoader.loadLatestWeather(
-                marketCodes,
-                targetWeatherDate
-        );
-        if (rows == null || rows.isEmpty()) {
-            return Map.of();
-        }
-        Map<String, WeatherObservation> byMarket = new java.util.LinkedHashMap<>();
-        for (WeatherObservation observation : rows) {
-            if (observation.getMarket() == null
-                    || observation.getMarket().getCode() == null) {
-                continue;
-            }
-            LocalDate observedAt = observation.getObservationDate();
-            if (observedAt != null && observedAt.isBefore(earliestWeatherDate)) {
-                continue;
-            }
-            byMarket.putIfAbsent(observation.getMarket().getCode(), observation);
-        }
-        return byMarket;
-    }
-
     private Optional<WeatherAlert> weatherAlert(
             String marketCode,
             WeatherObservation observation
@@ -344,16 +316,16 @@ public class ArbitrageRoutingService {
                     BigDecimal rain = item.getPrecipitationMm() != null
                             ? item.getPrecipitationMm()
                             : BigDecimal.ZERO;
-                    boolean extreme = item.isExtremeWeatherFlag();
-                    String risk = extreme || rain.compareTo(new BigDecimal("15")) >= 0
-                            ? "HIGH"
-                            : rain.compareTo(new BigDecimal("8")) >= 0
-                            ? "MEDIUM"
-                            : "LOW";
+                    String risk;
+                    if (item.isExtremeWeatherFlag() || rain.compareTo(new BigDecimal("15")) >= 0) {
+                        risk = "HIGH";
+                    } else if (rain.compareTo(new BigDecimal("8")) >= 0) {
+                        risk = "MEDIUM";
+                    } else {
+                        risk = "LOW";
+                    }
                     String message = "HIGH".equals(risk)
-                            ? (extreme && rain.compareTo(new BigDecimal("15")) < 0
-                                    ? "Extreme weather advisory may disrupt supply routes and increase spoilage risk."
-                                    : "Heavy rainfall may disrupt supply routes and increase spoilage risk.")
+                            ? "Heavy or extreme weather may disrupt supply routes and increase spoilage risk."
                             : "MEDIUM".equals(risk)
                             ? "Moderate rainfall may slow arrivals and transit."
                             : "Weather conditions are currently favourable.";
@@ -362,7 +334,7 @@ public class ArbitrageRoutingService {
                             risk,
                             message,
                             calculator.displayMoney(rain),
-                            extreme,
+                            item.isExtremeWeatherFlag(),
                             item.getSource(),
                             item.getObservationDate()
                     );

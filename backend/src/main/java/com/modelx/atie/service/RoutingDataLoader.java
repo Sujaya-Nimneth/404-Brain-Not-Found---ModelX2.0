@@ -2,6 +2,7 @@ package com.modelx.atie.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -37,11 +38,7 @@ public class RoutingDataLoader {
     }
 
     @Transactional(readOnly = true)
-    public RoutingInputs loadRoutingInputs(
-            String originCode,
-            String cropCode,
-            String defaultMarketCode
-    ) {
+    public RoutingInputs loadInputs(String originCode, String cropCode, String defaultMarketCode) {
         Crop crop = crops.findByCode(cropCode).orElseThrow(
                 () -> new DomainValidationException("UNKNOWN_CROP", "Unknown crop: " + cropCode)
         );
@@ -68,25 +65,41 @@ public class RoutingDataLoader {
                         "Fuel prices are unavailable"
                 )
         );
+        // Eagerly touch lazy destinationMarket attributes inside the read-only transaction.
+        originRoutes.forEach(route -> {
+            route.getDestinationMarket().getCode();
+            route.getDestinationMarket().getName();
+            route.getDestinationMarket().getHandlingFeePerKgLkr();
+        });
         return new RoutingInputs(crop, originRoutes, fuel);
     }
 
     @Transactional(readOnly = true)
-    public List<WeatherObservation> loadLatestWeather(
+    public Map<String, WeatherObservation> loadWeatherByMarket(
             List<String> marketCodes,
-            LocalDate targetDate
+            LocalDate targetWeatherDate,
+            LocalDate minObservationDate
     ) {
         List<WeatherObservation> rows = weather.findLatestByMarketCodesOnOrBefore(
                 marketCodes,
-                targetDate
+                targetWeatherDate
         );
-        return rows == null ? List.of() : rows;
+        if (rows == null || rows.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, WeatherObservation> byMarket = new java.util.LinkedHashMap<>();
+        for (WeatherObservation observation : rows) {
+            if (observation.getMarket() == null
+                    || observation.getMarket().getCode() == null
+                    || observation.getObservationDate() == null
+                    || observation.getObservationDate().isBefore(minObservationDate)) {
+                continue;
+            }
+            byMarket.putIfAbsent(observation.getMarket().getCode(), observation);
+        }
+        return byMarket;
     }
 
-    public record RoutingInputs(
-            Crop crop,
-            List<MarketRoute> originRoutes,
-            FuelPrice fuel
-    ) {
+    public record RoutingInputs(Crop crop, List<MarketRoute> routes, FuelPrice fuel) {
     }
 }
