@@ -227,3 +227,52 @@ def test_green_chili_and_clean_cropix_market_aliases_parse_without_accepting_dry
     ]
 
 
+def test_parsers_reject_nan_inf_and_non_lkr_currency():
+    from etl.feature_engineering import validate_price_frame
+    from etl.live_data import validate_outbound_url
+    import pandas as pd
+
+    csv_payload = """date,market,commodity,pricetype,price,unit,currency
+2026-10-27,Dambulla,Tomatoes,Wholesale,NaN,KG,LKR
+2026-10-27,Pettah,Tomatoes,Wholesale,Inf,KG,LKR
+2026-10-27,Meegoda,Tomatoes,Wholesale,180.00,KG,USD
+2026-10-27,Jaffna,Tomatoes,Wholesale,165.00,KG,LKR
+"""
+    rows = parse_hdx_prices(csv_payload)
+    assert [(r.market_code, r.wholesale_price_lkr_per_kg) for r in rows] == [
+        ("JAFFNA", 165.0)
+    ]
+
+    bad_weather = """
+    {
+      "daily": {
+        "time": ["2026-10-27"],
+        "precipitation_sum": ["NaN"],
+        "temperature_2m_max": [30.0],
+        "temperature_2m_min": [22.0]
+      }
+    }
+    """
+    with pytest.raises(ValueError, match="Non-finite"):
+        parse_open_meteo_weather(bad_weather, "DAMBULLA")
+
+    frame = pd.DataFrame(
+        {
+            "market_code": ["DAMBULLA"],
+            "crop_code": ["TOMATO"],
+            "recorded_date": ["2026-10-27"],
+            "wholesale_price_lkr_per_kg": [float("nan")],
+            "arrival_volume_tonnes": [40.0],
+            "diesel_price_lkr": [283.0],
+            "precipitation_mm": [2.0],
+        }
+    )
+    with pytest.raises(ValueError, match="finite and positive"):
+        validate_price_frame(frame)
+
+    with pytest.raises(ValueError, match="HTTPS"):
+        validate_outbound_url("http://example.com/data.csv")
+    with pytest.raises(ValueError, match="private|local|global"):
+        validate_outbound_url("https://127.0.0.1/secret")
+
+

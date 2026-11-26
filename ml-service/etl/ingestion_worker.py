@@ -372,8 +372,11 @@ def _ingest_prices(
                         wholesale_price_lkr_per_kg =
                             EXCLUDED.wholesale_price_lkr_per_kg,
                         source = EXCLUDED.source
-                    WHERE atie_source_priority(EXCLUDED.source)
-                            > atie_source_priority(historical_prices.source)
+                    WHERE (
+                            EXCLUDED.source LIKE '%!_LIVE' ESCAPE '!'
+                            AND atie_source_priority(EXCLUDED.source)
+                                > atie_source_priority(historical_prices.source)
+                        )
                        OR (
                             atie_source_priority(EXCLUDED.source)
                                 = atie_source_priority(historical_prices.source)
