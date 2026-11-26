@@ -1,14 +1,14 @@
 {
-  "model_version": "xgb-v2.0",
-  "training_rows": 11648,
+  "model_version": "xgb-v2.1",
+  "training_rows": 11620,
   "holdout_rows": 2940,
-  "trained_through": "2026-07-09 00:00:00",
+  "trained_through": "2026-07-08 00:00:00",
   "holdout_start": "2026-07-12 00:00:00",
   "metrics": {
     "48": {
       "model": {
-        "directional_symmetry_pct": 93.81,
-        "mae_lkr": 1.81
+        "directional_symmetry_pct": 93.84,
+        "mae_lkr": 1.82
       },
       "baseline_naive": {
         "directional_symmetry_pct": 0.0,
@@ -20,9 +20,36 @@
       },
       "safe_margin_fpr": {
         "model": {
-          "safe_margin_fpr_pct": 0.14,
-          "reroute_count": 2106,
-          "false_reroute_count": 3,
+          "safe_margin_fpr_pct": 0.04,
+          "reroute_count": 2316,
+          "false_reroute_count": 1,
+          "by_origin": {
+            "ANURADHAPURA": {
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 152,
+              "false_reroute_count": 0
+            },
+            "JAFFNA": {
+              "safe_margin_fpr_pct": 0.07,
+              "reroute_count": 1482,
+              "false_reroute_count": 1
+            },
+            "DAMBULLA": {
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 146,
+              "false_reroute_count": 0
+            },
+            "NUWARA_ELIYA": {
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 340,
+              "false_reroute_count": 0
+            },
+            "THAMBUTTEGAMA": {
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 196,
+              "false_reroute_count": 0
+            }
+          },
           "scenario_count": 60,
           "scenarios": [
             {
@@ -30,7 +57,7 @@
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 3,
+              "reroute_count": 13,
               "false_reroute_count": 0
             },
             {
@@ -38,7 +65,7 @@
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 3,
+              "reroute_count": 13,
               "false_reroute_count": 0
             },
             {
@@ -46,7 +73,7 @@
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 3,
+              "reroute_count": 13,
               "false_reroute_count": 0
             },
             {
@@ -54,7 +81,7 @@
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 3,
+              "reroute_count": 13,
               "false_reroute_count": 0
             },
             {
@@ -62,7 +89,7 @@
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 1,
+              "reroute_count": 9,
               "false_reroute_count": 0
             },
             {
@@ -70,7 +97,7 @@
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
+              "reroute_count": 15,
               "false_reroute_count": 0
             },
             {
@@ -78,7 +105,7 @@
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
+              "reroute_count": 15,
               "false_reroute_count": 0
             },
             {
@@ -86,7 +113,7 @@
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
+              "reroute_count": 15,
               "false_reroute_count": 0
             },
             {
@@ -94,7 +121,7 @@
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 1,
+              "reroute_count": 4,
               "false_reroute_count": 0
             },
             {
@@ -102,23 +129,23 @@
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 3,
+              "reroute_count": 13,
               "false_reroute_count": 0
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 14.29,
-              "reroute_count": 7,
-              "false_reroute_count": 1
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 14,
+              "false_reroute_count": 0
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
+              "reroute_count": 15,
               "false_reroute_count": 0
             },
             {
@@ -126,7 +153,7 @@
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 121,
+              "reroute_count": 120,
               "false_reroute_count": 0
             },
             {
@@ -134,7 +161,7 @@
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 158,
+              "reroute_count": 157,
               "false_reroute_count": 0
             },
             {
@@ -142,7 +169,7 @@
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 121,
+              "reroute_count": 120,
               "false_reroute_count": 0
             },
             {
@@ -150,15 +177,15 @@
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 127,
+              "reroute_count": 126,
               "false_reroute_count": 0
             },
             {
               "origin": "JAFFNA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "300",
-              "safe_margin_fpr_pct": 0.44,
-              "reroute_count": 228,
+              "safe_margin_fpr_pct": 0.43,
+              "reroute_count": 230,
               "false_reroute_count": 1
             },
             {
@@ -182,7 +209,7 @@
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 50,
+              "reroute_count": 51,
               "false_reroute_count": 0
             },
             {
@@ -206,7 +233,7 @@
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 69,
+              "reroute_count": 70,
               "false_reroute_count": 0
             },
             {
@@ -222,267 +249,75 @@
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 6,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 3,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 9,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 9,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 9,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 1,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 9,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 20,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 23,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 20,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 20,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 33,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 17,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 17,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 17,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 107,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 20,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 17,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 17,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 0.0,
               "reroute_count": 13,
               "false_reroute_count": 0
             },
             {
-              "origin": "THAMBUTTEGAMA",
+              "origin": "DAMBULLA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 12,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 13,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 13,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 9.09,
-              "reroute_count": 11,
-              "false_reroute_count": 1
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 13,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 14,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 14,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "300",
               "safe_margin_fpr_pct": 0.0,
               "reroute_count": 10,
               "false_reroute_count": 0
             },
             {
-              "origin": "THAMBUTTEGAMA",
+              "origin": "DAMBULLA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 13,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 13,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 7,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 14,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 15,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 15,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 4,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "DAMBULLA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 0.0,
@@ -490,9 +325,185 @@
               "false_reroute_count": 0
             },
             {
-              "origin": "THAMBUTTEGAMA",
+              "origin": "DAMBULLA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 14,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 15,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 22,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 26,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 22,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 22,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 31,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 18,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 18,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 18,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 105,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 22,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 18,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 18,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 16,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 16,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 16,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 16,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 13,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 18,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 18,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 18,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "300",
               "safe_margin_fpr_pct": 0.0,
               "reroute_count": 13,
               "false_reroute_count": 0
@@ -500,114 +511,157 @@
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "LORRY_3_5T",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 16,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 17,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "LORRY_3_5T",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 15,
+              "reroute_count": 19,
               "false_reroute_count": 0
             }
           ]
         },
         "baseline_naive": {
-          "safe_margin_fpr_pct": 24.65,
-          "reroute_count": 2126,
-          "false_reroute_count": 524,
+          "safe_margin_fpr_pct": 28.18,
+          "reroute_count": 2324,
+          "false_reroute_count": 655,
+          "by_origin": {
+            "ANURADHAPURA": {
+              "safe_margin_fpr_pct": 75.34,
+              "reroute_count": 146,
+              "false_reroute_count": 110
+            },
+            "JAFFNA": {
+              "safe_margin_fpr_pct": 8.08,
+              "reroute_count": 1486,
+              "false_reroute_count": 120
+            },
+            "DAMBULLA": {
+              "safe_margin_fpr_pct": 75.0,
+              "reroute_count": 136,
+              "false_reroute_count": 102
+            },
+            "NUWARA_ELIYA": {
+              "safe_margin_fpr_pct": 50.28,
+              "reroute_count": 358,
+              "false_reroute_count": 180
+            },
+            "THAMBUTTEGAMA": {
+              "safe_margin_fpr_pct": 72.22,
+              "reroute_count": 198,
+              "false_reroute_count": 143
+            }
+          },
           "scenario_count": 60,
           "scenarios": [
             {
               "origin": "ANURADHAPURA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "300",
-              "safe_margin_fpr_pct": 80.0,
-              "reroute_count": 5,
-              "false_reroute_count": 4
+              "safe_margin_fpr_pct": 75.0,
+              "reroute_count": 12,
+              "false_reroute_count": 9
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 75.0,
-              "reroute_count": 4,
-              "false_reroute_count": 3
+              "safe_margin_fpr_pct": 70.0,
+              "reroute_count": 10,
+              "false_reroute_count": 7
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 80.0,
-              "reroute_count": 5,
-              "false_reroute_count": 4
+              "safe_margin_fpr_pct": 75.0,
+              "reroute_count": 12,
+              "false_reroute_count": 9
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 75.0,
-              "reroute_count": 4,
-              "false_reroute_count": 3
+              "safe_margin_fpr_pct": 70.0,
+              "reroute_count": 10,
+              "false_reroute_count": 7
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "300",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 2,
-              "false_reroute_count": 2
+              "safe_margin_fpr_pct": 87.5,
+              "reroute_count": 8,
+              "false_reroute_count": 7
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 66.67,
-              "reroute_count": 6,
-              "false_reroute_count": 4
+              "safe_margin_fpr_pct": 78.57,
+              "reroute_count": 14,
+              "false_reroute_count": 11
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 71.43,
-              "reroute_count": 7,
-              "false_reroute_count": 5
+              "safe_margin_fpr_pct": 68.75,
+              "reroute_count": 16,
+              "false_reroute_count": 11
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 66.67,
-              "reroute_count": 6,
-              "false_reroute_count": 4
+              "safe_margin_fpr_pct": 75.0,
+              "reroute_count": 16,
+              "false_reroute_count": 12
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 1,
-              "false_reroute_count": 1
+              "reroute_count": 7,
+              "false_reroute_count": 7
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 80.0,
-              "reroute_count": 5,
-              "false_reroute_count": 4
+              "safe_margin_fpr_pct": 75.0,
+              "reroute_count": 12,
+              "false_reroute_count": 9
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 66.67,
-              "reroute_count": 6,
-              "false_reroute_count": 4
+              "safe_margin_fpr_pct": 76.92,
+              "reroute_count": 13,
+              "false_reroute_count": 10
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 71.43,
-              "reroute_count": 7,
-              "false_reroute_count": 5
+              "safe_margin_fpr_pct": 68.75,
+              "reroute_count": 16,
+              "false_reroute_count": 11
             },
             {
               "origin": "JAFFNA",
@@ -709,45 +763,13 @@
               "origin": "DAMBULLA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "300",
-              "safe_margin_fpr_pct": 85.71,
-              "reroute_count": 7,
-              "false_reroute_count": 6
+              "safe_margin_fpr_pct": 70.0,
+              "reroute_count": 10,
+              "false_reroute_count": 7
             },
             {
               "origin": "DAMBULLA",
               "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 80.0,
-              "reroute_count": 5,
-              "false_reroute_count": 4
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 85.71,
-              "reroute_count": 7,
-              "false_reroute_count": 6
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 85.71,
-              "reroute_count": 7,
-              "false_reroute_count": 6
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 66.67,
-              "reroute_count": 3,
-              "false_reroute_count": 2
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 77.78,
               "reroute_count": 9,
@@ -755,82 +777,114 @@
             },
             {
               "origin": "DAMBULLA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 70.0,
+              "reroute_count": 10,
+              "false_reroute_count": 7
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 70.0,
+              "reroute_count": 10,
+              "false_reroute_count": 7
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 85.71,
+              "reroute_count": 7,
+              "false_reroute_count": 6
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 76.92,
+              "reroute_count": 13,
+              "false_reroute_count": 10
+            },
+            {
+              "origin": "DAMBULLA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 81.82,
-              "reroute_count": 11,
-              "false_reroute_count": 9
+              "safe_margin_fpr_pct": 70.59,
+              "reroute_count": 17,
+              "false_reroute_count": 12
             },
             {
               "origin": "DAMBULLA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 80.0,
-              "reroute_count": 10,
-              "false_reroute_count": 8
+              "reroute_count": 15,
+              "false_reroute_count": 12
             },
             {
               "origin": "DAMBULLA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 2,
-              "false_reroute_count": 2
+              "reroute_count": 5,
+              "false_reroute_count": 5
             },
             {
               "origin": "DAMBULLA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 87.5,
-              "reroute_count": 8,
+              "safe_margin_fpr_pct": 70.0,
+              "reroute_count": 10,
               "false_reroute_count": 7
             },
             {
               "origin": "DAMBULLA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 77.78,
-              "reroute_count": 9,
-              "false_reroute_count": 7
+              "safe_margin_fpr_pct": 76.92,
+              "reroute_count": 13,
+              "false_reroute_count": 10
             },
             {
               "origin": "DAMBULLA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 81.82,
-              "reroute_count": 11,
-              "false_reroute_count": 9
+              "safe_margin_fpr_pct": 70.59,
+              "reroute_count": 17,
+              "false_reroute_count": 12
             },
             {
               "origin": "NUWARA_ELIYA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "300",
-              "safe_margin_fpr_pct": 63.64,
-              "reroute_count": 22,
+              "safe_margin_fpr_pct": 60.87,
+              "reroute_count": 23,
               "false_reroute_count": 14
             },
             {
               "origin": "NUWARA_ELIYA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 62.5,
-              "reroute_count": 24,
+              "safe_margin_fpr_pct": 60.0,
+              "reroute_count": 25,
               "false_reroute_count": 15
             },
             {
               "origin": "NUWARA_ELIYA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 63.64,
-              "reroute_count": 22,
+              "safe_margin_fpr_pct": 60.87,
+              "reroute_count": 23,
               "false_reroute_count": 14
             },
             {
               "origin": "NUWARA_ELIYA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 63.64,
-              "reroute_count": 22,
+              "safe_margin_fpr_pct": 60.87,
+              "reroute_count": 23,
               "false_reroute_count": 14
             },
             {
@@ -845,6 +899,14 @@
               "origin": "NUWARA_ELIYA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 65.0,
+              "reroute_count": 20,
+              "false_reroute_count": 13
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1500",
               "safe_margin_fpr_pct": 68.42,
               "reroute_count": 19,
               "false_reroute_count": 13
@@ -852,18 +914,10 @@
             {
               "origin": "NUWARA_ELIYA",
               "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 68.75,
-              "reroute_count": 16,
-              "false_reroute_count": 11
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 66.67,
-              "reroute_count": 18,
-              "false_reroute_count": 12
+              "safe_margin_fpr_pct": 65.0,
+              "reroute_count": 20,
+              "false_reroute_count": 13
             },
             {
               "origin": "NUWARA_ELIYA",
@@ -877,121 +931,121 @@
               "origin": "NUWARA_ELIYA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 61.9,
-              "reroute_count": 21,
+              "safe_margin_fpr_pct": 59.09,
+              "reroute_count": 22,
               "false_reroute_count": 13
             },
             {
               "origin": "NUWARA_ELIYA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 70.0,
-              "reroute_count": 20,
+              "safe_margin_fpr_pct": 66.67,
+              "reroute_count": 21,
               "false_reroute_count": 14
             },
             {
               "origin": "NUWARA_ELIYA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 75.0,
+              "safe_margin_fpr_pct": 68.42,
+              "reroute_count": 19,
+              "false_reroute_count": 13
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 81.25,
               "reroute_count": 16,
+              "false_reroute_count": 13
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 81.25,
+              "reroute_count": 16,
+              "false_reroute_count": 13
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 81.25,
+              "reroute_count": 16,
+              "false_reroute_count": 13
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 81.25,
+              "reroute_count": 16,
+              "false_reroute_count": 13
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 71.43,
+              "reroute_count": 14,
+              "false_reroute_count": 10
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 70.59,
+              "reroute_count": 17,
               "false_reroute_count": 12
             },
             {
               "origin": "THAMBUTTEGAMA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 83.33,
-              "reroute_count": 12,
-              "false_reroute_count": 10
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 81.82,
-              "reroute_count": 11,
-              "false_reroute_count": 9
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 83.33,
-              "reroute_count": 12,
-              "false_reroute_count": 10
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 81.82,
-              "reroute_count": 11,
-              "false_reroute_count": 9
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 60.0,
-              "reroute_count": 10,
-              "false_reroute_count": 6
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 84.62,
-              "reroute_count": 13,
-              "false_reroute_count": 11
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 73.33,
-              "reroute_count": 15,
-              "false_reroute_count": 11
+              "safe_margin_fpr_pct": 63.16,
+              "reroute_count": 19,
+              "false_reroute_count": 12
             },
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 73.33,
-              "reroute_count": 15,
-              "false_reroute_count": 11
+              "safe_margin_fpr_pct": 63.16,
+              "reroute_count": 19,
+              "false_reroute_count": 12
             },
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "300",
-              "safe_margin_fpr_pct": 41.67,
-              "reroute_count": 12,
-              "false_reroute_count": 5
+              "safe_margin_fpr_pct": 50.0,
+              "reroute_count": 14,
+              "false_reroute_count": 7
             },
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 83.33,
-              "reroute_count": 12,
-              "false_reroute_count": 10
+              "safe_margin_fpr_pct": 81.25,
+              "reroute_count": 16,
+              "false_reroute_count": 13
             },
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 83.33,
-              "reroute_count": 12,
-              "false_reroute_count": 10
+              "safe_margin_fpr_pct": 81.25,
+              "reroute_count": 16,
+              "false_reroute_count": 13
             },
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 66.67,
-              "reroute_count": 15,
-              "false_reroute_count": 10
+              "safe_margin_fpr_pct": 63.16,
+              "reroute_count": 19,
+              "false_reroute_count": 12
             }
           ]
         },
@@ -999,6 +1053,33 @@
           "safe_margin_fpr_pct": 23.59,
           "reroute_count": 1522,
           "false_reroute_count": 359,
+          "by_origin": {
+            "ANURADHAPURA": {
+              "safe_margin_fpr_pct": null,
+              "reroute_count": 0,
+              "false_reroute_count": 0
+            },
+            "JAFFNA": {
+              "safe_margin_fpr_pct": 22.34,
+              "reroute_count": 1419,
+              "false_reroute_count": 317
+            },
+            "DAMBULLA": {
+              "safe_margin_fpr_pct": null,
+              "reroute_count": 0,
+              "false_reroute_count": 0
+            },
+            "NUWARA_ELIYA": {
+              "safe_margin_fpr_pct": 40.4,
+              "reroute_count": 99,
+              "false_reroute_count": 40
+            },
+            "THAMBUTTEGAMA": {
+              "safe_margin_fpr_pct": 50.0,
+              "reroute_count": 4,
+              "false_reroute_count": 2
+            }
+          },
           "scenario_count": 60,
           "scenarios": [
             {
@@ -1487,8 +1568,8 @@
     },
     "72": {
       "model": {
-        "directional_symmetry_pct": 92.86,
-        "mae_lkr": 2.87
+        "directional_symmetry_pct": 93.2,
+        "mae_lkr": 2.84
       },
       "baseline_naive": {
         "directional_symmetry_pct": 0.0,
@@ -1500,9 +1581,36 @@
       },
       "safe_margin_fpr": {
         "model": {
-          "safe_margin_fpr_pct": 0.19,
-          "reroute_count": 2071,
-          "false_reroute_count": 4,
+          "safe_margin_fpr_pct": 0.04,
+          "reroute_count": 2293,
+          "false_reroute_count": 1,
+          "by_origin": {
+            "ANURADHAPURA": {
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 145,
+              "false_reroute_count": 0
+            },
+            "JAFFNA": {
+              "safe_margin_fpr_pct": 0.07,
+              "reroute_count": 1488,
+              "false_reroute_count": 1
+            },
+            "DAMBULLA": {
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 140,
+              "false_reroute_count": 0
+            },
+            "NUWARA_ELIYA": {
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 339,
+              "false_reroute_count": 0
+            },
+            "THAMBUTTEGAMA": {
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 181,
+              "false_reroute_count": 0
+            }
+          },
           "scenario_count": 60,
           "scenarios": [
             {
@@ -1510,7 +1618,7 @@
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 2,
+              "reroute_count": 12,
               "false_reroute_count": 0
             },
             {
@@ -1518,7 +1626,7 @@
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 2,
+              "reroute_count": 12,
               "false_reroute_count": 0
             },
             {
@@ -1526,7 +1634,7 @@
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 2,
+              "reroute_count": 12,
               "false_reroute_count": 0
             },
             {
@@ -1534,7 +1642,7 @@
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 2,
+              "reroute_count": 12,
               "false_reroute_count": 0
             },
             {
@@ -1542,7 +1650,7 @@
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 1,
+              "reroute_count": 8,
               "false_reroute_count": 0
             },
             {
@@ -1550,7 +1658,7 @@
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 6,
+              "reroute_count": 14,
               "false_reroute_count": 0
             },
             {
@@ -1558,7 +1666,7 @@
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
+              "reroute_count": 14,
               "false_reroute_count": 0
             },
             {
@@ -1566,15 +1674,15 @@
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 6,
+              "reroute_count": 14,
               "false_reroute_count": 0
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "300",
-              "safe_margin_fpr_pct": null,
-              "reroute_count": 0,
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 5,
               "false_reroute_count": 0
             },
             {
@@ -1582,23 +1690,23 @@
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 3,
+              "reroute_count": 12,
               "false_reroute_count": 0
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 16.67,
-              "reroute_count": 6,
-              "false_reroute_count": 1
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 14,
+              "false_reroute_count": 0
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
+              "reroute_count": 16,
               "false_reroute_count": 0
             },
             {
@@ -1638,7 +1746,7 @@
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 0.44,
-              "reroute_count": 227,
+              "reroute_count": 226,
               "false_reroute_count": 1
             },
             {
@@ -1646,7 +1754,7 @@
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 62,
+              "reroute_count": 60,
               "false_reroute_count": 0
             },
             {
@@ -1654,7 +1762,7 @@
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 37,
+              "reroute_count": 39,
               "false_reroute_count": 0
             },
             {
@@ -1662,7 +1770,7 @@
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 48,
+              "reroute_count": 49,
               "false_reroute_count": 0
             },
             {
@@ -1670,7 +1778,7 @@
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 364,
+              "reroute_count": 361,
               "false_reroute_count": 0
             },
             {
@@ -1686,7 +1794,7 @@
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 70,
+              "reroute_count": 73,
               "false_reroute_count": 0
             },
             {
@@ -1694,203 +1802,11 @@
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 33,
+              "reroute_count": 34,
               "false_reroute_count": 0
             },
             {
               "origin": "DAMBULLA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 5,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 3,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 5,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 5,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 3,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 1,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 6,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 21,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 22,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 21,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 21,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 28,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 17,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 16,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 16,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 0.95,
-              "reroute_count": 105,
-              "false_reroute_count": 1
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 21,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 18,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 15,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 0.0,
@@ -1898,39 +1814,39 @@
               "false_reroute_count": 0
             },
             {
-              "origin": "THAMBUTTEGAMA",
+              "origin": "DAMBULLA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 11,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 12,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 12,
-              "false_reroute_count": 0
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 10.0,
               "reroute_count": 10,
-              "false_reroute_count": 1
+              "false_reroute_count": 0
             },
             {
-              "origin": "THAMBUTTEGAMA",
+              "origin": "DAMBULLA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 12,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 12,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 7,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "DAMBULLA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 0.0,
@@ -1938,31 +1854,31 @@
               "false_reroute_count": 0
             },
             {
-              "origin": "THAMBUTTEGAMA",
+              "origin": "DAMBULLA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 15,
+              "reroute_count": 14,
               "false_reroute_count": 0
             },
             {
-              "origin": "THAMBUTTEGAMA",
+              "origin": "DAMBULLA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 15,
+              "reroute_count": 14,
               "false_reroute_count": 0
             },
             {
-              "origin": "THAMBUTTEGAMA",
+              "origin": "DAMBULLA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 8,
+              "reroute_count": 4,
               "false_reroute_count": 0
             },
             {
-              "origin": "THAMBUTTEGAMA",
+              "origin": "DAMBULLA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 0.0,
@@ -1970,11 +1886,203 @@
               "false_reroute_count": 0
             },
             {
+              "origin": "DAMBULLA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 14,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 15,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 22,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 23,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 22,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 22,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 29,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 20,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 19,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 20,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 101,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 22,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 20,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 19,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 14,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 14,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 14,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 14,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 12,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 17,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 18,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 17,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 11,
+              "false_reroute_count": 0
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 0.0,
+              "reroute_count": 14,
+              "false_reroute_count": 0
+            },
+            {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 13,
+              "reroute_count": 17,
               "false_reroute_count": 0
             },
             {
@@ -1982,15 +2090,42 @@
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 0.0,
-              "reroute_count": 15,
+              "reroute_count": 19,
               "false_reroute_count": 0
             }
           ]
         },
         "baseline_naive": {
-          "safe_margin_fpr_pct": 37.11,
-          "reroute_count": 2126,
-          "false_reroute_count": 789,
+          "safe_margin_fpr_pct": 41.87,
+          "reroute_count": 2324,
+          "false_reroute_count": 973,
+          "by_origin": {
+            "ANURADHAPURA": {
+              "safe_margin_fpr_pct": 97.95,
+              "reroute_count": 146,
+              "false_reroute_count": 143
+            },
+            "JAFFNA": {
+              "safe_margin_fpr_pct": 15.88,
+              "reroute_count": 1486,
+              "false_reroute_count": 236
+            },
+            "DAMBULLA": {
+              "safe_margin_fpr_pct": 98.53,
+              "reroute_count": 136,
+              "false_reroute_count": 134
+            },
+            "NUWARA_ELIYA": {
+              "safe_margin_fpr_pct": 75.98,
+              "reroute_count": 358,
+              "false_reroute_count": 272
+            },
+            "THAMBUTTEGAMA": {
+              "safe_margin_fpr_pct": 94.95,
+              "reroute_count": 198,
+              "false_reroute_count": 188
+            }
+          },
           "scenario_count": 60,
           "scenarios": [
             {
@@ -1998,96 +2133,96 @@
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 5,
-              "false_reroute_count": 5
+              "reroute_count": 12,
+              "false_reroute_count": 12
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 4,
-              "false_reroute_count": 4
+              "reroute_count": 10,
+              "false_reroute_count": 10
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 5,
-              "false_reroute_count": 5
+              "reroute_count": 12,
+              "false_reroute_count": 12
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 4,
-              "false_reroute_count": 4
+              "reroute_count": 10,
+              "false_reroute_count": 10
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 2,
-              "false_reroute_count": 2
+              "reroute_count": 8,
+              "false_reroute_count": 8
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 6,
-              "false_reroute_count": 6
+              "reroute_count": 14,
+              "false_reroute_count": 14
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 7,
-              "false_reroute_count": 7
+              "safe_margin_fpr_pct": 93.75,
+              "reroute_count": 16,
+              "false_reroute_count": 15
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 6,
-              "false_reroute_count": 6
+              "safe_margin_fpr_pct": 93.75,
+              "reroute_count": 16,
+              "false_reroute_count": 15
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 1,
-              "false_reroute_count": 1
+              "reroute_count": 7,
+              "false_reroute_count": 7
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 5,
-              "false_reroute_count": 5
+              "reroute_count": 12,
+              "false_reroute_count": 12
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 6,
-              "false_reroute_count": 6
+              "reroute_count": 13,
+              "false_reroute_count": 13
             },
             {
               "origin": "ANURADHAPURA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 7,
-              "false_reroute_count": 7
+              "safe_margin_fpr_pct": 93.75,
+              "reroute_count": 16,
+              "false_reroute_count": 15
             },
             {
               "origin": "JAFFNA",
@@ -2190,44 +2325,12 @@
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 7,
-              "false_reroute_count": 7
+              "reroute_count": 10,
+              "false_reroute_count": 10
             },
             {
               "origin": "DAMBULLA",
               "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 5,
-              "false_reroute_count": 5
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 7,
-              "false_reroute_count": 7
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "THREE_WHEELER",
-              "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 7,
-              "false_reroute_count": 7
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 3,
-              "false_reroute_count": 3
-            },
-            {
-              "origin": "DAMBULLA",
-              "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 100.0,
               "reroute_count": 9,
@@ -2235,15 +2338,15 @@
             },
             {
               "origin": "DAMBULLA",
-              "vehicle": "MINI_TRUCK_BATTA",
+              "vehicle": "THREE_WHEELER",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 11,
-              "false_reroute_count": 11
+              "reroute_count": 10,
+              "false_reroute_count": 10
             },
             {
               "origin": "DAMBULLA",
-              "vehicle": "MINI_TRUCK_BATTA",
+              "vehicle": "THREE_WHEELER",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 100.0,
               "reroute_count": 10,
@@ -2251,67 +2354,99 @@
             },
             {
               "origin": "DAMBULLA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "300",
+              "safe_margin_fpr_pct": 100.0,
+              "reroute_count": 7,
+              "false_reroute_count": 7
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 100.0,
+              "reroute_count": 13,
+              "false_reroute_count": 13
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1500",
+              "safe_margin_fpr_pct": 94.12,
+              "reroute_count": 17,
+              "false_reroute_count": 16
+            },
+            {
+              "origin": "DAMBULLA",
+              "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 100.0,
+              "reroute_count": 15,
+              "false_reroute_count": 15
+            },
+            {
+              "origin": "DAMBULLA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "300",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 2,
-              "false_reroute_count": 2
+              "reroute_count": 5,
+              "false_reroute_count": 5
             },
             {
               "origin": "DAMBULLA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 8,
-              "false_reroute_count": 8
+              "reroute_count": 10,
+              "false_reroute_count": 10
             },
             {
               "origin": "DAMBULLA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 9,
-              "false_reroute_count": 9
+              "reroute_count": 13,
+              "false_reroute_count": 13
             },
             {
               "origin": "DAMBULLA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 11,
-              "false_reroute_count": 11
+              "safe_margin_fpr_pct": 94.12,
+              "reroute_count": 17,
+              "false_reroute_count": 16
             },
             {
               "origin": "NUWARA_ELIYA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "300",
-              "safe_margin_fpr_pct": 95.45,
-              "reroute_count": 22,
-              "false_reroute_count": 21
+              "safe_margin_fpr_pct": 95.65,
+              "reroute_count": 23,
+              "false_reroute_count": 22
             },
             {
               "origin": "NUWARA_ELIYA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 95.83,
-              "reroute_count": 24,
-              "false_reroute_count": 23
+              "safe_margin_fpr_pct": 96.0,
+              "reroute_count": 25,
+              "false_reroute_count": 24
             },
             {
               "origin": "NUWARA_ELIYA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 95.45,
-              "reroute_count": 22,
-              "false_reroute_count": 21
+              "safe_margin_fpr_pct": 95.65,
+              "reroute_count": 23,
+              "false_reroute_count": 22
             },
             {
               "origin": "NUWARA_ELIYA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 95.45,
-              "reroute_count": 22,
-              "false_reroute_count": 21
+              "safe_margin_fpr_pct": 95.65,
+              "reroute_count": 23,
+              "false_reroute_count": 22
             },
             {
               "origin": "NUWARA_ELIYA",
@@ -2325,25 +2460,25 @@
               "origin": "NUWARA_ELIYA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 19,
+              "safe_margin_fpr_pct": 95.0,
+              "reroute_count": 20,
               "false_reroute_count": 19
             },
             {
               "origin": "NUWARA_ELIYA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 16,
-              "false_reroute_count": 16
+              "safe_margin_fpr_pct": 94.74,
+              "reroute_count": 19,
+              "false_reroute_count": 18
             },
             {
               "origin": "NUWARA_ELIYA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 18,
-              "false_reroute_count": 18
+              "safe_margin_fpr_pct": 95.0,
+              "reroute_count": 20,
+              "false_reroute_count": 19
             },
             {
               "origin": "NUWARA_ELIYA",
@@ -2357,6 +2492,14 @@
               "origin": "NUWARA_ELIYA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 95.45,
+              "reroute_count": 22,
+              "false_reroute_count": 21
+            },
+            {
+              "origin": "NUWARA_ELIYA",
+              "vehicle": "LORRY_3_5T",
+              "quantity_kg": "1500",
               "safe_margin_fpr_pct": 95.24,
               "reroute_count": 21,
               "false_reroute_count": 20
@@ -2364,15 +2507,15 @@
             {
               "origin": "NUWARA_ELIYA",
               "vehicle": "LORRY_3_5T",
-              "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 20,
-              "false_reroute_count": 20
+              "quantity_kg": "3500",
+              "safe_margin_fpr_pct": 94.74,
+              "reroute_count": 19,
+              "false_reroute_count": 18
             },
             {
-              "origin": "NUWARA_ELIYA",
-              "vehicle": "LORRY_3_5T",
-              "quantity_kg": "3500",
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "THREE_WHEELER",
+              "quantity_kg": "300",
               "safe_margin_fpr_pct": 100.0,
               "reroute_count": 16,
               "false_reroute_count": 16
@@ -2380,98 +2523,90 @@
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "THREE_WHEELER",
-              "quantity_kg": "300",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 12,
-              "false_reroute_count": 12
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "THREE_WHEELER",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 11,
-              "false_reroute_count": 11
+              "reroute_count": 16,
+              "false_reroute_count": 16
             },
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 12,
-              "false_reroute_count": 12
+              "reroute_count": 16,
+              "false_reroute_count": 16
             },
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "THREE_WHEELER",
               "quantity_kg": "3500",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 11,
-              "false_reroute_count": 11
+              "reroute_count": 16,
+              "false_reroute_count": 16
             },
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "300",
-              "safe_margin_fpr_pct": 90.0,
-              "reroute_count": 10,
-              "false_reroute_count": 9
-            },
-            {
-              "origin": "THAMBUTTEGAMA",
-              "vehicle": "MINI_TRUCK_BATTA",
-              "quantity_kg": "1000",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 13,
+              "safe_margin_fpr_pct": 92.86,
+              "reroute_count": 14,
               "false_reroute_count": 13
             },
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "MINI_TRUCK_BATTA",
+              "quantity_kg": "1000",
+              "safe_margin_fpr_pct": 94.12,
+              "reroute_count": 17,
+              "false_reroute_count": 16
+            },
+            {
+              "origin": "THAMBUTTEGAMA",
+              "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "1500",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 15,
-              "false_reroute_count": 15
+              "safe_margin_fpr_pct": 94.74,
+              "reroute_count": 19,
+              "false_reroute_count": 18
             },
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "MINI_TRUCK_BATTA",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 15,
-              "false_reroute_count": 15
+              "safe_margin_fpr_pct": 94.74,
+              "reroute_count": 19,
+              "false_reroute_count": 18
             },
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "300",
-              "safe_margin_fpr_pct": 58.33,
-              "reroute_count": 12,
-              "false_reroute_count": 7
+              "safe_margin_fpr_pct": 64.29,
+              "reroute_count": 14,
+              "false_reroute_count": 9
             },
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1000",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 12,
-              "false_reroute_count": 12
+              "reroute_count": 16,
+              "false_reroute_count": 16
             },
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "1500",
               "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 12,
-              "false_reroute_count": 12
+              "reroute_count": 16,
+              "false_reroute_count": 16
             },
             {
               "origin": "THAMBUTTEGAMA",
               "vehicle": "LORRY_3_5T",
               "quantity_kg": "3500",
-              "safe_margin_fpr_pct": 100.0,
-              "reroute_count": 15,
-              "false_reroute_count": 15
+              "safe_margin_fpr_pct": 94.74,
+              "reroute_count": 19,
+              "false_reroute_count": 18
             }
           ]
         },
@@ -2479,6 +2614,33 @@
           "safe_margin_fpr_pct": 27.92,
           "reroute_count": 1522,
           "false_reroute_count": 425,
+          "by_origin": {
+            "ANURADHAPURA": {
+              "safe_margin_fpr_pct": null,
+              "reroute_count": 0,
+              "false_reroute_count": 0
+            },
+            "JAFFNA": {
+              "safe_margin_fpr_pct": 26.64,
+              "reroute_count": 1419,
+              "false_reroute_count": 378
+            },
+            "DAMBULLA": {
+              "safe_margin_fpr_pct": null,
+              "reroute_count": 0,
+              "false_reroute_count": 0
+            },
+            "NUWARA_ELIYA": {
+              "safe_margin_fpr_pct": 44.44,
+              "reroute_count": 99,
+              "false_reroute_count": 44
+            },
+            "THAMBUTTEGAMA": {
+              "safe_margin_fpr_pct": 75.0,
+              "reroute_count": 4,
+              "false_reroute_count": 3
+            }
+          },
           "scenario_count": 60,
           "scenarios": [
             {
