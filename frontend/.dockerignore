@@ -9,3 +9,6 @@ test-results
 *.tsbuildinfo
 npm-debug.log*
 mobile
+e2e
+scripts
+coverage
