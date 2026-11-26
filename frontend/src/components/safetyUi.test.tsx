@@ -2,13 +2,18 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { demoRequest, demoResponse } from "../data/demoResponse";
-import type { AnalyzeRequest, AnalyzeResponse } from "../types/atie";
+import type { AnalyzeRequest, AnalyzeResponse, DataStatus } from "../types/atie";
+import { DataFreshnessPanel } from "./DataFreshnessPanel";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { EvaluationBaselinesPanel } from "./EvaluationBaselinesPanel";
 import { OnboardingConfigModal } from "./OnboardingConfigModal";
 import { PrimaryDirectiveCard } from "./PrimaryDirectiveCard";
 import { formatUpliftLabel, shortMarketName } from "./profitFormat";
 import { RoutingLogisticsPanel } from "./RoutingLogisticsPanel";
-import { buildTrajectoryChartData } from "./trajectoryData";
+import {
+  buildTrajectoryChartData,
+  formatTrajectoryDate,
+} from "./trajectoryData";
 import { formatLkr, roundHalfUp2 } from "../utils/format";
 
 vi.mock("../api/atieClient", async () => {
@@ -227,5 +232,86 @@ describe("safety-critical dashboard presentation", () => {
     expect(anchor.model).toBe(220);
     expect(anchor.naive).toBe(220);
     expect(anchor.ma7).toBe(230);
+  });
+
+  it("guards invalid trajectory dates and renders DataFreshnessPanel secondary states", () => {
+    expect(formatTrajectoryDate("not-a-date")).toBe("not-a-date");
+
+    const status: DataStatus = {
+      overallStatus: "PARTIAL",
+      generatedAt: "2026-10-27T08:00:00Z",
+      sources: [
+        {
+          sourceCode: "HDX",
+          label: "WFP HDX Prices",
+          dataState: "LIVE",
+          freshness: "CURRENT",
+          lastAttemptAt: "2026-10-27T07:00:00Z",
+          lastSuccessAt: "2026-10-27T07:00:00Z",
+          latestObservationDate: "2026-10-27",
+          sourceUrl: "https://example.test",
+          recordsWritten: 120,
+          message: "HDX verified against latest feed.",
+        },
+      ],
+      priceCoverage: [
+        {
+          marketCode: "DAMBULLA",
+          cropCode: "TOMATO",
+          latestObservationDate: "2026-10-27",
+          source: "HDX_LIVE",
+          state: "CURRENT",
+        },
+        {
+          marketCode: "PETTAH_COLOMBO",
+          cropCode: "TOMATO",
+          latestObservationDate: "2026-10-20",
+          source: "HDX_CACHED",
+          state: "CACHED",
+        },
+        {
+          marketCode: "JAFFNA",
+          cropCode: "TOMATO",
+          latestObservationDate: "2026-10-10",
+          source: "HDX_SEED",
+          state: "STALE",
+        },
+      ],
+    };
+
+    render(<DataFreshnessPanel status={status} unavailable={false} loading />);
+
+    expect(screen.getByText("Refreshing")).toBeVisible();
+    expect(screen.getByText("HDX verified against latest feed.")).toBeVisible();
+    expect(screen.getByText("1 cached series")).toBeVisible();
+    expect(screen.getByText("1 stale series")).toBeVisible();
+  });
+
+  it("recovers cleanly via ErrorBoundary and renders route baseline with defaultMarketCode", () => {
+    let shouldThrow = true;
+    function ProblemChild() {
+      if (shouldThrow) {
+        throw new Error("Simulated chart crash");
+      }
+      return <p>Recovered child view</p>;
+    }
+
+    render(
+      <ErrorBoundary>
+        <ProblemChild />
+      </ErrorBoundary>,
+    );
+    expect(screen.getByText("Simulated chart crash")).toBeVisible();
+    shouldThrow = false;
+    fireEvent.click(screen.getByRole("button", { name: "Reload dashboard" }));
+    expect(screen.getByText("Recovered child view")).toBeVisible();
+
+    render(
+      <RoutingLogisticsPanel
+        markets={demoResponse.marketComparisons}
+        defaultMarketCode="DAMBULLA"
+      />,
+    );
+    expect(screen.getByText("Default · crash")).toBeVisible();
   });
 });
