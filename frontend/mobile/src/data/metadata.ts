@@ -214,7 +214,7 @@ export function filterReachableMarkets(
       .map((route) => route.marketCode),
   );
   if (allowed.size === 0) {
-    return config.markets;
+    return [];
   }
   return config.markets.filter((market) => allowed.has(market.code));
 }

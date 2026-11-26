@@ -28,8 +28,12 @@ export async function shareViaSms(message: string): Promise<void> {
 }
 
 export async function shareViaSystemSheet(message: string): Promise<void> {
-  await Share.share({
-    title: "ATIE Market Dispatch",
-    message,
-  });
+  try {
+    await Share.share({
+      title: "ATIE Market Dispatch",
+      message,
+    });
+  } catch {
+    // Ignore dismissed or unsupported share sheet errors on restricted devices.
+  }
 }
