@@ -79,26 +79,43 @@ public class MlMetricsClient {
         CachedMetrics snapshot = cachedMetrics;
         Instant now = clock.instant();
         if (snapshot != null && now.isBefore(snapshot.expiresAt())) {
-            return parseHorizonSummary(
-                    snapshot.root(),
-                    horizonHours,
-                    "Evaluation report loaded from the ML service."
-            );
-        }
-        if (now.isBefore(retryAfter)) {
-            return fallbackOrUnavailable(snapshot, horizonHours);
-        }
-
-        refreshLock.lock();
-        try {
-            snapshot = cachedMetrics;
-            now = clock.instant();
-            if (snapshot != null && now.isBefore(snapshot.expiresAt())) {
+            try {
                 return parseHorizonSummary(
                         snapshot.root(),
                         horizonHours,
                         "Evaluation report loaded from the ML service."
                 );
+            } catch (RuntimeException invalidCached) {
+                log.warn("Cached ML metrics invalid for horizon {}: {}", horizonHours, invalidCached.getMessage());
+                cachedMetrics = null;
+                snapshot = null;
+            }
+        }
+        if (now.isBefore(retryAfter)) {
+            return fallbackOrUnavailable(snapshot, horizonHours);
+        }
+
+        if (snapshot != null) {
+            if (!refreshLock.tryLock()) {
+                return fallbackOrUnavailable(snapshot, horizonHours);
+            }
+        } else {
+            refreshLock.lock();
+        }
+        try {
+            snapshot = cachedMetrics;
+            now = clock.instant();
+            if (snapshot != null && now.isBefore(snapshot.expiresAt())) {
+                try {
+                    return parseHorizonSummary(
+                            snapshot.root(),
+                            horizonHours,
+                            "Evaluation report loaded from the ML service."
+                    );
+                } catch (RuntimeException invalidCached) {
+                    cachedMetrics = null;
+                    snapshot = null;
+                }
             }
             if (now.isBefore(retryAfter)) {
                 return fallbackOrUnavailable(snapshot, horizonHours);
@@ -106,16 +123,19 @@ public class MlMetricsClient {
 
             try {
                 JsonNode root = fetchMetricsRoot();
-                cachedMetrics = new CachedMetrics(root, now.plus(cacheTtl));
-                retryAfter = Instant.MIN;
-                return parseHorizonSummary(
+                ModelEvaluationSummary summary = parseHorizonSummary(
                         root,
                         horizonHours,
                         "Evaluation report loaded from the ML service."
                 );
+                validateAllAvailableHorizons(root);
+                Instant completedAt = clock.instant();
+                cachedMetrics = new CachedMetrics(root, completedAt.plus(cacheTtl));
+                retryAfter = Instant.MIN;
+                return summary;
             } catch (RuntimeException | IOException error) {
                 log.warn("ML evaluation metrics unavailable: {}", error.getMessage());
-                retryAfter = now.plus(negativeCacheTtl);
+                retryAfter = clock.instant().plus(negativeCacheTtl);
                 return fallbackOrUnavailable(snapshot, horizonHours);
             }
         } finally {
@@ -152,6 +172,24 @@ public class MlMetricsClient {
             throw new IllegalStateException("ML metrics response was empty");
         }
         return objectMapper.readTree(body);
+    }
+
+    private void validateAllAvailableHorizons(JsonNode root) {
+        JsonNode metricsNode = root.get("metrics");
+        if (metricsNode == null || !metricsNode.isObject() || metricsNode.isEmpty()) {
+            throw new IllegalStateException("ML metrics payload is missing metrics map");
+        }
+        var fieldNames = metricsNode.fieldNames();
+        while (fieldNames.hasNext()) {
+            String key = fieldNames.next();
+            int parsedHorizon;
+            try {
+                parsedHorizon = Integer.parseInt(key);
+            } catch (NumberFormatException ignored) {
+                continue;
+            }
+            parseHorizonSummary(root, parsedHorizon, "validated");
+        }
     }
 
     private ModelEvaluationSummary parseHorizonSummary(
@@ -204,13 +242,19 @@ public class MlMetricsClient {
         JsonNode percentage = node.get("safe_margin_fpr_pct");
         JsonNode rerouteCount = node.get("reroute_count");
         JsonNode falseRerouteCount = node.get("false_reroute_count");
-        if (rerouteCount == null || falseRerouteCount == null) {
+        if (rerouteCount == null || !rerouteCount.isIntegralNumber()
+                || falseRerouteCount == null || !falseRerouteCount.isIntegralNumber()) {
             return null;
         }
+        BigDecimal pctValue = null;
+        if (percentage != null && !percentage.isNull()) {
+            if (!percentage.isNumber()) {
+                return null;
+            }
+            pctValue = percentage.decimalValue().setScale(2, RoundingMode.HALF_UP);
+        }
         return new ModelEvaluationSummary.SafeMarginFpr(
-                percentage == null || percentage.isNull()
-                        ? null
-                        : percentage.decimalValue().setScale(2, RoundingMode.HALF_UP),
+                pctValue,
                 rerouteCount.intValue(),
                 falseRerouteCount.intValue()
         );

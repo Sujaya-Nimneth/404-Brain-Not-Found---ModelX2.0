@@ -2,6 +2,7 @@ package com.modelx.atie.service;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -14,8 +15,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.modelx.atie.dto.DataStatusResponse;
 
@@ -25,13 +28,22 @@ public class DataStatusService {
     private static final ZoneId COLOMBO_ZONE = ZoneId.of("Asia/Colombo");
     private static final int DAILY_STALE_DAYS = 3;
     private static final int MONTHLY_STALE_DAYS = 45;
+    private static final Duration OPEN_METEO_MAX_AGE = Duration.ofHours(24);
 
     private final JdbcTemplate jdbc;
+    private final Clock clock;
 
-    public DataStatusService(JdbcTemplate jdbc) {
+    @Autowired
+    public DataStatusService(JdbcTemplate jdbc, Clock clock) {
         this.jdbc = jdbc;
+        this.clock = clock;
     }
 
+    public DataStatusService(JdbcTemplate jdbc) {
+        this(jdbc, Clock.systemUTC());
+    }
+
+    @Transactional(readOnly = true)
     public DataStatusResponse snapshot() {
         List<SourceRow> sourceRows = jdbc.query(
                 """
@@ -68,7 +80,7 @@ public class DataStatusService {
                         resultSet.getString("source")
                 )
         );
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         return build(
                 sourceRows,
                 coverageRows,
@@ -117,6 +129,7 @@ public class DataStatusService {
                     row.dataState(),
                     freshness(
                             row.sourceCode(),
+                            row.dataState(),
                             row.latestObservationDate(),
                             row.lastSuccessAt(),
                             today,
@@ -181,7 +194,9 @@ public class DataStatusService {
         boolean hasUsableCoverage = coverage.stream()
                 .anyMatch(item -> Set.of("CURRENT", "STALE", "CACHED", "SEED")
                         .contains(item.state()));
-        if (live == sources.size()) {
+        boolean allCoverageCurrent = !coverage.isEmpty()
+                && coverage.stream().allMatch(item -> "CURRENT".equals(item.state()));
+        if (live == sources.size() && allCoverageCurrent) {
             return "LIVE";
         }
         if (live > 0) {
@@ -191,6 +206,26 @@ public class DataStatusService {
             return "FALLBACK";
         }
         return "UNAVAILABLE";
+    }
+
+    private static String freshness(
+            String sourceCode,
+            String dataState,
+            LocalDate latestObservationDate,
+            Instant lastSuccessAt,
+            LocalDate today,
+            Instant now
+    ) {
+        if ("UNAVAILABLE".equals(dataState)) {
+            return "UNKNOWN";
+        }
+        if (latestObservationDate == null) {
+            return "UNKNOWN";
+        }
+        if (!"LIVE".equals(dataState)) {
+            return "STALE";
+        }
+        return freshness(sourceCode, latestObservationDate, lastSuccessAt, today, now);
     }
 
     private static String freshness(
@@ -205,8 +240,8 @@ public class DataStatusService {
         }
         long age = ChronoUnit.DAYS.between(latestObservationDate, today);
         if ("OPEN_METEO".equals(sourceCode)) {
-            if (lastSuccessAt != null
-                    && Duration.between(lastSuccessAt, now).toHours() > 24) {
+            if (lastSuccessAt == null
+                    || Duration.between(lastSuccessAt, now).compareTo(OPEN_METEO_MAX_AGE) > 0) {
                 return "STALE";
             }
             return age <= 1 ? "CURRENT" : "STALE";

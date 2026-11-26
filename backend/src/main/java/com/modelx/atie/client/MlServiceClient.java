@@ -3,7 +3,11 @@ package com.modelx.atie.client;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +15,7 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -38,21 +43,43 @@ public class MlServiceClient implements ForecastClient {
             "CACHED",
             "SEED"
     );
+    private static final Set<String> GLUT_RISK_LEVELS = Set.of(
+            "LOW",
+            "MEDIUM",
+            "HIGH"
+    );
+    private static final Duration DEFAULT_CIRCUIT_COOLDOWN = Duration.ofSeconds(20);
 
     private final RestClient client;
     private final AtieProperties properties;
     private final JsonNode fallbackSnapshot;
+    private final Clock clock;
+    private final Duration circuitCooldown;
+    private volatile Instant retryAfter = Instant.MIN;
 
+    @Autowired
     public MlServiceClient(
             RestClient.Builder builder,
             AtieProperties properties,
             ObjectMapper objectMapper
+    ) {
+        this(builder, properties, objectMapper, Clock.systemUTC(), DEFAULT_CIRCUIT_COOLDOWN);
+    }
+
+    MlServiceClient(
+            RestClient.Builder builder,
+            AtieProperties properties,
+            ObjectMapper objectMapper,
+            Clock clock,
+            Duration circuitCooldown
     ) {
         this.client = builder
                 .baseUrl(properties.mlServiceUrl())
                 .build();
         this.properties = properties;
         this.fallbackSnapshot = loadFallbackSnapshot(objectMapper);
+        this.clock = clock;
+        this.circuitCooldown = circuitCooldown;
     }
 
     @Override
@@ -63,6 +90,11 @@ public class MlServiceClient implements ForecastClient {
             List<String> markets,
             boolean demoMode
     ) {
+        Instant now = clock.instant();
+        if (now.isBefore(retryAfter)) {
+            log.debug("ML circuit open; serving fallback forecast");
+            return fallback(cropCode, horizonHours, referenceDate, markets, demoMode);
+        }
         try {
             MlForecastResponse response = client.post()
                     .uri(uriBuilder -> uriBuilder
@@ -84,23 +116,29 @@ public class MlServiceClient implements ForecastClient {
                     markets,
                     demoMode
             );
+            retryAfter = Instant.MIN;
             return response;
         } catch (RestClientResponseException error) {
-            if (error.getStatusCode().is4xxClientError()) {
+            int rawStatus = error.getStatusCode().value();
+            if (rawStatus == 400 || rawStatus == 422) {
+                HttpStatus resolved = HttpStatus.resolve(rawStatus);
                 throw new MlServiceException(
-                        HttpStatus.valueOf(error.getStatusCode().value()),
+                        resolved != null ? resolved : HttpStatus.BAD_REQUEST,
                         "ML_REJECTED_REQUEST",
-                        bounded(error.getResponseBodyAsString()),
+                        "ML service rejected the request",
                         error
                 );
             }
             log.warn("ML service returned {}; using fallback", error.getStatusCode());
+            retryAfter = clock.instant().plus(circuitCooldown);
             return fallback(cropCode, horizonHours, referenceDate, markets, demoMode);
         } catch (ResourceAccessException error) {
             log.warn("ML service is unreachable; using fallback: {}", error.getMessage());
+            retryAfter = clock.instant().plus(circuitCooldown);
             return fallback(cropCode, horizonHours, referenceDate, markets, demoMode);
         } catch (RestClientException error) {
             log.warn("ML transport failed; using fallback: {}", error.getMessage());
+            retryAfter = clock.instant().plus(circuitCooldown);
             return fallback(cropCode, horizonHours, referenceDate, markets, demoMode);
         }
     }
@@ -124,6 +162,9 @@ public class MlServiceClient implements ForecastClient {
         }
         if (response.referenceDate() == null) {
             throw contractError("ML service returned no reference date");
+        }
+        if (response.modelVersion() == null || response.modelVersion().isBlank()) {
+            throw contractError("ML service returned no model version");
         }
         if (!FORECAST_SOURCES.contains(response.forecastSource())) {
             throw contractError("ML service returned an invalid forecast source");
@@ -168,14 +209,48 @@ public class MlServiceClient implements ForecastClient {
                 || forecast.baselineMa7Lkr().signum() <= 0) {
             throw contractError("ML service returned non-positive price data");
         }
+        if (forecast.pctChange() == null) {
+            throw contractError("ML service returned no pct_change");
+        }
         if (!Set.of("CRASH", "STABLE", "SURGE").contains(forecast.direction())) {
             throw contractError("ML service returned an invalid direction");
+        }
+        if (forecast.glutRiskLevel() == null || !GLUT_RISK_LEVELS.contains(forecast.glutRiskLevel())) {
+            throw contractError("ML service returned an invalid glut risk level");
+        }
+        String expectedDirection = classifyMovement(
+                forecast.currentPriceLkr(),
+                forecast.predictedPriceLkr()
+        );
+        if (!expectedDirection.equals(forecast.direction())) {
+            // Allow 2-dp boundary cases only if rounded pct_change matches direction
+            String pctDirection = classifyPct(forecast.pctChange());
+            if (!pctDirection.equals(forecast.direction())) {
+                throw contractError("ML service direction conflicts with movement threshold");
+            }
         }
         if (forecast.confidenceScore() == null
                 || forecast.confidenceScore().signum() < 0
                 || forecast.confidenceScore().compareTo(BigDecimal.ONE) > 0) {
             throw contractError("ML service returned an invalid confidence score");
         }
+    }
+
+    private String classifyMovement(BigDecimal current, BigDecimal predicted) {
+        BigDecimal change = predicted.subtract(current)
+                .divide(current, MathContext.DECIMAL128)
+                .multiply(new BigDecimal("100"));
+        return classifyPct(change);
+    }
+
+    private String classifyPct(BigDecimal change) {
+        if (change.compareTo(properties.movementThresholdPct().negate()) <= 0) {
+            return "CRASH";
+        }
+        if (change.compareTo(properties.movementThresholdPct()) >= 0) {
+            return "SURGE";
+        }
+        return "STABLE";
     }
 
     private MlForecastResponse fallback(
@@ -198,11 +273,12 @@ public class MlServiceClient implements ForecastClient {
             throw fallbackUnavailable("No fallback snapshot exists for " + cropCode);
         }
         String source = demoMode ? "DEMO_FIXTURE" : "FALLBACK";
-        String dataState = fallbackSnapshot.path("input_data_state")
-                .asText("SEED");
-        LocalDate fallbackDate = LocalDate.parse(
-                fallbackSnapshot.path("reference_date")
-                        .asText(referenceDate.toString())
+        String dataState = demoMode
+                ? "SEED"
+                : fallbackSnapshot.path("input_data_state").asText("SEED");
+        LocalDate fallbackDate = parseDateOrDefault(
+                fallbackSnapshot.path("reference_date").asText(""),
+                referenceDate
         );
         List<MarketForecast> predictions = markets.stream()
                 .map(marketCode -> fallbackForecast(
@@ -225,6 +301,17 @@ public class MlServiceClient implements ForecastClient {
         );
     }
 
+    private LocalDate parseDateOrDefault(String raw, LocalDate fallbackDate) {
+        if (raw == null || raw.isBlank()) {
+            return fallbackDate;
+        }
+        try {
+            return LocalDate.parse(raw.trim());
+        } catch (DateTimeParseException invalid) {
+            return fallbackDate;
+        }
+    }
+
     private MarketForecast fallbackForecast(
             JsonNode cropData,
             String marketCode,
@@ -238,19 +325,21 @@ public class MlServiceClient implements ForecastClient {
                     "Fallback snapshot is missing " + marketCode + "/" + horizonHours
             );
         }
-        BigDecimal current = decimal(fixture, "current_price_lkr");
-        BigDecimal predicted = decimal(fixture, "predicted_price_lkr");
-        BigDecimal ma7 = decimal(fixture, "baseline_ma7_lkr");
+        BigDecimal current = positiveDecimal(fixture, "current_price_lkr");
+        BigDecimal predicted = positiveDecimal(fixture, "predicted_price_lkr");
+        BigDecimal ma7 = positiveDecimal(fixture, "baseline_ma7_lkr");
+        BigDecimal confidence = decimal(fixture, "confidence_score");
+        if (confidence.signum() < 0 || confidence.compareTo(BigDecimal.ONE) > 0) {
+            throw fallbackUnavailable("Fallback confidence score is out of range");
+        }
         BigDecimal change = predicted.subtract(current)
                 .divide(current, MathContext.DECIMAL128)
                 .multiply(new BigDecimal("100"));
-        String direction = change.compareTo(
-                properties.movementThresholdPct().negate()
-        ) <= 0
-                ? "CRASH"
-                : change.compareTo(properties.movementThresholdPct()) >= 0
-                ? "SURGE"
-                : "STABLE";
+        String direction = classifyPct(change);
+        String glutRisk = fixture.path("glut_risk_level").asText("MEDIUM");
+        if (!GLUT_RISK_LEVELS.contains(glutRisk)) {
+            glutRisk = "MEDIUM";
+        }
         return new MarketForecast(
                 marketCode,
                 current,
@@ -259,10 +348,18 @@ public class MlServiceClient implements ForecastClient {
                 ma7,
                 change.setScale(2, RoundingMode.HALF_UP),
                 direction,
-                fixture.path("glut_risk_level").asText("MEDIUM"),
-                decimal(fixture, "confidence_score"),
+                glutRisk,
+                confidence,
                 fixture.path("primary_driver").asText("Fallback forecast snapshot")
         );
+    }
+
+    private BigDecimal positiveDecimal(JsonNode fixture, String field) {
+        BigDecimal value = decimal(fixture, field);
+        if (value.signum() <= 0) {
+            throw fallbackUnavailable("Fallback snapshot price must be positive: " + field);
+        }
+        return value;
     }
 
     private BigDecimal decimal(JsonNode fixture, String field) {
