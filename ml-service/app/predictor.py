@@ -168,12 +168,18 @@ class Predictor:
                 if not isinstance(manifest, dict) or not isinstance(model_files, dict):
                     raise ValueError("model manifest has an invalid shape")
                 loaded_models: dict[str, Booster] = {}
+                manifest_root = manifest_path.parent.resolve()
                 for horizon, rel_path in model_files.items():
                     model_file = (manifest_path.parent / str(rel_path)).resolve()
-                    if not model_file.exists():
+                    if not model_file.is_relative_to(manifest_root):
+                        raise ValueError(
+                            f"model file escapes manifest directory: {model_file}"
+                        )
+                    if not model_file.is_file():
                         raise ValueError(f"missing XGBoost binary model: {model_file}")
                     booster = Booster({"nthread": 1})
                     booster.load_model(model_file)
+                    booster.set_param({"nthread": 1})
                     loaded_models[str(horizon)] = booster
                 self.artifact = {
                     **manifest,
@@ -682,7 +688,7 @@ class Predictor:
 
         feature_matrix = pd.DataFrame(matrix_rows, columns=feature_columns)
         raw_predictions = (
-            model.predict(DMatrix(feature_matrix))
+            model.predict(DMatrix(feature_matrix, feature_names=feature_columns))
             if isinstance(model, Booster)
             else model.predict(feature_matrix)
         )

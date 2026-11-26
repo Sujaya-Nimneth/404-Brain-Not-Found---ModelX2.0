@@ -431,4 +431,50 @@ def test_ingestion_cache_oserror_does_not_abort_live_db_write(tmp_path, monkeypa
     assert result["records_written"] == 1
 
 
+def test_corrupt_json_manifest_and_ubj_binary_fall_back_gracefully(tmp_path):
+    bad_manifest = tmp_path / "bad_manifest.json"
+    bad_manifest.write_text("{not-json", encoding="utf-8")
+    p1 = Predictor(Settings(model_path=bad_manifest))
+    assert not p1.model_loaded
+    assert p1.predict(CANONICAL_REQUEST).forecast_source.value == "FALLBACK"
+
+    corrupt_ubj = tmp_path / "corrupt_48h.ubj"
+    corrupt_ubj.write_bytes(b"corrupt-ubj-payload")
+    manifest_corrupt_bin = tmp_path / "manifest_bad_bin.json"
+    manifest_corrupt_bin.write_text(
+        '{"model_version": "xgb-v2.1", "models": {"48": "corrupt_48h.ubj"}}',
+        encoding="utf-8",
+    )
+    p2 = Predictor(Settings(model_path=manifest_corrupt_bin))
+    assert not p2.model_loaded
+    assert p2.predict(CANONICAL_REQUEST).forecast_source.value == "FALLBACK"
+
+    traversal_manifest = tmp_path / "traversal.json"
+    traversal_manifest.write_text(
+        '{"model_version": "xgb-v2.1", "models": {"48": "../outside.ubj"}}',
+        encoding="utf-8",
+    )
+    p3 = Predictor(Settings(model_path=traversal_manifest))
+    assert not p3.model_loaded
+    assert p3.predict(CANONICAL_REQUEST).forecast_source.value == "FALLBACK"
+
+
+def test_mixed_live_and_seed_history_reports_cached_provenance(monkeypatch):
+    from etl.seed_loader import generate_demo_history
+
+    mixed = generate_demo_history().copy()
+    mixed["source"] = "HDX_SEED"
+    mixed.loc[mixed["market_code"] == "DAMBULLA", "source"] = "HDX_LIVE"
+    monkeypatch.setattr(Predictor, "_load_database_history", lambda self, dsn: mixed)
+
+    predictor = Predictor(
+        Settings(database_dsn="postgresql://atie:test@127.0.0.1:5432/atie")
+    )
+    response = predictor.predict(CANONICAL_REQUEST)
+
+    assert response.forecast_source.value == "MODEL"
+    assert response.input_data_state.value == "CACHED"
+
+
+
 
