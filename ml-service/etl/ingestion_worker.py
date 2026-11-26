@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 import os
+import signal
+import threading
 import time
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -60,7 +62,15 @@ class IngestionConfig:
         dsn = os.getenv("POSTGRES_DSN")
         if not dsn:
             raise ValueError("POSTGRES_DSN is required for live ingestion")
-        schema = Path(os.getenv("INGESTION_SCHEMA_PATH", "/app/ingestion_schema.sql"))
+        default_schema = Path("/app/ingestion_schema.sql")
+        if not default_schema.exists():
+            default_schema = (
+                Path(__file__).resolve().parents[2]
+                / "db"
+                / "migrations"
+                / "001_ingestion_schema.sql"
+            )
+        schema = Path(os.getenv("INGESTION_SCHEMA_PATH", str(default_schema)))
         if not schema.exists():
             raise ValueError(f"ingestion schema is missing: {schema}")
         return cls(
@@ -90,8 +100,16 @@ class IngestionConfig:
         )
 
 
+def _connect(dsn: str) -> psycopg.Connection:
+    return psycopg.connect(
+        dsn,
+        connect_timeout=5,
+        options="-c statement_timeout=15000",
+    )
+
+
 def apply_schema(config: IngestionConfig) -> None:
-    with psycopg.connect(config.dsn, connect_timeout=5) as connection:
+    with _connect(config.dsn) as connection:
         connection.execute(config.schema_path.read_text(encoding="utf-8"))
         connection.commit()
 
@@ -106,7 +124,21 @@ def ingest_hdx(config: IngestionConfig) -> dict[str, object]:
         observations = parse_hdx_prices(payload)
         if not observations:
             raise ValueError("HDX returned no supported wholesale price rows")
+    except (httpx.HTTPError, ValueError) as error:
+        return _ingest_cached_or_fallback(
+            config,
+            config.hdx_cache_path,
+            parse_hdx_prices,
+            started,
+            source_code="HDX",
+            source_url=config.hdx_url,
+            error=error,
+        )
+    try:
         read_or_write_cache(config.hdx_cache_path, payload)
+    except OSError as cache_error:
+        logger.warning("HDX cache write failed; continuing with live DB write: %s", cache_error)
+    try:
         return _ingest_prices(
             config,
             observations,
@@ -117,15 +149,13 @@ def ingest_hdx(config: IngestionConfig) -> dict[str, object]:
             source_url=config.hdx_url,
             message="WFP Sri Lanka wholesale prices fetched from HDX.",
         )
-    except (httpx.HTTPError, OSError, ValueError, psycopg.Error) as error:
-        return _ingest_cached_or_fallback(
+    except (OSError, psycopg.Error) as db_error:
+        return _record_failure(
             config,
-            config.hdx_cache_path,
-            parse_hdx_prices,
-            started,
             source_code="HDX",
+            started=started,
             source_url=config.hdx_url,
-            error=error,
+            message=bound_message(f"HDX database persistence failed: {db_error}"),
         )
 
 
@@ -140,7 +170,24 @@ def ingest_cropix(config: IngestionConfig) -> dict[str, object]:
             observations = parse_cropix_prices(payload)
             if not observations:
                 raise ValueError("CROPIX returned no supported wholesale price rows")
+        except (httpx.HTTPError, ValueError) as error:
+            return _ingest_cached_or_fallback(
+                config,
+                config.cropix_cache_path,
+                parse_cropix_prices,
+                started,
+                source_code="CROPIX",
+                source_url=config.cropix_url,
+                error=error,
+            )
+        try:
             read_or_write_cache(config.cropix_cache_path, payload)
+        except OSError as cache_error:
+            logger.warning(
+                "CROPIX cache write failed; continuing with live DB write: %s",
+                cache_error,
+            )
+        try:
             return _ingest_prices(
                 config,
                 observations,
@@ -151,15 +198,15 @@ def ingest_cropix(config: IngestionConfig) -> dict[str, object]:
                 source_url=config.cropix_url,
                 message="CROPIX prices fetched from the configured endpoint.",
             )
-        except (httpx.HTTPError, OSError, ValueError, psycopg.Error) as error:
-            return _ingest_cached_or_fallback(
+        except (OSError, psycopg.Error) as db_error:
+            return _record_failure(
                 config,
-                config.cropix_cache_path,
-                parse_cropix_prices,
-                started,
                 source_code="CROPIX",
+                started=started,
                 source_url=config.cropix_url,
-                error=error,
+                message=bound_message(
+                    f"CROPIX database persistence failed: {db_error}"
+                ),
             )
     return _ingest_cached_or_fallback(
         config,
@@ -210,8 +257,11 @@ def ingest_weather(config: IngestionConfig) -> dict[str, object]:
                     row for row in prior_cached if row.market_code not in live_markets
                 )
             write_weather_cache(config.weather_cache_path, merged_cache)
-        except OSError as error:
-            errors.append(f"weather cache write failed: {error}")
+        except OSError as cache_error:
+            logger.warning(
+                "Weather cache write failed; continuing with live DB write: %s",
+                cache_error,
+            )
     if not observations:
         cached = prior_cached or read_weather_cache(config.weather_cache_path)
         if cached:
@@ -328,7 +378,7 @@ def _ingest_prices(
     if not rows:
         raise ValueError("price ingestion requires at least one observation")
     bounded = bound_message(message)
-    with psycopg.connect(config.dsn, connect_timeout=5) as connection:
+    with _connect(config.dsn) as connection:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -436,7 +486,7 @@ def _ingest_weather_rows(
     if not rows:
         raise ValueError("weather ingestion requires at least one observation")
     bounded = bound_message(message)
-    with psycopg.connect(config.dsn, connect_timeout=5) as connection:
+    with _connect(config.dsn) as connection:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -547,7 +597,7 @@ def _record_failure(
 ) -> dict[str, object]:
     bounded = bound_message(message)
     try:
-        with psycopg.connect(config.dsn, connect_timeout=5) as connection:
+        with _connect(config.dsn) as connection:
             _record_run(
                 connection,
                 source_code=source_code,
@@ -617,6 +667,12 @@ def _record_run(
             None if status == "SUCCESS" else bound_message(message),
         ),
     )
+    connection.execute(
+        """
+        DELETE FROM data_ingestion_runs
+        WHERE started_at < NOW() - INTERVAL '90 days'
+        """
+    )
 
 
 def _upsert_status(
@@ -651,11 +707,25 @@ def _upsert_status(
             latest_observation_date = CASE
                 WHEN %s IN ('SUCCESS', 'FALLBACK')
                  AND EXCLUDED.latest_observation_date IS NOT NULL
-                THEN EXCLUDED.latest_observation_date
+                THEN GREATEST(
+                    COALESCE(
+                        data_source_status.latest_observation_date,
+                        EXCLUDED.latest_observation_date
+                    ),
+                    EXCLUDED.latest_observation_date
+                )
                 ELSE data_source_status.latest_observation_date END,
-            source_url = COALESCE(EXCLUDED.source_url, data_source_status.source_url),
+            source_url = CASE
+                WHEN %s = 'FALLBACK'
+                THEN COALESCE(data_source_status.source_url, EXCLUDED.source_url)
+                ELSE COALESCE(EXCLUDED.source_url, data_source_status.source_url) END,
             records_written = CASE
-                WHEN %s = 'FAILED' AND data_source_status.records_written > 0
+                WHEN %s IN ('FAILED', 'FALLBACK')
+                 AND data_source_status.records_written > 0
+                THEN data_source_status.records_written
+                WHEN %s = 'SUCCESS'
+                 AND EXCLUDED.records_written = 0
+                 AND data_source_status.records_written > 0
                 THEN data_source_status.records_written
                 ELSE EXCLUDED.records_written END,
             message = EXCLUDED.message,
@@ -671,6 +741,8 @@ def _upsert_status(
             records_written,
             bound_message(message),
             now,
+            status,
+            status,
             status,
             status,
             status,
@@ -711,14 +783,28 @@ def write_heartbeat(status_path: Path) -> None:
     atomic_write_text(status_path, str(int(time.time())), encoding="ascii")
 
 
-def wait_for_next_cycle(interval_seconds: int, status_path: Path) -> None:
+def wait_for_next_cycle(
+    interval_seconds: int,
+    status_path: Path,
+    *,
+    allow_heartbeat: bool = True,
+    stop_event: threading.Event | None = None,
+) -> None:
     deadline = time.monotonic() + interval_seconds
     while True:
-        write_heartbeat(status_path)
+        if allow_heartbeat:
+            write_heartbeat(status_path)
+        if stop_event is not None and stop_event.is_set():
+            return
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             return
-        time.sleep(min(60, remaining))
+        step = min(60.0, remaining)
+        if stop_event is not None:
+            if stop_event.wait(step):
+                return
+        else:
+            time.sleep(step)
 
 
 def main() -> None:
@@ -730,17 +816,42 @@ def main() -> None:
     status_path = Path(
         os.getenv("INGESTION_HEALTH_PATH", "/tmp/atie-ingestion-health")
     )
-    write_heartbeat(status_path)
+    stop_event = threading.Event()
+
+    def _handle_stop(signum, _frame) -> None:
+        logger.info("Received signal %s; shutting down ingestion worker", signum)
+        stop_event.set()
+
+    signal.signal(signal.SIGTERM, _handle_stop)
+    signal.signal(signal.SIGINT, _handle_stop)
+
     schema_ready = False
-    while True:
+    consecutive_failures = 0
+    while not stop_event.is_set():
         try:
             if not schema_ready:
                 apply_schema(config)
                 schema_ready = True
             run_once(config, status_path=status_path, ensure_schema=False)
+            consecutive_failures = 0
+            write_heartbeat(status_path)
+            sleep_seconds = config.interval_seconds
         except Exception:
-            logger.exception("Ingestion cycle failed")
-        wait_for_next_cycle(config.interval_seconds, status_path)
+            consecutive_failures += 1
+            logger.exception(
+                "Ingestion cycle failed (consecutive_failures=%d)",
+                consecutive_failures,
+            )
+            sleep_seconds = min(
+                300 * (2 ** (consecutive_failures - 1)),
+                config.interval_seconds,
+            )
+        wait_for_next_cycle(
+            sleep_seconds,
+            status_path,
+            allow_heartbeat=consecutive_failures < 2,
+            stop_event=stop_event,
+        )
 
 
 if __name__ == "__main__":

@@ -124,8 +124,8 @@ def _compute_group_series_features(group: pd.DataFrame) -> pd.DataFrame:
     ).mean()
     cal["precipitation_7d_mm"] = daily_rain.rolling(7, min_periods=1).sum()
 
-    aligned = cal.reindex(group["recorded_date"]).reset_index(drop=True)
-    out = group.reset_index(drop=True).copy()
+    aligned = cal.reindex(deduped.index).reset_index(drop=True)
+    out = deduped.reset_index().copy()
     for column in aligned.columns:
         out[column] = aligned[column].to_numpy()
     return out
@@ -139,9 +139,14 @@ def build_features(frame: pd.DataFrame) -> pd.DataFrame:
     result["recorded_date"] = pd.to_datetime(
         result["recorded_date"], errors="raise"
     )
-    result = result.sort_values(
-        ["market_code", "crop_code", "recorded_date"]
-    ).reset_index(drop=True)
+    result = (
+        result.sort_values(["market_code", "crop_code", "recorded_date"])
+        .drop_duplicates(
+            subset=["market_code", "crop_code", "recorded_date"],
+            keep="last",
+        )
+        .reset_index(drop=True)
+    )
 
     if _has_calendar_gaps(result):
         parts = [
