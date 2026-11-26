@@ -1,8 +1,8 @@
 package com.modelx.atie.repository;
 
 import java.util.List;
-import java.util.Optional;
 
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -13,12 +13,10 @@ public interface MarketRouteRepository extends JpaRepository<MarketRoute, Long> 
     @EntityGraph(attributePaths = "destinationMarket")
     List<MarketRoute> findAll();
 
+    @Override
     @EntityGraph(attributePaths = "destinationMarket")
-    List<MarketRoute> findByOriginCodeOrderByDistanceKmAsc(String originCode);
+    List<MarketRoute> findAll(Sort sort);
 
     @EntityGraph(attributePaths = "destinationMarket")
-    Optional<MarketRoute> findByOriginCodeAndDestinationMarketCode(
-            String originCode,
-            String destinationMarketCode
-    );
+    List<MarketRoute> findByOriginCodeOrderByDistanceKmAsc(String originCode);
 }

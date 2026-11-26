@@ -98,7 +98,7 @@ class ArbitrageRoutingServiceTest {
                         route("ANURADHAPURA", keppetipola, "175", "1.25")
                 ));
         when(fuelPrices.findTopByOrderByEffectiveDateDesc()).thenReturn(Optional.of(fuel));
-        when(weather.findByMarketCodeInAndObservationDateLessThanEqualOrderByObservationDateDesc(
+        when(weather.findLatestByMarketCodesOnOrBefore(
                 org.mockito.ArgumentMatchers.anyCollection(),
                 org.mockito.ArgumentMatchers.eq(LocalDate.of(2026, 10, 29))
         )).thenReturn(List.of(
@@ -155,8 +155,48 @@ class ArbitrageRoutingServiceTest {
                 48,
                 false
         )))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(DomainValidationException.class)
                 .hasMessageContaining("Unknown origin");
+    }
+
+    @Test
+    void extremeWeatherFlagWithLowRainStillRaisesHighRiskAlert() {
+        Crop tomato = entity(Crop.class, "id", 1L, "code", "TOMATO", "name", "Tomato",
+                "spoilageRatePer100KmPct", new BigDecimal("1.50"));
+        Market dambulla = market(1L, "DAMBULLA", "Dambulla", "70");
+        Market pettah = market(2L, "PETTAH_COLOMBO", "Pettah", "205");
+        FuelPrice fuel = entity(FuelPrice.class, "id", 1L,
+                "effectiveDate", LocalDate.of(2026, 10, 1),
+                "dieselLkrPerLiter", new BigDecimal("283"),
+                "petrolLkrPerLiter", new BigDecimal("311"));
+
+        when(crops.findByCode("TOMATO")).thenReturn(Optional.of(tomato));
+        when(routes.findByOriginCodeOrderByDistanceKmAsc("ANURADHAPURA"))
+                .thenReturn(List.of(
+                        route("ANURADHAPURA", dambulla, "70", "1.00"),
+                        route("ANURADHAPURA", pettah, "205", "1.00")
+                ));
+        when(fuelPrices.findTopByOrderByEffectiveDateDesc()).thenReturn(Optional.of(fuel));
+        when(weather.findLatestByMarketCodesOnOrBefore(
+                org.mockito.ArgumentMatchers.anyCollection(),
+                org.mockito.ArgumentMatchers.eq(LocalDate.of(2026, 10, 29))
+        )).thenReturn(List.of(
+                entity(WeatherObservation.class,
+                        "market", dambulla,
+                        "observationDate", LocalDate.of(2026, 10, 29),
+                        "precipitationMm", new BigDecimal("2.00"),
+                        "extremeWeatherFlag", true,
+                        "source", "OPEN_METEO_LIVE")
+        ));
+
+        AnalyzeResponse response = service.analyze(new AnalyzeRequest(
+                "ANURADHAPURA", "DAMBULLA", "TOMATO",
+                new BigDecimal("1000"), VehicleType.MINI_TRUCK_BATTA, 48, true
+        ));
+
+        assertThat(response.weatherAlerts()).singleElement()
+                .extracting("riskLevel")
+                .isEqualTo("HIGH");
     }
 
     private MlServiceClient.MlForecastResponse fixtureForecast() {

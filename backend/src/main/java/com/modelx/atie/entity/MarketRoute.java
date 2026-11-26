@@ -32,7 +32,7 @@ public class MarketRoute {
     @Column(name = "origin_code", nullable = false, length = 32)
     private String originCode;
 
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "destination_market_id", nullable = false)
     private Market destinationMarket;
 

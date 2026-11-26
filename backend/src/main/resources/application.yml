@@ -5,6 +5,9 @@ spring:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/atie}
     username: ${DATABASE_USERNAME:atie}
     password: ${DATABASE_PASSWORD:atie_dev_password}
+    hikari:
+      connection-timeout: 5000
+      maximum-pool-size: 10
   jpa:
     hibernate:
       ddl-auto: validate
@@ -16,6 +19,8 @@ spring:
 
 server:
   port: ${BACKEND_PORT:8080}
+  shutdown: graceful
+  forward-headers-strategy: framework
 
 springdoc:
   swagger-ui:
