@@ -379,4 +379,50 @@ describe("ATIE Android Option A — Normative Contracts & Field UX", () => {
     }
     assert.equal(getOfflineDemoHistory("DAMBULLA", "CARROT"), null);
   });
+
+  it("hardens endpoint URLs, cache clock-skew, metadata TTL, and 0-route origins", () => {
+    assert.throws(() => normalizeBaseUrl("ftp://192.168.1.10:8080"), /http/);
+    assert.throws(
+      () => normalizeBaseUrl("http://user:pass@192.168.1.10:8080"),
+      /credentials/,
+    );
+    assert.throws(() => normalizeBaseUrl("http://999.1.1.1:8080"), /valid http|IPv4/);
+    assert.equal(extractLanHostFromExpoUri("999.168.1.42:8081"), null);
+
+    const zeroRouteConfig = {
+      ...fallbackMetadataConfig,
+      routes: fallbackMetadataConfig.routes.filter(
+        (route) => route.originCode !== "JAFFNA",
+      ),
+    };
+    assert.deepEqual(filterReachableMarkets(zeroRouteConfig, "JAFFNA"), []);
+
+    const refNow = Date.parse("2026-10-27T12:00:00Z");
+    const futureSnapshot: CachedResultSnapshot = {
+      request: { ...demoRequest, demoMode: false },
+      response: { ...demoResponse, forecastSource: "MODEL" },
+      cachedAt: "2026-10-28T12:00:00Z",
+    };
+    assert.equal(validateCachedResultSnapshot(futureSnapshot, refNow), null);
+
+    assert.ok(
+      validateCachedMetadata(
+        {
+          savedAt: "2026-10-27T08:00:00Z",
+          config: fallbackMetadataConfig,
+        },
+        refNow,
+      ),
+    );
+    assert.equal(
+      validateCachedMetadata(
+        {
+          savedAt: "2026-10-20T08:00:00Z",
+          config: fallbackMetadataConfig,
+        },
+        refNow,
+      ),
+      null,
+    );
+  });
 });

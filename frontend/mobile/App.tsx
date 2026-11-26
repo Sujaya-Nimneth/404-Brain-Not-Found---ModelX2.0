@@ -20,6 +20,7 @@ import {
 import { BottomTabBar } from "./src/components/BottomTabBar";
 import { ConsignmentSetup } from "./src/components/ConsignmentSetup";
 import { DataProvenanceCard } from "./src/components/DataProvenanceCard";
+import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import { ForecastTrajectoryPanel } from "./src/components/ForecastTrajectoryPanel";
 import { Header } from "./src/components/Header";
 import { HeroSection } from "./src/components/HeroSection";
@@ -62,12 +63,13 @@ import type {
   MetadataConfig,
   MobileTab,
 } from "./src/types/atie";
-import { sameRequest } from "./src/utils/format";
+import { isCacheSnapshotFresh, sameRequest } from "./src/utils/format";
 
 interface ResultSnapshot {
   request: AnalyzeRequest;
   response: AnalyzeResponse;
   cachedAt: string | null;
+  fetchedAtMs?: number;
 }
 
 interface FailureNotice {
@@ -110,9 +112,13 @@ export default function App() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
   const [failure, setFailure] = useState<FailureNotice | null>(null);
 
+  const scrollViewRef = useRef<React.ComponentRef<typeof ScrollView> | null>(
+    null,
+  );
   const activeControllerRef = useRef<AbortController | null>(null);
   const runIdRef = useRef(0);
   const resultRef = useRef<ResultSnapshot | null>(result);
@@ -164,6 +170,7 @@ export default function App() {
       if (savedApiKey) setCustomApiKey(savedApiKey);
       if (cachedMeta) setMetadata(cachedMeta);
       if (cachedLive) persistedLiveRef.current = cachedLive;
+      setHydrated(true);
 
       await refreshMetadataAndStatus(bootController.signal);
     }
@@ -217,9 +224,11 @@ export default function App() {
               : { kind: "live" }),
         },
         cachedAt: null,
+        fetchedAtMs: Date.now(),
       };
 
       setResult(nextSnapshot);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       if (apiResponse.forecastSource !== "DEMO_FIXTURE") {
         setBackendReachable(true);
         const toCache: CachedResultSnapshot = {
@@ -242,10 +251,16 @@ export default function App() {
       setBackendReachable(false);
 
       const inMemoryCurrent = resultRef.current;
+      const inMemoryTimestamp =
+        inMemoryCurrent?.cachedAt ??
+        (inMemoryCurrent?.fetchedAtMs
+          ? new Date(inMemoryCurrent.fetchedAtMs).toISOString()
+          : null);
       const keepInMemory =
         inMemoryCurrent !== null &&
         inMemoryCurrent.response.forecastSource !== "DEMO_FIXTURE" &&
-        sameRequest(inMemoryCurrent.request, nextRequest);
+        sameRequest(inMemoryCurrent.request, nextRequest) &&
+        isCacheSnapshotFresh(inMemoryTimestamp);
 
       const diskMatch = findMatchingCachedResult(
         persistedLiveRef.current,
@@ -313,12 +328,14 @@ export default function App() {
     response?.weatherAlerts.some((w) => w.riskLevel === "HIGH") ?? false;
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-        <StatusBar style="dark" />
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+          <StatusBar style="dark" />
 
-        <ScrollView
-          style={styles.scrollView}
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -405,6 +422,7 @@ export default function App() {
                 <RouteLedger
                   markets={response.marketComparisons}
                   language={language}
+                  defaultMarketCode={activeRequest.defaultMarketCode}
                 />
               </>
             ) : (
@@ -456,9 +474,11 @@ export default function App() {
               ATIE ANDROID · SAFE ROUTING FIRST · MODELX 2.0
             </Text>
             <Text style={styles.footerSubText} numberOfLines={1}>
-              {response
-                ? `${response.forecastSource} · ${response.modelVersion} · ${getActiveApiBaseUrl()}`
-                : getActiveApiBaseUrl()}
+              {!hydrated
+                ? "Initializing offline store…"
+                : response
+                  ? `${response.forecastSource} · ${response.modelVersion} · ${getActiveApiBaseUrl()}`
+                  : getActiveApiBaseUrl()}
             </Text>
           </View>
         </ScrollView>
@@ -477,8 +497,9 @@ export default function App() {
           onClose={() => setServerModalOpen(false)}
           onSaveEndpoint={handleSaveEndpoint}
         />
-      </SafeAreaView>
-    </SafeAreaProvider>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 

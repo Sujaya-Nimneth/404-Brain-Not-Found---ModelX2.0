@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { localizePlaceName, UI_STRINGS } from "../i18n/translations";
@@ -10,10 +10,21 @@ interface Props {
   language: LanguageCode;
 }
 
+function riskRank(level: WeatherAlert["riskLevel"]): number {
+  return level === "HIGH" ? 3 : level === "MEDIUM" ? 2 : 1;
+}
+
 export function WeatherDisruptions({ alerts, language }: Props) {
   const t = UI_STRINGS[language];
+  const sortedAlerts = useMemo(
+    () =>
+      [...(alerts ?? [])].sort(
+        (left, right) => riskRank(right.riskLevel) - riskRank(left.riskLevel),
+      ),
+    [alerts],
+  );
 
-  if (!alerts || alerts.length === 0) return null;
+  if (sortedAlerts.length === 0) return null;
 
   return (
     <View style={styles.card}>
@@ -28,7 +39,7 @@ export function WeatherDisruptions({ alerts, language }: Props) {
       </View>
 
       <View style={styles.alertList}>
-        {alerts.map((a, index) => {
+        {sortedAlerts.map((a, index) => {
           const isHigh = a.riskLevel === "HIGH";
           const isMedium = a.riskLevel === "MEDIUM";
 

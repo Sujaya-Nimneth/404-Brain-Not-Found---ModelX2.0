@@ -112,6 +112,8 @@ export function parseCacheTimestampMs(cachedAt: string | null | undefined): numb
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+const MAX_FUTURE_CLOCK_SKEW_MS = 5 * 60 * 1000;
+
 export function isCacheSnapshotFresh(
   cachedAt: string | null | undefined,
   nowMs = Date.now(),
@@ -119,6 +121,7 @@ export function isCacheSnapshotFresh(
 ): boolean {
   const savedMs = parseCacheTimestampMs(cachedAt);
   if (savedMs === null) return false;
+  if (savedMs - nowMs > MAX_FUTURE_CLOCK_SKEW_MS) return false;
   return nowMs - savedMs <= maxAgeMs;
 }
 

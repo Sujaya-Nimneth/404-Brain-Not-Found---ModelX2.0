@@ -19,7 +19,7 @@ export function ProfitComparisonChart({ markets, language }: Props) {
     let peak = 1;
     for (const m of markets) {
       const deductions = m.transportCostLkr + m.handlingCostLkr;
-      const total = Math.max(0, m.netProfitLkr) + deductions + m.spoilageLossLkr;
+      const total = Math.abs(m.netProfitLkr) + deductions + Math.max(0, m.spoilageLossLkr);
       if (total > peak) peak = total;
     }
     return peak;
@@ -49,11 +49,12 @@ export function ProfitComparisonChart({ markets, language }: Props) {
 
       <View style={styles.rowsContainer}>
         {markets.map((m) => {
-          const net = Math.max(0, m.netProfitLkr);
-          const deductions = m.transportCostLkr + m.handlingCostLkr;
+          const isNegative = m.netProfitLkr < 0;
+          const netAbs = Math.abs(m.netProfitLkr);
+          const deductions = Math.max(0, m.transportCostLkr + m.handlingCostLkr);
           const spoilage = Math.max(0, m.spoilageLossLkr);
 
-          const netPct = (net / maxTotal) * 100;
+          const netPct = (netAbs / maxTotal) * 100;
           const deductPct = (deductions / maxTotal) * 100;
           const spoilPct = (spoilage / maxTotal) * 100;
 
@@ -69,13 +70,19 @@ export function ProfitComparisonChart({ markets, language }: Props) {
                   style={[
                     styles.marketLabel,
                     m.recommended && styles.marketLabelRec,
+                    isNegative && { color: "#8b3e2b" },
                   ]}
                   numberOfLines={1}
                 >
                   {label}
                   {m.recommended ? " ★" : ""}
                 </Text>
-                <Text style={styles.netAmount}>
+                <Text
+                  style={[
+                    styles.netAmount,
+                    isNegative && { color: "#8b3e2b" },
+                  ]}
+                >
                   {formatCurrency(m.netProfitLkr)}
                 </Text>
               </View>
@@ -95,7 +102,13 @@ export function ProfitComparisonChart({ markets, language }: Props) {
                   width={netPct}
                   height={14}
                   rx={3}
-                  fill={m.recommended ? colors.moss : colors.leaf}
+                  fill={
+                    isNegative
+                      ? "#8b3e2b"
+                      : m.recommended
+                        ? colors.moss
+                        : colors.leaf
+                  }
                 />
                 <Rect
                   x={netPct}

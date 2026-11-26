@@ -28,7 +28,9 @@ export function SourceProvenanceNotice({
   const isFallback = response.forecastSource === "FALLBACK";
 
   const title = cachedAt
-    ? "Offline cached result active."
+    ? isFallback
+      ? "Offline cached fallback result active."
+      : "Offline cached result active."
     : isDemo
       ? "Canonical demo fixture active (DEMO_FIXTURE)."
       : isFallback
@@ -38,7 +40,9 @@ export function SourceProvenanceNotice({
           : "Seed inputs active.";
 
   const detail = cachedAt
-    ? `Backend unreachable; retaining last verified live calculation (${cachedAt}) because the requested consignment matches identically.`
+    ? isFallback
+      ? `Backend unreachable; retaining last cached deterministic fallback calculation (${cachedAt}) because the requested consignment matches identically.`
+      : `Backend unreachable; retaining last verified live model calculation (${cachedAt}) because the requested consignment matches identically.`
     : response.analysisState?.kind === "demo"
       ? response.analysisState.message
       : [

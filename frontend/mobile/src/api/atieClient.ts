@@ -37,7 +37,6 @@ export {
 
 const expoHostUri = Constants.expoConfig?.hostUri ?? null;
 const envApiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? null;
-const envApiKey = process.env.EXPO_PUBLIC_ATIE_API_KEY?.trim() || null;
 
 export const AUTO_DETECTED_BASE_URL = resolveDefaultAndroidBaseUrl(
   envApiBaseUrl,
@@ -48,8 +47,15 @@ let customApiBaseUrl: string | null = null;
 let customApiKey: string | null = null;
 
 export function setCustomApiBaseUrl(url: string | null): void {
-  customApiBaseUrl =
-    url && url.trim().length > 0 ? normalizeBaseUrl(url) : null;
+  if (!url || url.trim().length === 0) {
+    customApiBaseUrl = null;
+    return;
+  }
+  try {
+    customApiBaseUrl = normalizeBaseUrl(url);
+  } catch {
+    customApiBaseUrl = null;
+  }
 }
 
 export function getCustomApiBaseUrl(): string | null {
@@ -66,7 +72,7 @@ export function getCustomApiKey(): string | null {
 }
 
 export function getActiveApiKey(): string | null {
-  return customApiKey ?? envApiKey;
+  return customApiKey;
 }
 
 export function getActiveApiBaseUrl(): string {
@@ -259,7 +265,7 @@ async function fetchJsonWithGatewayFallback(
     }
   }
 
-  if (lastGatewayError && lastNetworkError === null) {
+  if (lastGatewayError) {
     throw lastGatewayError;
   }
 
@@ -376,55 +382,71 @@ export async function pingEndpointHealth(
   candidateBaseUrl: string,
   candidateApiKey?: string | null,
 ): Promise<{ ok: boolean; statusText: string }> {
-  const normalized = normalizeBaseUrl(candidateBaseUrl);
-  const { signal, cleanup } = mergeAbortSignals(undefined, 4500);
-  const authHeaders = buildAuthHeaders(candidateApiKey);
+  let normalized: string;
   try {
-    const [statusResp, configResp] = await Promise.all([
-      fetch(`${normalized}/metadata/data-status`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "X-Request-ID": createRequestId(),
-          ...authHeaders,
-        },
-        signal,
-      }),
-      fetch(`${normalized}/metadata/config`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "X-Request-ID": createRequestId(),
-          ...authHeaders,
-        },
-        signal,
-      }),
-    ]);
-    if (configResp.status === 401) {
-      return {
-        ok: false,
-        statusText: `HTTP 401 Unauthorized · enter X-ATIE-API-Key or use :15173 gateway`,
-      };
-    }
-    if (!statusResp.ok || !configResp.ok) {
-      const code = !configResp.ok ? configResp.status : statusResp.status;
-      return {
-        ok: false,
-        statusText: `HTTP ${code} from ${normalized}`,
-      };
-    }
-    const status = mapDataStatus(await statusResp.json());
-    mapMetadataConfig(await configResp.json());
-    return {
-      ok: true,
-      statusText: `Connected (${status.overallStatus}) · ${normalized}`,
-    };
-  } catch {
+    normalized = normalizeBaseUrl(candidateBaseUrl);
+  } catch (error) {
     return {
       ok: false,
-      statusText: `Unreachable · ${normalized}`,
+      statusText:
+        error instanceof Error ? error.message : "Invalid endpoint URL.",
     };
-  } finally {
-    cleanup();
   }
+  const fallback = deriveDirectBackendFallbackUrl(normalized);
+  const candidates = fallback ? [normalized, fallback] : [normalized];
+  const authHeaders = buildAuthHeaders(candidateApiKey);
+
+  let lastStatusText = `Unreachable · ${normalized}`;
+  for (let idx = 0; idx < candidates.length; idx++) {
+    const base = candidates[idx];
+    const hasMore = idx < candidates.length - 1;
+    const { signal, cleanup } = mergeAbortSignals(undefined, 4500);
+    try {
+      const [statusResp, configResp] = await Promise.all([
+        fetch(`${base}/metadata/data-status`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "X-Request-ID": createRequestId(),
+            ...authHeaders,
+          },
+          signal,
+        }),
+        fetch(`${base}/metadata/config`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "X-Request-ID": createRequestId(),
+            ...authHeaders,
+          },
+          signal,
+        }),
+      ]);
+      if (configResp.status === 401 || configResp.status === 403) {
+        return {
+          ok: false,
+          statusText: `HTTP ${configResp.status} Auth error · check X-ATIE-API-Key or use :15173 gateway`,
+        };
+      }
+      if (!statusResp.ok || !configResp.ok) {
+        const code = !configResp.ok ? configResp.status : statusResp.status;
+        lastStatusText = `HTTP ${code} from ${base}`;
+        if (hasMore && shouldRetryDirectBackendOnHttpStatus(code)) {
+          continue;
+        }
+        return { ok: false, statusText: lastStatusText };
+      }
+      const status = mapDataStatus(await statusResp.json());
+      mapMetadataConfig(await configResp.json());
+      return {
+        ok: true,
+        statusText: `Connected (${status.overallStatus}) · ${base}`,
+      };
+    } catch {
+      lastStatusText = `Unreachable · ${base}`;
+    } finally {
+      cleanup();
+    }
+  }
+  return { ok: false, statusText: lastStatusText };
 }

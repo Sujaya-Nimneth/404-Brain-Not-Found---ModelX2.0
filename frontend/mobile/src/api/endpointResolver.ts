@@ -1,15 +1,47 @@
 export const ANDROID_EMULATOR_GATEWAY_URL = "http://10.0.2.2:15173/api/v1";
 export const ANDROID_EMULATOR_DIRECT_BACKEND_URL = "http://10.0.2.2:8080/api/v1";
 
-const IPV4_HOST_PATTERN =
-  /^(?:\d{1,3}\.){3}\d{1,3}$/;
+const IPV4_HOST_PATTERN = /^(?:\d{1,3}\.){3}\d{1,3}$/;
+
+export function isValidIpv4Host(host: string): boolean {
+  if (!IPV4_HOST_PATTERN.test(host)) return false;
+  return host
+    .split(".")
+    .every((segment) => {
+      const value = Number(segment);
+      return Number.isInteger(value) && value >= 0 && value <= 255;
+    });
+}
 
 export function normalizeBaseUrl(url: string): string {
   const trimmed = url.trim().replace(/\/+$/, "");
   if (!trimmed) return ANDROID_EMULATOR_GATEWAY_URL;
-  if (trimmed.endsWith("/api/v1")) return trimmed;
-  if (trimmed.endsWith("/api")) return `${trimmed}/v1`;
-  return `${trimmed}/api/v1`;
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new Error("Server URL must be a valid http:// or https:// URL.");
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Server URL must start with http:// or https://.");
+  }
+  if (parsed.username || parsed.password || trimmed.includes("@")) {
+    throw new Error("Server URL must not include embedded credentials.");
+  }
+  if (!parsed.hostname) {
+    throw new Error("Server URL must include a valid host.");
+  }
+  if (
+    IPV4_HOST_PATTERN.test(parsed.hostname) &&
+    !isValidIpv4Host(parsed.hostname)
+  ) {
+    throw new Error("Server URL contains an invalid IPv4 address.");
+  }
+
+  const originAndPath = `${parsed.origin}${parsed.pathname.replace(/\/+$/, "")}`;
+  if (originAndPath.endsWith("/api/v1")) return originAndPath;
+  if (originAndPath.endsWith("/api")) return `${originAndPath}/v1`;
+  return `${originAndPath}/api/v1`;
 }
 
 export function extractLanHostFromExpoUri(
@@ -18,10 +50,15 @@ export function extractLanHostFromExpoUri(
   if (!hostUri) return null;
   const cleaned = hostUri.trim().replace(/^[a-z]+:\/\//i, "");
   const host = cleaned.split("/")[0]?.split(":")[0]?.trim() ?? "";
-  if (!host || host === "localhost" || host === "127.0.0.1" || host === "10.0.2.2") {
+  if (
+    !host ||
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "10.0.2.2"
+  ) {
     return null;
   }
-  if (IPV4_HOST_PATTERN.test(host)) {
+  if (isValidIpv4Host(host)) {
     return host;
   }
   return null;
