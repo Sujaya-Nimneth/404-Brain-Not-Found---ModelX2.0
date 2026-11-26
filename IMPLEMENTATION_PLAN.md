@@ -56,7 +56,7 @@ Agents must scaffold and maintain the following exact directory layout inside th
 │   ├── training/
 │   │   ├── train_model.py           # Trains XGBoost/RandomForest + compares vs Naive & 7-day MA baselines
 │   │   └── evaluate.py              # Computes Directional Symmetry (DS) and Mean Absolute Error (MAE)
-│   ├── models/                      # Serialized .joblib / .json model artifacts & evaluation_report.json
+│   ├── models/                      # Serialized .json manifest, .ubj model binaries & evaluation_report.json
 │   └── tests/
 │       └── test_inference.py        # Pytest unit tests for ML endpoints and DS/MAE calculation
 ├── backend/                         # Java 17/21 Spring Boot 3.x Core API Service

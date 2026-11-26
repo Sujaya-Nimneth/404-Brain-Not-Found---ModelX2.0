@@ -54,9 +54,9 @@ profit_delta_lkr:     23238.58
 profit_uplift_pct:    15.84
 ```
 
-The same request with `demo_mode: false` runs live `xgb-v2.0` inference on the
+The same request with `demo_mode: false` runs live `xgb-v2.1` inference on the
 causal arrival-surge and rainfall series and returns `MODEL`,
-`CRITICAL_REROUTE` (`PETTAH_COLOMBO`, `+22.51%` net uplift), and seven market
+`CRITICAL_REROUTE` (`PETTAH_COLOMBO`, `+22.32%` net uplift), and seven market
 forecasts in the current verified state.
 
 ## Current Data Status
@@ -79,8 +79,9 @@ cd ml-service && python -m pytest -q
 cd ../backend && ATIE_TEST_DATABASE_URL=jdbc:postgresql://localhost:55432/atie \
   ATIE_TEST_DATABASE_USERNAME=atie \
   ATIE_TEST_DATABASE_PASSWORD=atie_dev_password \
-  mvn -q -Ppostgres-it -Dnet.bytebuddy.experimental=true test
+  mvn -q -Ppostgres-it test
 cd ../frontend && npm test && npm run lint && npm run build
+cd ../frontend/mobile && npm run typecheck && npm test && npm run export:android
 CI=true ATIE_E2E_URL=http://localhost:15173 npm run test:e2e
 cd .. && docker compose --env-file .env.example config
 docker compose --env-file .env.example ps
