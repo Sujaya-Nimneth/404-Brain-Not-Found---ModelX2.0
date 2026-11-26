@@ -81,7 +81,7 @@ test("renders the canonical fixture and switches to live model output", async ({
     page.getByRole("button", { name: "Show highest-risk markets" }),
   ).toBeVisible();
 
-  await page.getByLabel(/Forecast/i).selectOption("72");
+  await page.getByRole("combobox", { name: /^Forecast/i }).selectOption("72");
   await expect(page.getByText(/Consignment settings changed/i)).toBeVisible();
   await page.getByRole("button", { name: "Analyze market route" }).click();
   await expect(page.getByText("Model check (72h)")).toBeVisible({
