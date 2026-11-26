@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { MapPin, Sprout, Truck, Wheat } from "lucide-react";
+import { ChevronDown, MapPin, Sprout, Truck, Wheat } from "lucide-react";
 import { fetchMetadataConfig } from "../api/atieClient";
-import type {
-  AnalyzeRequest,
-  MetadataConfig,
-} from "../types/atie";
+import type { AnalyzeRequest, MetadataConfig } from "../types/atie";
+import { formatFixed2, formatLkr } from "../utils/format";
 
 interface Props {
   value: AnalyzeRequest;
   onChange: (request: AnalyzeRequest) => void;
   onAnalyze: () => void;
   onDemo: () => void;
+  onThresholdsLoaded?: (thresholds: MetadataConfig["thresholds"]) => void;
   loading: boolean;
 }
 
@@ -19,6 +18,7 @@ export function OnboardingConfigModal({
   onChange,
   onAnalyze,
   onDemo,
+  onThresholdsLoaded,
   loading,
 }: Props) {
   const [metadata, setMetadata] = useState<MetadataConfig | null>(null);
@@ -33,17 +33,23 @@ export function OnboardingConfigModal({
 
   useEffect(() => {
     let active = true;
-    fetchMetadataConfig()
+    const controller = new AbortController();
+    fetchMetadataConfig(controller.signal)
       .then((config) => {
-        if (active) setMetadata(config);
+        if (!active) return;
+        setMetadata(config);
+        onThresholdsLoaded?.(config.thresholds);
       })
       .catch(() => {
-        if (active) setMetadataError(true);
+        if (active && !controller.signal.aborted) {
+          setMetadataError(true);
+        }
       });
     return () => {
       active = false;
+      controller.abort();
     };
-  }, []);
+  }, [onThresholdsLoaded]);
 
   const reachableMarkets = useMemo(() => {
     if (!metadata) return [];
@@ -54,6 +60,20 @@ export function OnboardingConfigModal({
     );
     return metadata.markets.filter((market) => allowed.has(market.code));
   }, [metadata, value.originCode]);
+
+  useEffect(() => {
+    if (
+      reachableMarkets.length > 0 &&
+      !reachableMarkets.some(
+        (market) => market.code === value.defaultMarketCode,
+      )
+    ) {
+      onChange({
+        ...value,
+        defaultMarketCode: reachableMarkets[0].code,
+      });
+    }
+  }, [reachableMarkets, value, onChange]);
 
   const update = <K extends keyof AnalyzeRequest>(
     key: K,
@@ -81,6 +101,9 @@ export function OnboardingConfigModal({
       route.marketCode === value.defaultMarketCode,
   );
 
+  const marketOptions =
+    reachableMarkets.length > 0 ? reachableMarkets : fallbackMarkets;
+
   return (
     <section
       aria-label="Consignment setup"
@@ -88,7 +111,7 @@ export function OnboardingConfigModal({
     >
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
-          <p className="font-mono text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-moss">
+          <p className="font-mono text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-moss">
             Consignment setup
           </p>
           <h2 className="mt-2 font-display text-2xl font-semibold text-ink md:text-3xl">
@@ -100,156 +123,219 @@ export function OnboardingConfigModal({
           onClick={onDemo}
           className="group inline-flex items-center justify-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-bold text-cream transition hover:-translate-y-0.5 hover:bg-moss"
         >
-          <Sprout className="h-4 w-4 text-lime transition group-hover:rotate-6" />
+          <Sprout
+            aria-hidden="true"
+            className="h-4 w-4 text-lime transition group-hover:rotate-6"
+          />
           Load Northern glut demo
         </button>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
-        <Field label="Origin" icon={<MapPin className="h-4 w-4" />}>
-          <select
-            value={value.originCode}
-            onChange={(event) => updateOrigin(event.target.value)}
-            className="field"
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onAnalyze();
+        }}
+      >
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
+          <Field
+            label="Origin"
+            icon={<MapPin aria-hidden="true" className="h-4 w-4" />}
           >
-            {(metadata?.origins ?? fallbackOrigins).map((origin) => (
-              <option key={origin.code} value={origin.code}>
-                {origin.name}
-              </option>
-            ))}
-          </select>
-        </Field>
+            <div className="relative">
+              <select
+                value={value.originCode}
+                onChange={(event) => updateOrigin(event.target.value)}
+                className="field pr-9"
+              >
+                {(metadata?.origins ?? fallbackOrigins).map((origin) => (
+                  <option key={origin.code} value={origin.code}>
+                    {origin.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                aria-hidden="true"
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/60"
+              />
+            </div>
+          </Field>
 
-        <Field label="Default market" icon={<MapPin className="h-4 w-4" />}>
-          <select
-            value={value.defaultMarketCode}
-            onChange={(event) =>
-              update("defaultMarketCode", event.target.value)
-            }
-            className="field"
+          <Field
+            label="Default market"
+            icon={<MapPin aria-hidden="true" className="h-4 w-4" />}
           >
-            {(reachableMarkets.length > 0
-              ? reachableMarkets
-              : fallbackMarkets
-            ).map((market) => (
-              <option key={market.code} value={market.code}>
-                {market.name}
-              </option>
-            ))}
-          </select>
-        </Field>
+            <div className="relative">
+              <select
+                value={value.defaultMarketCode}
+                onChange={(event) =>
+                  update("defaultMarketCode", event.target.value)
+                }
+                className="field pr-9"
+              >
+                {marketOptions.map((market) => (
+                  <option key={market.code} value={market.code}>
+                    {market.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                aria-hidden="true"
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/60"
+              />
+            </div>
+          </Field>
 
-        <Field label="Crop" icon={<Wheat className="h-4 w-4" />}>
-          <select
-            value={value.cropCode}
-            onChange={(event) => update("cropCode", event.target.value)}
-            className="field"
+          <Field
+            label="Crop"
+            icon={<Wheat aria-hidden="true" className="h-4 w-4" />}
           >
-            {(metadata?.crops ?? fallbackCrops).map((crop) => (
-              <option key={crop.code} value={crop.code}>
-                {crop.name}
-              </option>
-            ))}
-          </select>
-        </Field>
+            <div className="relative">
+              <select
+                value={value.cropCode}
+                onChange={(event) => update("cropCode", event.target.value)}
+                className="field pr-9"
+              >
+                {(metadata?.crops ?? fallbackCrops).map((crop) => (
+                  <option key={crop.code} value={crop.code}>
+                    {crop.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                aria-hidden="true"
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/60"
+              />
+            </div>
+          </Field>
 
-        <Field label="Harvest (kg)" icon={<Wheat className="h-4 w-4" />}>
-          <input
-            type="number"
-            min={1}
-            max={100000}
-            value={quantityDraft}
-            onChange={(event) => {
-              const raw = event.target.value;
-              setQuantityDraft(raw);
-              const parsed = Number(raw);
-              if (raw.trim() !== "" && Number.isFinite(parsed) && parsed > 0) {
-                const clamped = Math.min(100_000, parsed);
-                update("quantityKg", clamped);
-              }
-            }}
-            onBlur={() => {
-              const parsed = Number(quantityDraft);
-              if (
-                quantityDraft.trim() === "" ||
-                !Number.isFinite(parsed) ||
-                parsed <= 0
-              ) {
-                setQuantityDraft(String(value.quantityKg));
-                return;
-              }
-              const clamped = Math.min(100_000, Math.max(1, parsed));
-              setQuantityDraft(String(clamped));
-              if (clamped !== value.quantityKg) {
-                update("quantityKg", clamped);
-              }
-            }}
-            className="field"
-          />
-        </Field>
-
-        <Field label="Vehicle" icon={<Truck className="h-4 w-4" />}>
-          <select
-            value={value.vehicleType}
-            onChange={(event) =>
-              update(
-                "vehicleType",
-                event.target.value as AnalyzeRequest["vehicleType"],
-              )
-            }
-            className="field"
+          <Field
+            label="Harvest (kg)"
+            icon={<Wheat aria-hidden="true" className="h-4 w-4" />}
           >
-            {(metadata?.vehicleTypes ?? fallbackVehicles).map((vehicle) => (
-              <option key={vehicle.code} value={vehicle.code}>
-                {vehicle.displayName} · {formatCapacity(vehicle.capacityKg)}
-              </option>
-            ))}
-          </select>
-        </Field>
+            <input
+              type="number"
+              min={1}
+              max={100000}
+              step={1}
+              value={quantityDraft}
+              onChange={(event) => {
+                const raw = event.target.value;
+                setQuantityDraft(raw);
+                const parsed = Number(raw);
+                if (raw.trim() !== "" && Number.isFinite(parsed) && parsed >= 1) {
+                  const clamped = Math.min(100_000, Math.round(parsed));
+                  if (clamped !== parsed) {
+                    setQuantityDraft(String(clamped));
+                  }
+                  update("quantityKg", clamped);
+                }
+              }}
+              onBlur={() => {
+                const parsed = Number(quantityDraft);
+                if (
+                  quantityDraft.trim() === "" ||
+                  !Number.isFinite(parsed) ||
+                  parsed < 1
+                ) {
+                  setQuantityDraft(String(value.quantityKg));
+                  return;
+                }
+                const clamped = Math.min(100_000, Math.max(1, Math.round(parsed)));
+                setQuantityDraft(String(clamped));
+                if (clamped !== value.quantityKg) {
+                  update("quantityKg", clamped);
+                }
+              }}
+              className="field"
+            />
+          </Field>
 
-        <Field label="Forecast" icon={<MapPin className="h-4 w-4" />}>
-          <select
-            value={value.horizonHours}
-            onChange={(event) =>
-              update("horizonHours", Number(event.target.value) as 48 | 72)
-            }
-            className="field"
+          <Field
+            label="Vehicle"
+            icon={<Truck aria-hidden="true" className="h-4 w-4" />}
           >
-            {(metadata?.horizons ?? [48, 72]).map((horizon) => (
-              <option key={horizon} value={horizon}>
-                {horizon} hours
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
+            <div className="relative">
+              <select
+                value={value.vehicleType}
+                onChange={(event) =>
+                  update(
+                    "vehicleType",
+                    event.target.value as AnalyzeRequest["vehicleType"],
+                  )
+                }
+                className="field pr-9"
+              >
+                {(metadata?.vehicleTypes ?? fallbackVehicles).map((vehicle) => (
+                  <option key={vehicle.code} value={vehicle.code}>
+                    {vehicle.displayName} · {formatCapacity(vehicle.capacityKg)}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                aria-hidden="true"
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/60"
+              />
+            </div>
+          </Field>
 
-      <div className="mt-5 flex flex-col gap-3 border-t border-ink/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="max-w-xl text-xs leading-relaxed text-ink/55">
-            Recommendations compare net profit after fuel, terrain, handling and
-            spoilage. A reroute requires a{" "}
-            {formatThreshold(metadata?.thresholds.safeMarginPct, 5)}% margin and{" "}
-            {formatLkrThreshold(metadata?.thresholds.safeAbsoluteFloorLkr)} minimum
-            gain.
-          </p>
-          <p className="mt-1 font-mono text-[0.58rem] uppercase tracking-[0.1em] text-ink/35">
-            {selectedRoute
-              ? `${selectedRoute.distanceKm.toFixed(0)} km one way · terrain ×${selectedRoute.terrainFactor.toFixed(2)}`
-              : metadataError
-                ? "Metadata API unavailable · using verified defaults"
-                : "Loading route configuration"}
-          </p>
+          <Field
+            label="Forecast"
+            icon={<MapPin aria-hidden="true" className="h-4 w-4" />}
+          >
+            <div className="relative">
+              <select
+                value={value.horizonHours}
+                onChange={(event) =>
+                  update("horizonHours", Number(event.target.value) as 48 | 72)
+                }
+                className="field pr-9"
+              >
+                {(metadata?.horizons ?? [48, 72]).map((horizon) => (
+                  <option key={horizon} value={horizon}>
+                    {horizon} hours
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                aria-hidden="true"
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/60"
+              />
+            </div>
+          </Field>
         </div>
-        <button
-          type="button"
-          onClick={onAnalyze}
-          disabled={loading}
-          className="rounded-full bg-clay px-6 py-3 text-sm font-extrabold text-cream transition hover:-translate-y-0.5 hover:bg-[#ad4f2d] disabled:cursor-wait disabled:opacity-60"
-        >
-          {loading ? "Calculating safest route…" : "Analyze market route"}
-        </button>
-      </div>
+
+        <div className="mt-5 flex flex-col gap-3 border-t border-ink/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="max-w-xl text-xs leading-relaxed text-ink/75">
+              Recommendations compare net profit after fuel, terrain, handling and
+              spoilage. A reroute requires a{" "}
+              <strong className="text-ink">
+                {formatFixed2(metadata?.thresholds.safeMarginPct ?? 5)}%
+              </strong>{" "}
+              margin and{" "}
+              <strong className="text-ink">
+                LKR {formatLkr(metadata?.thresholds.safeAbsoluteFloorLkr ?? 1000)}
+              </strong>{" "}
+              minimum gain.
+            </p>
+            <p className="mt-1 font-mono text-[0.6875rem] uppercase tracking-[0.09em] text-ink/65">
+              {selectedRoute
+                ? `${selectedRoute.distanceKm.toFixed(0)} km one way · terrain ×${selectedRoute.terrainFactor.toFixed(2)}`
+                : metadataError
+                  ? "Metadata API unavailable · using verified defaults"
+                  : "Loading route configuration"}
+            </p>
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-full bg-clay px-6 py-3 text-sm font-extrabold text-cream transition hover:-translate-y-0.5 hover:bg-[#ad4f2d] disabled:cursor-wait disabled:opacity-60"
+          >
+            {loading ? "Calculating safest route…" : "Analyze market route"}
+          </button>
+        </div>
+      </form>
     </section>
   );
 }
@@ -293,18 +379,6 @@ function formatCapacity(capacityKg: number) {
   return capacityKg >= 1000 ? `${capacityKg / 1000} t` : `${capacityKg} kg`;
 }
 
-function formatThreshold(value: number | undefined, fallback: number) {
-  return (value ?? fallback).toFixed(0);
-}
-
-function formatLkrThreshold(value: number | undefined) {
-  return new Intl.NumberFormat("en-LK", {
-    style: "currency",
-    currency: "LKR",
-    maximumFractionDigits: 0,
-  }).format(value ?? 1000);
-}
-
 function Field({
   label,
   icon,
@@ -316,7 +390,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 flex items-center gap-1.5 font-mono text-[0.63rem] font-semibold uppercase tracking-[0.15em] text-ink/55">
+      <span className="mb-2 flex items-center gap-1.5 font-mono text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-ink/75">
         <span className="text-leaf">{icon}</span>
         {label}
       </span>
