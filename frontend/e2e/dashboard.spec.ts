@@ -82,9 +82,12 @@ test("renders the canonical fixture and switches to live model output", async ({
   ).toBeVisible();
 
   await page.getByRole("combobox", { name: /^Forecast/i }).selectOption("72");
-  await expect(page.getByText(/Consignment settings changed/i)).toBeVisible();
+  await expect(page.getByText(/Consignment inputs changed/i)).toBeVisible();
   await page.getByRole("button", { name: "Analyze market route" }).click();
-  await expect(page.getByText("Model check (72h)")).toBeVisible({
+  await expect(
+    page.getByText(/Evaluation baselines · 72h horizon/i),
+  ).toBeVisible({
     timeout: 20_000,
   });
+  await expect(page.getByText(/Consignment inputs changed/i)).toBeHidden();
 });
