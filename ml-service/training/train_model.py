@@ -184,7 +184,7 @@ def train(
     model_files: dict[str, str] = {}
     for horizon, model in models.items():
         filename = f"model_{horizon}h.ubj"
-        model.save_model(manifest_path.parent / filename)
+        model.get_booster().save_model(manifest_path.parent / filename)
         model_files[str(horizon)] = filename
     manifest = {
         "format": "xgboost_ubj_v1",

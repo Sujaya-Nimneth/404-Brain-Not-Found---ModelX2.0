@@ -255,3 +255,50 @@ def test_routing_backtest_respects_safe_margin_pct_override(monkeypatch):
         get_settings.cache_clear()
 
 
+def test_routing_matrix_includes_pettah_colombo_by_origin_and_overrides():
+    rows = []
+    for market_code, current, predicted, realized in (
+        ("DAMBULLA", 120.0, 110.0, 110.0),
+        ("THAMBUTTEGAMA", 120.0, 110.0, 110.0),
+        ("MEEGODA", 120.0, 110.0, 110.0),
+        ("NUWARA_ELIYA", 120.0, 110.0, 110.0),
+        ("KEPPETIPOLA", 120.0, 110.0, 110.0),
+        ("JAFFNA", 120.0, 110.0, 110.0),
+        ("PETTAH_COLOMBO", 120.0, 210.0, 210.0),
+    ):
+        rows.append(
+            {
+                "recorded_date": pd.Timestamp("2026-09-01"),
+                "market_code": market_code,
+                "crop_code": "TOMATO",
+                "price_lag_1d": current,
+                "target_price_48h": realized,
+                "prediction_48h": predicted,
+            }
+        )
+    frame = pd.DataFrame(rows)
+
+    result = evaluate_routing_matrix(frame, 48, "prediction_48h")
+    assert set(result["by_origin"]) == {
+        "ANURADHAPURA",
+        "JAFFNA",
+        "DAMBULLA",
+        "NUWARA_ELIYA",
+        "THAMBUTTEGAMA",
+    }
+    # JAFFNA's two nearest non-Dambulla markets are THAMBUTTEGAMA (275km) and MEEGODA (390km),
+    # so a JAFFNA reroute to PETTAH_COLOMBO proves PETTAH_COLOMBO is always included.
+    assert result["by_origin"]["JAFFNA"]["reroute_count"] > 0
+    assert result["by_origin"]["JAFFNA"]["false_reroute_count"] == 0
+
+    blocked = evaluate_routing_matrix(
+        frame,
+        48,
+        "prediction_48h",
+        safe_margin_pct=Decimal("200.0"),
+        safe_absolute_floor_lkr=Decimal("500000.00"),
+    )
+    assert blocked["reroute_count"] == 0
+
+
+
