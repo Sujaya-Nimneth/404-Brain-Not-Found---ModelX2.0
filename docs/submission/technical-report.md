@@ -35,10 +35,10 @@ The competition fixture is the proposal's Northern tomato corridor scenario:
 1,000 kg of tomatoes from Anuradhapura, with Dambulla as the default market and
 Colombo Pettah as the alternative. The fixture returns
 `CRITICAL_REROUTE`, a `LKR 23,238.58` profit delta, and `15.84%` uplift. The
-same request with demo mode disabled runs live `xgb-v2.0` model inference on
+same request with demo mode disabled runs live `xgb-v2.1` model inference on
 the causal arrival-surge and rainfall series, independently detecting the
-Dambulla glut crash (`208.58 -> 156.35 LKR/kg`) and recommending Colombo Pettah
-(`+22.51%` net uplift) without invoking `DEMO_FIXTURE`.
+Dambulla glut crash (`208.58 -> 155.87 LKR/kg`) and recommending Colombo Pettah
+(`+22.32%` net uplift) without invoking `DEMO_FIXTURE`.
 
 ## 2. Problem And Product Position
 
@@ -145,16 +145,17 @@ the optional API key is enabled so judges can audit source state.
 
 ## 5. Forecasting And Evaluation
 
-The ML service uses a deterministic XGBoost Regressor (`xgb-v2.0`) artifact
-checked into `ml-service/models/atie_forecaster.joblib` trained on relative
-horizon returns. The 32-feature pipeline includes calendar-aligned lagged
+The ML service uses a deterministic XGBoost Regressor (`xgb-v2.1`) manifest
+checked into `ml-service/models/atie_forecaster.json` (with native
+`model_48h.ubj` and `model_72h.ubj` binaries) trained on relative
+horizon returns. The 34-feature pipeline includes calendar-aligned lagged
 prices, rolling mean and volatility, arrival-surge and momentum ratios, forward
 horizon rainfall forecasts, historical CPC fuel prices, and cyclical seasonal
 features. The model produces 48-hour and 72-hour forecasts for all supported
 market/crop combinations.
 
 Evaluation uses a chronological holdout rather than a random split, enforcing a
-3-day horizon embargo between training (`2026-07-09`) and holdout start
+4-day horizon embargo between training (`2026-07-08`) and holdout start
 (`2026-07-12`) so multi-step targets never overlap across the boundary. The
 mandatory baselines are:
 
@@ -168,19 +169,20 @@ and safe-margin rule to realized holdout prices.
 
 | Horizon | Model DS | Model MAE | Model SM-FPR | Reroutes |
 |---|---:|---:|---:|---:|
-| 48h | 93.81% | 1.81 LKR/kg | 0.14% | 2,106 |
-| 72h | 92.86% | 2.87 LKR/kg | 0.19% | 2,071 |
+| 48h | 93.84% | 1.82 LKR/kg | 0.04% | 2,316 |
+| 72h | 93.20% | 2.84 LKR/kg | 0.04% | 2,293 |
 
 For the 48h holdout, the naive baseline reports DS `0.00%`, MAE `12.25`, and
-SM-FPR `24.65%`; the MA7 baseline reports DS `40.99%`, MAE `16.35`, and SM-FPR
+SM-FPR `28.18%`; the MA7 baseline reports DS `40.99%`, MAE `16.35`, and SM-FPR
 `23.59%`. For the 72h holdout, the naive baseline reports DS `0.00%`, MAE
-`16.32`, and SM-FPR `37.11%`, while MA7 reports DS `45.24%`, MAE `17.65`, and
+`16.32`, and SM-FPR `41.87%`, while MA7 reports DS `45.24%`, MAE `17.65`, and
 SM-FPR `27.92%`. Both the 48h and 72h models remain far below the five-percent
 SM-FPR safety ceiling (`0.00%` on the canonical Northern tomato scenario).
 
 SM-FPR is calculated across a finite, versioned matrix of 60 route profiles
 per horizon: five origins, three vehicle types, four quantities, four crops,
-and Dambulla compared with each origin's two nearest alternatives. When a
+and Dambulla compared with each origin's two nearest alternatives and
+`PETTAH_COLOMBO` (reported both in aggregate and `by_origin`). When a
 profile has zero reroute decisions, the metric is `null`, never zero.
 
 ## 6. Safe Routing Engine

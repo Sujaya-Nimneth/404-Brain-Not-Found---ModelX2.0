@@ -39,7 +39,7 @@ React dashboard / Android field app
       |
 Spring Boot API ----> PostgreSQL
       |
-Python ML service ----> XGBoost artifact (xgb-v2.0)
+Python ML service ----> XGBoost artifact (xgb-v2.1)
       ^
 Ingestion worker ----> HDX / Open-Meteo / CROPIX (optional)
 ```
@@ -59,18 +59,18 @@ fuel, and handling. Decimal arithmetic is used for every routing decision.
 
 ## Evaluation
 
-The model is evaluated on a chronological holdout (with a 3-day horizon
+The model is evaluated on a chronological holdout (with a 4-day horizon
 embargo) against two required baselines: naive persistence and a seven-day
 moving average.
 
 | Horizon | Model DS | Model MAE | Model SM-FPR | Reroutes |
 |---|---:|---:|---:|---:|
-| 48h | 93.81% | 1.81 LKR/kg | 0.14% | 2,106 |
-| 72h | 92.86% | 2.87 LKR/kg | 0.19% | 2,071 |
+| 48h | 93.84% | 1.82 LKR/kg | 0.04% | 2,316 |
+| 72h | 93.20% | 2.84 LKR/kg | 0.04% | 2,293 |
 
 SM-FPR is the rate at which a reroute recommendation loses against the default
 market after realized holdout prices are substituted. It is a routing
-backtest, not a price-error proxy. The 48h naive baseline has SM-FPR `24.65%`;
+backtest, not a price-error proxy. The 48h naive baseline has SM-FPR `28.18%`;
 the MA7 baseline has `23.59%`. Both 48h and 72h models remain well under the
 five-percent target (`0.00%` on the canonical Northern tomato scenario).
 

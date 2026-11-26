@@ -123,6 +123,8 @@ def register_fonts() -> None:
             style.fontName = SERIF_BOLD
         elif style.fontName == "Georgia-Italic":
             style.fontName = SERIF_ITALIC
+        elif style.fontName == "Georgia-BoldItalic":
+            style.fontName = SERIF_BOLD_ITALIC
 
 
 def styles() -> dict[str, ParagraphStyle]:
@@ -330,20 +332,20 @@ def table_widths(header: list[str], rows: list[list[str]], total: float) -> list
         weights.append(max(8, min(34, longest)))
     weight_total = sum(weights)
     widths = [total * weight / weight_total for weight in weights]
-    minimum = 46
-    deficit = sum(max(0, minimum - width) for width in widths)
-    if deficit:
-        donor_indices = [
-            index for index, width in enumerate(widths) if width > minimum + 12
-        ]
-        for index in donor_indices:
-            if deficit <= 0:
-                break
-            available = widths[index] - minimum
-            take = min(available, deficit)
-            widths[index] -= take
-            deficit -= take
-    return widths
+    minimum = min(46.0, total / max(1, len(header)))
+    deficit = sum(max(0.0, minimum - width) for width in widths)
+    if deficit > 0:
+        widths = [max(minimum, width) for width in widths]
+        excess = sum(widths) - total
+        if excess > 0:
+            adjustable = [i for i, w in enumerate(widths) if w > minimum]
+            adjustable_pool = sum(widths[i] - minimum for i in adjustable)
+            if adjustable_pool > 0:
+                for i in adjustable:
+                    share = (widths[i] - minimum) / adjustable_pool
+                    widths[i] -= min(widths[i] - minimum, excess * share)
+    scale = total / sum(widths)
+    return [width * scale for width in widths]
 
 
 def make_table(
@@ -365,6 +367,7 @@ def make_table(
         data,
         colWidths=table_widths(header, rows, total_width),
         repeatRows=1,
+        splitByRow=1,
         hAlign="LEFT",
     )
     table.setStyle(
@@ -632,8 +635,8 @@ def draw_cover(canv: canvas.Canvas, doc: BaseDocTemplate) -> None:
     cards = [
         ("48-72h", "forecast horizon"),
         ("5% + LKR 1k", "safe-margin rule"),
-        ("93.81% / 92.86%", "48h / 72h DS"),
-        ("0.14% / 0.19%", "48h / 72h SM-FPR"),
+        ("93.84% / 93.20%", "48h / 72h DS"),
+        ("0.04% / 0.04%", "48h / 72h SM-FPR"),
     ]
     card_width = (CONTENT_WIDTH - 18) / 2
     card_height = 70
@@ -855,8 +858,8 @@ def build_summary() -> None:
             summary_table(
                 ["Horizon", "Model DS", "MAE", "SM-FPR", "Reroutes"],
                 [
-                    ["48h", "93.81%", "1.81", "0.14%", "2,106"],
-                    ["72h", "92.86%", "2.87", "0.19%", "2,071"],
+                    ["48h", "93.84%", "1.82", "0.04%", "2,316"],
+                    ["72h", "93.20%", "2.84", "0.04%", "2,293"],
                 ],
                 CONTENT_WIDTH,
             ),
@@ -897,8 +900,8 @@ def build_summary() -> None:
             result_card(),
             Spacer(1, 5),
             summary_paragraph(
-                "The same request with `demo_mode: false` runs live `xgb-v2.0` "
-                "inference and independently recommends `PETTAH_COLOMBO` (`+22.51%`)."
+                "The same request with `demo_mode: false` runs live `xgb-v2.1` "
+                "inference and independently recommends `PETTAH_COLOMBO` (`+22.32%`)."
             ),
             FrameBreak(),
         ]
@@ -990,8 +993,8 @@ def build_summary() -> None:
             summary_table(
                 ["Baseline 48h", "DS", "MAE", "SM-FPR"],
                 [
-                    ["Model", "93.81%", "1.81", "0.14%"],
-                    ["Naive", "0.00%", "12.25", "24.65%"],
+                    ["Model", "93.84%", "1.82", "0.04%"],
+                    ["Naive", "0.00%", "12.25", "28.18%"],
                     ["MA7", "40.99%", "16.35", "23.59%"],
                 ],
                 236,
