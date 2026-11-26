@@ -5,10 +5,13 @@ export const DEFAULT_OFFLINE_CACHE_TTL_MS = 72 * 60 * 60 * 1000;
 export function roundHalfUp(value: number, fractionDigits = 2): number {
   if (!Number.isFinite(value)) return 0;
   const factor = 10 ** fractionDigits;
-  const sign = value < 0 ? -1 : 1;
-  return (
-    (sign * Math.floor(Math.abs(value) * factor + 0.5 + 1e-12)) / factor
-  );
+  const abs = Math.abs(value);
+  const shifted = Number(`${abs}e${fractionDigits}`);
+  const rounded = Number.isFinite(shifted)
+    ? Math.floor(shifted + 0.5 + 1e-12) / factor
+    : Math.floor(abs * factor + 0.5 + 1e-12) / factor;
+  if (rounded === 0) return 0;
+  return value < 0 ? -rounded : rounded;
 }
 
 export function formatInteger(value: number): string {

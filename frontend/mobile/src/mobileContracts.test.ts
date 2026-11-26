@@ -196,7 +196,10 @@ describe("ATIE Android Option A — Normative Contracts & Field UX", () => {
     assert.equal(formatSignedPct(null), "n/a");
     assert.equal(formatSignedLkr(23238.58), "+23,238.58");
     assert.equal(formatSignedLkr(-1250), "-1,250.00");
+    assert.equal(formatSignedLkr(-0.001), "0.00");
     assert.equal(formatSignedCurrency(-1250), "-LKR 1,250.00");
+    assert.equal(formatSignedCurrency(-0.001), "LKR 0.00");
+    assert.equal(formatSignedLkr(35.855), "+35.86");
     assert.equal(formatInteger(1000), "1,000");
     assert.equal(formatMetricPct(null), "—");
     assert.equal(formatMetricPct(2.59, 2), "2.59%");
