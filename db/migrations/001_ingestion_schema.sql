@@ -61,7 +61,7 @@ BEGIN
         SELECT 1
         FROM pg_attrdef ad
         JOIN pg_attribute a
-          ON a.attrelid = ad.adrelid AND a.attnum = ad.adattnum
+          ON a.attrelid = ad.adrelid AND a.attnum = ad.adnum
         WHERE ad.adrelid = 'historical_prices'::regclass
           AND a.attname = 'source'
           AND pg_get_expr(ad.adbin, ad.adrelid) = '''HDX_SEED''::character varying'

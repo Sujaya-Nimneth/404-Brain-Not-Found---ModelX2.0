@@ -297,29 +297,30 @@ three-minute demo is
 
 ## Evaluation Snapshot
 
-Chronological holdout results (with a 3-day horizon embargo between training
-end `2026-07-09` and holdout start `2026-07-12`) are stored in
-`ml-service/models/evaluation_report.json`. The trained model currently reports:
+Chronological holdout results (with a 4-day horizon embargo between training
+end `2026-07-08` and holdout start `2026-07-12`) are stored in
+`ml-service/models/evaluation_report.json`. The trained `xgb-v2.1` model currently reports:
 
 | Horizon | DS | MAE (LKR/kg) | SM-FPR | Reroutes |
 |---|---:|---:|---:|---:|
-| 48h | 93.81% | 1.81 | 0.14% | 2,106 |
-| 72h | 92.86% | 2.87 | 0.19% | 2,071 |
+| 48h | 93.84% | 1.82 | 0.04% | 2,316 |
+| 72h | 93.20% | 2.84 | 0.04% | 2,293 |
 
 Naive and 7-day moving-average baselines are evaluated alongside the model.
 SM-FPR is `null` when no reroute decisions occur, never silently reported as
 zero.
 
 For the 48h holdout, the naive baseline has DS `0.00%`, MAE `12.25`, and SM-FPR
-`24.65%`; the MA7 baseline has DS `40.99%`, MAE `16.35`, and SM-FPR `23.59%`.
-For 72h, the corresponding model figures are DS `92.86%`, MAE `2.87`, and
-SM-FPR `0.19%` (versus naive MAE `16.32` / SM-FPR `37.11%` and MA7 DS `45.24%` /
+`28.18%`; the MA7 baseline has DS `40.99%`, MAE `16.35`, and SM-FPR `23.59%`.
+For 72h, the corresponding model figures are DS `93.20%`, MAE `2.84`, and
+SM-FPR `0.04%` (versus naive MAE `16.32` / SM-FPR `41.87%` and MA7 DS `45.24%` /
 MAE `17.65` / SM-FPR `27.92%`).
 
 The fallback snapshot covers all four crops across all seven markets at both
 horizons. SM-FPR backtests 60 route profiles per horizon (five origins, three
 vehicle types, and quantities of 300, 1,000, 1,500, and 3,500 kg). Every profile
 is evaluated across all four crops and every holdout timestamp, with Dambulla
-compared against each origin's two nearest alternatives. The matrix is
+compared against each origin's two nearest alternatives and `PETTAH_COLOMBO`
+(reported both in aggregate and `by_origin`). The matrix is
 deliberately finite and does not claim coverage of every possible origin or
 consignment.
