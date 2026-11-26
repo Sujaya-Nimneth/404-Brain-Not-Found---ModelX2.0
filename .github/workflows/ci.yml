@@ -12,6 +12,7 @@ permissions:
 jobs:
   ml-service:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16-alpine
@@ -42,13 +43,14 @@ jobs:
           psql -h localhost -U atie -d atie -v ON_ERROR_STOP=1 -f db/init.sql
           psql -h localhost -U atie -d atie -v ON_ERROR_STOP=1 -f db/seed.sql
           psql -h localhost -U atie -d atie -v ON_ERROR_STOP=1 -f db/migrations/001_ingestion_schema.sql
-      - run: pytest --cov=app --cov=etl --cov=training --cov-report=term-missing
+      - run: pytest --cov=app --cov=etl --cov=training --cov-fail-under=75 --cov-report=term-missing
         working-directory: ml-service
         env:
           ATIE_TEST_POSTGRES_DSN: postgresql://atie:atie_dev_password@localhost:5432/atie
 
   backend:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16-alpine
@@ -77,7 +79,7 @@ jobs:
           psql -h localhost -U atie -d atie -v ON_ERROR_STOP=1 -f db/init.sql
           psql -h localhost -U atie -d atie -v ON_ERROR_STOP=1 -f db/seed.sql
           psql -h localhost -U atie -d atie -v ON_ERROR_STOP=1 -f db/migrations/001_ingestion_schema.sql
-      - run: mvn -B -Dnet.bytebuddy.experimental=true test
+      - run: mvn -B test
         working-directory: backend
       - name: Run PostgreSQL schema integration test
         working-directory: backend
@@ -85,10 +87,11 @@ jobs:
           ATIE_TEST_DATABASE_URL: jdbc:postgresql://localhost:5432/atie
           ATIE_TEST_DATABASE_USERNAME: atie
           ATIE_TEST_DATABASE_PASSWORD: atie_dev_password
-        run: mvn -B -Dnet.bytebuddy.experimental=true -Ppostgres-it -Dtest=PostgresSchemaIntegrationTest test
+        run: mvn -B -Ppostgres-it -Dtest=PostgresSchemaIntegrationTest test
 
   frontend:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -107,6 +110,7 @@ jobs:
 
   frontend-mobile:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -120,9 +124,12 @@ jobs:
         working-directory: frontend/mobile
       - run: npm test
         working-directory: frontend/mobile
+      - run: npm run export:android
+        working-directory: frontend/mobile
 
   e2e:
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     needs: [ml-service, backend, frontend, frontend-mobile]
     steps:
       - uses: actions/checkout@v4
@@ -133,12 +140,25 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
         working-directory: frontend
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
       - run: npx playwright install --with-deps chromium
         working-directory: frontend
       - run: docker compose --env-file .env.example config --quiet
-      - run: docker compose --env-file .env.example up --build -d --wait
+      - run: docker compose --env-file .env.example up --build -d --wait --wait-timeout 180
         env:
           INGESTION_FETCH_TIMEOUT_SECONDS: "8"
+          ATIE_API_KEY: "ci-e2e-test-key"
+      - name: Verify backend API key enforcement and Nginx proxy injection
+        run: |
+          code_unauth=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/api/v1/metadata/config)
+          test "$code_unauth" = "401"
+          code_proxy=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:15173/api/v1/metadata/config)
+          test "$code_proxy" = "200"
       - run: npm run test:e2e
         working-directory: frontend
         env:
