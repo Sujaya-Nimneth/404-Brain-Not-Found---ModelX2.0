@@ -49,13 +49,15 @@ class MarketHistoryServiceTest {
                 Optional.of(entity(Crop.class, "code", "TOMATO"))
         );
         when(markets.findByCode("DAMBULLA")).thenReturn(Optional.of(market));
-        when(prices.findByMarketCodeAndCropCodeOrderByRecordedDateDesc(
+        when(prices.findTopByMarketCodeAndCropCodeOrderByRecordedDateDesc("DAMBULLA", "TOMATO"))
+                .thenReturn(Optional.of(price("2026-10-27", "220.00")));
+        when(prices.findByMarketCodeAndCropCodeAndRecordedDateGreaterThanEqualOrderByRecordedDateAsc(
                 eq("DAMBULLA"),
                 eq("TOMATO"),
-                any()
+                eq(LocalDate.of(2026, 9, 28))
         )).thenReturn(List.of(
-                price("2026-10-27", "220.00"),
-                price("2026-10-26", "218.00")
+                price("2026-10-26", "218.00"),
+                price("2026-10-27", "220.00")
         ));
         when(forecasts.predictBatch(
                 eq("TOMATO"),
@@ -107,10 +109,12 @@ class MarketHistoryServiceTest {
                 Optional.of(entity(Crop.class, "code", "TOMATO"))
         );
         when(markets.findByCode("DAMBULLA")).thenReturn(Optional.of(market));
-        when(prices.findByMarketCodeAndCropCodeOrderByRecordedDateDesc(
+        when(prices.findTopByMarketCodeAndCropCodeOrderByRecordedDateDesc("DAMBULLA", "TOMATO"))
+                .thenReturn(Optional.of(price("2026-10-27", "203.05")));
+        when(prices.findByMarketCodeAndCropCodeAndRecordedDateGreaterThanEqualOrderByRecordedDateAsc(
                 eq("DAMBULLA"),
                 eq("TOMATO"),
-                any()
+                eq(LocalDate.of(2026, 10, 14))
         )).thenReturn(List.of(price("2026-10-27", "203.05")));
 
         when(forecasts.predictBatch(

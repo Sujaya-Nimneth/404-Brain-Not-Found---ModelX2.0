@@ -30,7 +30,7 @@ public class WeatherObservation {
     @JdbcTypeCode(SqlTypes.BIGINT)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "market_id", nullable = false)
     private Market market;
 

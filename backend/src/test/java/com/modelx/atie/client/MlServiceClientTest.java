@@ -214,6 +214,24 @@ class MlServiceClientTest {
     }
 
     @Test
+    void rateLimited429FallsBackGracefullyInsteadOfFailing() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("http://localhost:8000/predict-batch?demo_mode=false"))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+
+        MlServiceClient.MlForecastResponse response = client(builder).predictBatch(
+                "CARROT",
+                48,
+                LocalDate.of(2026, 10, 27),
+                List.of("DAMBULLA"),
+                false
+        );
+        assertThat(response.forecastSource()).isEqualTo("FALLBACK");
+        server.verify();
+    }
+
+    @Test
     void backendFallbackSnapshotMatchesMlServiceSnapshotWhenPresent() throws Exception {
         java.nio.file.Path mlPath = java.nio.file.Path.of(
                 "..",

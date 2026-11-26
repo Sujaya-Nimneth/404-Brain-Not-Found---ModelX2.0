@@ -1,12 +1,11 @@
 package com.modelx.atie.service;
 
-import java.util.ArrayList;
-import java.util.Comparator;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -40,14 +39,6 @@ public class MarketHistoryService {
         this.forecastClient = forecastClient;
     }
 
-    public MarketHistoryService(
-            HistoricalPriceRepository prices,
-            MarketRepository markets,
-            ForecastClient forecastClient
-    ) {
-        this(prices, markets, null, forecastClient);
-    }
-
     public MarketHistoryResponse history(
             String requestedMarketCode,
             String requestedCropCode,
@@ -63,38 +54,44 @@ public class MarketHistoryService {
             boolean demoMode
     ) {
         if (requestedDays < 1 || requestedDays > 365) {
-            throw new IllegalArgumentException("days must be between 1 and 365");
+            throw new DomainValidationException(
+                    "INVALID_DAYS",
+                    "days must be between 1 and 365"
+            );
         }
 
         String marketCode = normalize(requestedMarketCode);
         String cropCode = normalize(requestedCropCode);
-        if (crops != null && crops.findByCode(cropCode).isEmpty()) {
-            throw new IllegalArgumentException("Unknown crop: " + cropCode);
+        if (crops.findByCode(cropCode).isEmpty()) {
+            throw new DomainValidationException("UNKNOWN_CROP", "Unknown crop: " + cropCode);
         }
         if (demoMode && !"TOMATO".equals(cropCode)) {
-            throw new IllegalArgumentException(
+            throw new DomainValidationException(
+                    "DEMO_FIXTURE_MISMATCH",
                     "Canonical demo trajectory is only available for TOMATO"
             );
         }
         Market market = markets.findByCode(marketCode).orElseThrow(
                 () -> new NoSuchElementException("Unknown market: " + marketCode)
         );
-        List<HistoricalPrice> newestFirst = prices
-                .findByMarketCodeAndCropCodeOrderByRecordedDateDesc(
+        HistoricalPrice latest = prices
+                .findTopByMarketCodeAndCropCodeOrderByRecordedDateDesc(marketCode, cropCode)
+                .orElseThrow(() -> new NoSuchElementException(
+                        "No history for " + cropCode + " in " + marketCode
+                ));
+        LocalDate referenceDate = latest.getRecordedDate();
+        LocalDate startDate = referenceDate.minusDays(requestedDays - 1L);
+        List<HistoricalPrice> chronological = prices
+                .findByMarketCodeAndCropCodeAndRecordedDateGreaterThanEqualOrderByRecordedDateAsc(
                         marketCode,
                         cropCode,
-                        PageRequest.of(0, requestedDays)
+                        startDate
                 );
-        if (newestFirst.isEmpty()) {
+        if (chronological.isEmpty()) {
             throw new NoSuchElementException(
                     "No history for " + cropCode + " in " + marketCode
             );
         }
-
-        List<HistoricalPrice> chronological = new ArrayList<>(newestFirst);
-        chronological.sort(Comparator.comparing(HistoricalPrice::getRecordedDate));
-        var referenceDate = chronological.get(chronological.size() - 1)
-                .getRecordedDate();
 
         MlServiceClient.MlForecastResponse forecast48 = forecast(
                 cropCode,
@@ -111,15 +108,14 @@ public class MarketHistoryService {
                 demoMode
         );
         if (!forecast48.forecastSource().equals(forecast72.forecastSource())) {
-            forecast48 = forecast(
-                    cropCode,
-                    48,
-                    referenceDate,
-                    marketCode,
-                    demoMode
-            );
+            if ("FALLBACK".equals(forecast72.forecastSource())) {
+                forecast48 = forecast(cropCode, 48, referenceDate, marketCode, demoMode);
+            } else {
+                forecast72 = forecast(cropCode, 72, referenceDate, marketCode, demoMode);
+            }
         }
-        if (!forecast48.forecastSource().equals(forecast72.forecastSource())) {
+        if (!forecast48.forecastSource().equals(forecast72.forecastSource())
+                || !Objects.equals(forecast48.referenceDate(), forecast72.referenceDate())) {
             throw new MlServiceException(
                     HttpStatus.SERVICE_UNAVAILABLE,
                     "TRAJECTORY_SOURCE_MISMATCH",

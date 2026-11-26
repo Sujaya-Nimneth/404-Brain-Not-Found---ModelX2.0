@@ -1,6 +1,7 @@
 package com.modelx.atie.service;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Comparator;
@@ -9,11 +10,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import com.modelx.atie.client.ForecastClient;
-import com.modelx.atie.client.MlServiceClient;
 import com.modelx.atie.client.MlMetricsClient;
+import com.modelx.atie.client.MlServiceClient;
+import com.modelx.atie.client.MlServiceException;
 import com.modelx.atie.config.AtieProperties;
 import com.modelx.atie.config.OriginCatalog;
 import com.modelx.atie.domain.Origin;
@@ -22,7 +26,6 @@ import com.modelx.atie.dto.AnalyzeRequest;
 import com.modelx.atie.dto.AnalyzeResponse;
 import com.modelx.atie.dto.MarketComparison;
 import com.modelx.atie.dto.MarketForecast;
-import com.modelx.atie.dto.ModelEvaluationSummary;
 import com.modelx.atie.dto.ProfitBreakdown;
 import com.modelx.atie.dto.WeatherAlert;
 import com.modelx.atie.entity.Crop;
@@ -37,16 +40,35 @@ import com.modelx.atie.repository.WeatherObservationRepository;
 
 @Service
 public class ArbitrageRoutingService {
-    private final CropRepository crops;
-    private final MarketRouteRepository routes;
-    private final FuelPriceRepository fuelPrices;
-    private final WeatherObservationRepository weather;
+    private static final ZoneId COLOMBO_ZONE = ZoneId.of("Asia/Colombo");
+    private static final int WEATHER_STALE_DAYS = 14;
+
+    private final RoutingDataLoader dataLoader;
     private final OriginCatalog origins;
     private final ForecastClient forecastClient;
     private final MlMetricsClient metricsClient;
     private final ProfitMarginCalculator calculator;
     private final RoutingDecisionService decisions;
-    private final AtieProperties properties;
+    private final Clock clock;
+
+    @Autowired
+    public ArbitrageRoutingService(
+            RoutingDataLoader dataLoader,
+            OriginCatalog origins,
+            ForecastClient forecastClient,
+            MlMetricsClient metricsClient,
+            ProfitMarginCalculator calculator,
+            RoutingDecisionService decisions,
+            Clock clock
+    ) {
+        this.dataLoader = dataLoader;
+        this.origins = origins;
+        this.forecastClient = forecastClient;
+        this.metricsClient = metricsClient;
+        this.calculator = calculator;
+        this.decisions = decisions;
+        this.clock = clock;
+    }
 
     public ArbitrageRoutingService(
             CropRepository crops,
@@ -60,57 +82,51 @@ public class ArbitrageRoutingService {
             RoutingDecisionService decisions,
             AtieProperties properties
     ) {
-        this.crops = crops;
-        this.routes = routes;
-        this.fuelPrices = fuelPrices;
-        this.weather = weather;
-        this.origins = origins;
-        this.forecastClient = forecastClient;
-        this.metricsClient = metricsClient;
-        this.calculator = calculator;
-        this.decisions = decisions;
-        this.properties = properties;
+        this(
+                new RoutingDataLoader(crops, routes, fuelPrices, weather),
+                origins,
+                forecastClient,
+                metricsClient,
+                calculator,
+                decisions,
+                Clock.systemUTC()
+        );
     }
 
     public AnalyzeResponse analyze(AnalyzeRequest request) {
+        if (request == null) {
+            throw new DomainValidationException("INVALID_REQUEST", "Request body is required");
+        }
         String originCode = normalize(request.originCode());
         String cropCode = normalize(request.cropCode());
         String defaultMarketCode = normalize(request.defaultMarketCode());
-        if (!Set.of(48, 72).contains(request.horizonHours())) {
-            throw new IllegalArgumentException("horizonHours must be 48 or 72");
+        if (request.horizonHours() == null || !Set.of(48, 72).contains(request.horizonHours())) {
+            throw new DomainValidationException("INVALID_HORIZON", "horizonHours must be 48 or 72");
+        }
+        if (request.quantityKg() == null || request.quantityKg().compareTo(BigDecimal.ONE) < 0) {
+            throw new DomainValidationException("INVALID_QUANTITY", "quantity_kg must be at least 1.0");
+        }
+        if (request.vehicleType() == null) {
+            throw new DomainValidationException("INVALID_VEHICLE", "vehicle_type is required");
         }
         if (request.demoRequested()) {
             validateCanonicalDemo(request, originCode, cropCode, defaultMarketCode);
         }
         Origin origin = origins.find(originCode).orElseThrow(
-                () -> new IllegalArgumentException("Unknown origin: " + originCode)
+                () -> new DomainValidationException("UNKNOWN_ORIGIN", "Unknown origin: " + originCode)
         );
-        Crop crop = crops.findByCode(cropCode).orElseThrow(
-                () -> new IllegalArgumentException("Unknown crop: " + cropCode)
+        RoutingDataLoader.RoutingInputs inputs = dataLoader.loadRoutingInputs(
+                origin.code(),
+                cropCode,
+                defaultMarketCode
         );
-        List<MarketRoute> originRoutes = routes.findByOriginCodeOrderByDistanceKmAsc(
-                origin.code()
-        );
-        if (originRoutes.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "No routes configured for origin: " + origin.code()
-            );
-        }
-        boolean hasDefault = originRoutes.stream().anyMatch(
-                route -> route.getDestinationMarket().getCode().equals(defaultMarketCode)
-        );
-        if (!hasDefault) {
-            throw new IllegalArgumentException(
-                    "Default market is not reachable from origin: " + defaultMarketCode
-            );
-        }
-        FuelPrice fuel = fuelPrices.findTopByOrderByEffectiveDateDesc().orElseThrow(
-                () -> new IllegalArgumentException("Fuel prices are unavailable")
-        );
+        Crop crop = inputs.crop();
+        List<MarketRoute> originRoutes = inputs.originRoutes();
+        FuelPrice fuel = inputs.fuel();
         List<String> marketCodes = originRoutes.stream()
                 .map(route -> route.getDestinationMarket().getCode())
                 .toList();
-        LocalDate requestedReferenceDate = LocalDate.now(ZoneId.of("Asia/Colombo"));
+        LocalDate requestedReferenceDate = LocalDate.now(clock.withZone(COLOMBO_ZONE));
         MlServiceClient.MlForecastResponse forecast = forecastClient.predictBatch(
                 crop.getCode(),
                 request.horizonHours(),
@@ -120,7 +136,9 @@ public class ArbitrageRoutingService {
         );
         String expectedSource = request.demoRequested() ? "DEMO_FIXTURE" : null;
         if (expectedSource != null && !expectedSource.equals(forecast.forecastSource())) {
-            throw new IllegalArgumentException(
+            throw new MlServiceException(
+                    HttpStatus.BAD_GATEWAY,
+                    "ML_CONTRACT_ERROR",
                     "Demo request did not resolve to the canonical fixture"
             );
         }
@@ -129,7 +147,9 @@ public class ArbitrageRoutingService {
                         MarketForecast::marketCode,
                         item -> item,
                         (first, duplicate) -> {
-                            throw new IllegalArgumentException(
+                            throw new MlServiceException(
+                                    HttpStatus.BAD_GATEWAY,
+                                    "ML_CONTRACT_ERROR",
                                     "ML service returned duplicate market forecasts"
                             );
                         }
@@ -213,9 +233,11 @@ public class ArbitrageRoutingService {
                 : requestedReferenceDate;
         LocalDate targetWeatherDate = weatherBaseDate
                 .plusDays(request.horizonHours() / 24L);
+        LocalDate earliestWeatherDate = weatherBaseDate.minusDays(WEATHER_STALE_DAYS);
         Map<String, WeatherObservation> weatherByMarket = loadWeatherByMarket(
                 marketCodes,
-                targetWeatherDate
+                targetWeatherDate,
+                earliestWeatherDate
         );
         List<WeatherAlert> alerts = comparisons.stream()
                 .map(comparison -> weatherAlert(
@@ -245,7 +267,9 @@ public class ArbitrageRoutingService {
             VehicleType vehicleType
     ) {
         if (forecast == null) {
-            throw new IllegalArgumentException(
+            throw new MlServiceException(
+                    HttpStatus.BAD_GATEWAY,
+                    "ML_CONTRACT_ERROR",
                     "Forecast missing for market: "
                             + route.getDestinationMarket().getCode()
             );
@@ -286,20 +310,13 @@ public class ArbitrageRoutingService {
 
     private Map<String, WeatherObservation> loadWeatherByMarket(
             List<String> marketCodes,
-            LocalDate targetWeatherDate
+            LocalDate targetWeatherDate,
+            LocalDate earliestWeatherDate
     ) {
-        List<WeatherObservation> rows = weather
-                .findLatestByMarketCodesOnOrBefore(
-                        marketCodes,
-                        targetWeatherDate
-                );
-        if (rows == null || rows.isEmpty()) {
-            rows = weather
-                    .findByMarketCodeInAndObservationDateLessThanEqualOrderByObservationDateDesc(
-                            marketCodes,
-                            targetWeatherDate
-                    );
-        }
+        List<WeatherObservation> rows = dataLoader.loadLatestWeather(
+                marketCodes,
+                targetWeatherDate
+        );
         if (rows == null || rows.isEmpty()) {
             return Map.of();
         }
@@ -307,6 +324,10 @@ public class ArbitrageRoutingService {
         for (WeatherObservation observation : rows) {
             if (observation.getMarket() == null
                     || observation.getMarket().getCode() == null) {
+                continue;
+            }
+            LocalDate observedAt = observation.getObservationDate();
+            if (observedAt != null && observedAt.isBefore(earliestWeatherDate)) {
                 continue;
             }
             byMarket.putIfAbsent(observation.getMarket().getCode(), observation);
@@ -320,14 +341,19 @@ public class ArbitrageRoutingService {
     ) {
         return Optional.ofNullable(observation)
                 .map(item -> {
-                    BigDecimal rain = item.getPrecipitationMm();
-                    String risk = rain.compareTo(new BigDecimal("15")) >= 0
+                    BigDecimal rain = item.getPrecipitationMm() != null
+                            ? item.getPrecipitationMm()
+                            : BigDecimal.ZERO;
+                    boolean extreme = item.isExtremeWeatherFlag();
+                    String risk = extreme || rain.compareTo(new BigDecimal("15")) >= 0
                             ? "HIGH"
                             : rain.compareTo(new BigDecimal("8")) >= 0
                             ? "MEDIUM"
                             : "LOW";
                     String message = "HIGH".equals(risk)
-                            ? "Heavy rainfall may disrupt supply routes and increase spoilage risk."
+                            ? (extreme && rain.compareTo(new BigDecimal("15")) < 0
+                                    ? "Extreme weather advisory may disrupt supply routes and increase spoilage risk."
+                                    : "Heavy rainfall may disrupt supply routes and increase spoilage risk.")
                             : "MEDIUM".equals(risk)
                             ? "Moderate rainfall may slow arrivals and transit."
                             : "Weather conditions are currently favourable.";
@@ -336,7 +362,7 @@ public class ArbitrageRoutingService {
                             risk,
                             message,
                             calculator.displayMoney(rain),
-                            item.isExtremeWeatherFlag(),
+                            extreme,
                             item.getSource(),
                             item.getObservationDate()
                     );
@@ -360,7 +386,8 @@ public class ArbitrageRoutingService {
                 && request.quantityKg().compareTo(new BigDecimal("1000")) == 0
                 && request.vehicleType() == VehicleType.MINI_TRUCK_BATTA;
         if (!matches) {
-            throw new IllegalArgumentException(
+            throw new DomainValidationException(
+                    "DEMO_FIXTURE_MISMATCH",
                     "demo_mode only supports the registered Anuradhapura tomato fixture"
             );
         }

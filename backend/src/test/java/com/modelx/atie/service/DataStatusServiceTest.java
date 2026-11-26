@@ -151,4 +151,37 @@ class DataStatusServiceTest {
                 .extracting("state")
                 .containsExactly("STALE", "CURRENT");
     }
+
+    @Test
+    void allLiveSourcesWithSeededCoverageGapsStillReportPartial() {
+        Instant now = Instant.parse("2026-10-27T12:00:00Z");
+        var result = DataStatusService.build(
+                List.of(
+                        new DataStatusService.SourceRow(
+                                "HDX", "LIVE", now, now,
+                                LocalDate.of(2026, 10, 25), "https://example.test/hdx",
+                                101, "ok"
+                        ),
+                        new DataStatusService.SourceRow(
+                                "CROPIX", "LIVE", now, now,
+                                LocalDate.of(2026, 10, 27), "https://example.test/cropix",
+                                10, "ok"
+                        ),
+                        new DataStatusService.SourceRow(
+                                "OPEN_METEO", "LIVE", now, now,
+                                LocalDate.of(2026, 10, 27), "https://example.test/weather",
+                                49, "ok"
+                        )
+                ),
+                List.of(
+                        new DataStatusService.CoverageRow(
+                                "DAMBULLA", "TOMATO", LocalDate.of(2026, 10, 27), "HDX_SEED"
+                        )
+                ),
+                LocalDate.of(2026, 10, 27),
+                now
+        );
+
+        assertThat(result.overallStatus()).isEqualTo("PARTIAL");
+    }
 }

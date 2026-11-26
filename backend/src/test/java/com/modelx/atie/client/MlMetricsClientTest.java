@@ -141,6 +141,28 @@ class MlMetricsClientTest {
         server.verify();
     }
 
+    @Test
+    void malformedMetricsNeverPoisonCacheOrThrow500OnMissingHorizon() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("http://localhost:8000/metrics"))
+                .andRespond(withSuccess("{\"metrics\":{}}", MediaType.APPLICATION_JSON));
+
+        MlMetricsClient metricsClient = client(builder);
+        assertThat(metricsClient.fetchSummary(48).available()).isFalse();
+        assertThat(metricsClient.fetchSummary(48).available()).isFalse();
+        server.verify();
+
+        RestClient.Builder builder2 = RestClient.builder();
+        MockRestServiceServer server2 = MockRestServiceServer.bindTo(builder2).build();
+        server2.expect(requestTo("http://localhost:8000/metrics"))
+                .andRespond(withSuccess(metricsJson(), MediaType.APPLICATION_JSON));
+        MlMetricsClient validClient = client(builder2);
+        assertThat(validClient.fetchSummary(48).available()).isTrue();
+        assertThat(validClient.fetchSummary(72).available()).isFalse();
+        server2.verify();
+    }
+
     private MlMetricsClient client(RestClient.Builder builder) {
         return new MlMetricsClient(builder, properties(), new ObjectMapper());
     }
