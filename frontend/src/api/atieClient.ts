@@ -7,6 +7,7 @@ import type {
   MetadataConfig,
 } from "../types/atie";
 import {
+  ApiContractError,
   mapAnalyzeResponse,
   mapDataStatus,
   mapMarketHistoryResponse,
@@ -133,12 +134,20 @@ export async function analyzeConsignment(
   } catch (error) {
     if (
       error instanceof AtieApiError ||
+      error instanceof ApiContractError ||
       (error instanceof Error && error.name === "AbortError")
     ) {
       throw error;
     }
     if (isCanonicalDemoRequest(request)) {
-      return demoResponse;
+      return {
+        ...demoResponse,
+        analysisState: {
+          kind: "offline_demo",
+          message:
+            "The ATIE API is offline; showing the verified competition fixture rather than live server output.",
+        },
+      };
     }
     throw error;
   }
@@ -167,9 +176,12 @@ export async function fetchMarketHistory(
   );
 }
 
-export async function fetchMetadataConfig(): Promise<MetadataConfig> {
+export async function fetchMetadataConfig(
+  signal?: AbortSignal,
+): Promise<MetadataConfig> {
   const response = await fetch(`${API_BASE_URL}/metadata/config`, {
     headers: authHeaders(),
+    signal,
   });
   return mapMetadataConfig(
     await responseJson(response, "The metadata request"),
