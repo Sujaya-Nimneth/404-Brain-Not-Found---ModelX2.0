@@ -83,6 +83,40 @@ class ApiKeyFilterTest {
         verifyNoInteractions(chain);
     }
 
+    @Test
+    void urlEncodedOrDotSegmentPathsDoNotBypassApiKeyCheck() throws Exception {
+        var filter = new ApiKeyFilter(properties("secret"));
+        for (String uri : java.util.List.of(
+                "/%61pi/v1/directives/analyze",
+                "/./api/v1/directives/analyze",
+                "/api/v1/metadata/../directives/analyze",
+                "/api%2fv1/directives/analyze",
+                "/actuator/metrics",
+                "/actuator/info"
+        )) {
+            var request = new MockHttpServletRequest("GET", uri);
+            var response = new MockHttpServletResponse();
+            var chain = mock(jakarta.servlet.FilterChain.class);
+
+            filter.doFilter(request, response, chain);
+
+            assertThat(response.getStatus()).as("URI %s", uri).isEqualTo(401);
+            verifyNoInteractions(chain);
+        }
+    }
+
+    @Test
+    void actuatorHealthRemainsPublicWhenKeyEnabled() throws Exception {
+        var filter = new ApiKeyFilter(properties("secret"));
+        var request = new MockHttpServletRequest("GET", "/actuator/health");
+        var response = new MockHttpServletResponse();
+        var chain = mock(jakarta.servlet.FilterChain.class);
+
+        filter.doFilter(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+    }
+
     private AtieProperties properties(String key) {
         return new AtieProperties(
                 "http://localhost:18000",

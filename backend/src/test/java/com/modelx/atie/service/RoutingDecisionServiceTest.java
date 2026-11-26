@@ -111,6 +111,31 @@ class RoutingDecisionServiceTest {
         assertThat(result.primaryDirective().severity()).isEqualTo("PROCEED_DEFAULT");
     }
 
+    @Test
+    void zeroThresholdsStillRequireStrictPositiveProfitImprovement() {
+        var zeroThresholdService = new RoutingDecisionService(
+                new AtieProperties(
+                        "http://localhost:8000",
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        new BigDecimal("10.0"),
+                        List.of("http://localhost:5173"),
+                        "",
+                        3,
+                        15
+                )
+        );
+        RoutingDecisionService.Decision result = zeroThresholdService.decide(
+                "DAMBULLA",
+                List.of(
+                        market("DAMBULLA", "100000", "0"),
+                        market("PETTAH_COLOMBO", "100000", "0")
+                )
+        );
+
+        assertThat(result.primaryDirective().severity()).isEqualTo("PROCEED_DEFAULT");
+    }
+
     private MarketEvaluation market(
             String code,
             String netProfit,

@@ -40,6 +40,21 @@ class AtiePropertiesValidationTest {
         ))).hasSizeGreaterThanOrEqualTo(7);
     }
 
+    @Test
+    void rejectsNullThresholdsAndBlankCorsOrigins() {
+        var invalid = new AtieProperties(
+                "http://ml-service:8000",
+                null,
+                null,
+                null,
+                List.of(""),
+                "",
+                3,
+                15
+        );
+        assertThat(validator.validate(invalid)).hasSizeGreaterThanOrEqualTo(4);
+    }
+
     private AtieProperties properties(
             String url,
             String safeMargin,

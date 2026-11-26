@@ -1,6 +1,7 @@
 package com.modelx.atie.service;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.Comparator;
 import java.util.List;
@@ -14,6 +15,8 @@ import com.modelx.atie.dto.PrimaryDirective;
 
 @Service
 public class RoutingDecisionService {
+    private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
+
     private final AtieProperties properties;
 
     public RoutingDecisionService(AtieProperties properties) {
@@ -45,13 +48,15 @@ public class RoutingDecisionService {
 
         if (selected.isPresent()) {
             MarketEvaluation winner = selected.get();
-            BigDecimal delta = winner.profit().netProfitLkr()
-                    .subtract(defaultMarket.profit().netProfitLkr());
-            BigDecimal uplift = winner.profitUpliftPct();
+            BigDecimal defaultProfit = defaultMarket.profit().netProfitLkr();
+            BigDecimal delta = winner.profit().netProfitLkr().subtract(defaultProfit);
+            BigDecimal uplift = defaultProfit.signum() <= 0
+                    ? null
+                    : delta.divide(defaultProfit, MathContext.DECIMAL128).multiply(ONE_HUNDRED);
             String explanation = "Net profit at %s is LKR %s higher than %s after transport, spoilage, and handling costs."
                     .formatted(
                             winner.marketName(),
-                            delta.setScale(2, java.math.RoundingMode.HALF_UP)
+                            delta.setScale(2, RoundingMode.HALF_UP)
                                     .toPlainString(),
                             defaultMarket.marketName()
                     );
@@ -104,17 +109,19 @@ public class RoutingDecisionService {
             MarketEvaluation defaultMarket,
             MarketEvaluation alternative
     ) {
-        BigDecimal delta = alternative.profit().netProfitLkr()
-                .subtract(defaultMarket.profit().netProfitLkr());
-        if (delta.compareTo(properties.safeAbsoluteFloorLkr()) < 0) {
+        BigDecimal defaultProfit = defaultMarket.profit().netProfitLkr();
+        BigDecimal alternativeProfit = alternative.profit().netProfitLkr();
+        BigDecimal delta = alternativeProfit.subtract(defaultProfit);
+        if (delta.signum() <= 0 || delta.compareTo(properties.safeAbsoluteFloorLkr()) < 0) {
             return false;
         }
-        if (defaultMarket.profit().netProfitLkr().signum() <= 0) {
-            return alternative.profit().netProfitLkr().signum() > 0;
+        if (defaultProfit.signum() <= 0) {
+            return alternativeProfit.signum() > 0;
         }
-        BigDecimal uplift = alternative.profitUpliftPct();
-        return uplift != null
-                && uplift.compareTo(properties.safeMarginPct()) >= 0;
+        BigDecimal uplift = delta
+                .divide(defaultProfit, MathContext.DECIMAL128)
+                .multiply(ONE_HUNDRED);
+        return uplift.compareTo(properties.safeMarginPct()) >= 0;
     }
 
     public record Decision(
