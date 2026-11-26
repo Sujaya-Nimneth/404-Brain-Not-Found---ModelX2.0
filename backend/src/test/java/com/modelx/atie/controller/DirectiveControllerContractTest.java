@@ -113,6 +113,15 @@ class DirectiveControllerContractTest {
                 .andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"));
     }
 
+    @Test
+    void returns415ForUnsupportedMediaTypeInsteadOf500() throws Exception {
+        mvc.perform(post("/api/v1/directives/analyze")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("hello"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"));
+    }
+
     private AnalyzeRequest request() {
         return new AnalyzeRequest(
                 "ANURADHAPURA",
