@@ -1,4 +1,5 @@
 target/
+.git/
 .idea/
 .vscode/
 .DS_Store
@@ -6,3 +7,4 @@ target/
 *.iml
 *.log
 *.tmp
+*.hprof

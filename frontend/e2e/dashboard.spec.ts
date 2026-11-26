@@ -5,6 +5,13 @@ test("renders the canonical fixture and switches to live model output", async ({
 }) => {
   await page.goto("/");
 
+  await expect(page.getByRole("banner")).toBeVisible();
+  await expect(page.getByRole("main")).toBeVisible();
+  await expect(page.getByRole("contentinfo")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Skip to main content" }),
+  ).toBeAttached();
+
   await expect(
     page.getByRole("heading", { name: "Reroute to Colombo Pettah" }),
   ).toBeVisible();
@@ -73,4 +80,11 @@ test("renders the canonical fixture and switches to live model output", async ({
   await expect(
     page.getByRole("button", { name: "Show highest-risk markets" }),
   ).toBeVisible();
+
+  await page.getByLabel(/Forecast/i).selectOption("72");
+  await expect(page.getByText(/Consignment settings changed/i)).toBeVisible();
+  await page.getByRole("button", { name: "Analyze market route" }).click();
+  await expect(page.getByText("Model check (72h)")).toBeVisible({
+    timeout: 20_000,
+  });
 });
